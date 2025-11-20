@@ -1,0 +1,127 @@
+/* --- 1. 전체 레이아웃 & 로딩 --- */
+.container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: #f3f4f6;
+  padding: 2rem;
+}
+
+.loadingText {
+  font-size: 1.2rem;
+  color: #555;
+}
+
+/* --- 2. 메인 박스 (공통 스타일) --- */
+.pendingBox {
+  background: white;
+  padding: 2.5rem 3rem;
+  border-radius: 16px; /* 둥글게 */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  width: 100%;
+  max-width: 550px;
+  text-align: center;
+
+  /* 🚨 [추가] 기본 상태(대기중)는 파란색 상단 바 */
+  border-top: 5px solid #007bff;
+}
+
+/* --- 3. 텍스트 스타일 --- */
+.title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  font-size: 1rem;
+  color: #666;
+  margin-bottom: 1.5rem;
+}
+
+.message {
+  font-size: 1rem;
+  color: #333;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+}
+
+.contact {
+  font-size: 0.9rem;
+  color: #888;
+  margin-top: 2rem;
+}
+
+/* --- 4. 정보 박스 (회색 박스) --- */
+.infoBox {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1.5rem;
+  text-align: left;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: #444;
+  margin-bottom: 1rem;
+}
+
+.infoBox strong {
+  color: #000;
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+/* =========================================
+   🚨 [신규 추가] 거절(Rejected) 전용 스타일
+   ========================================= */
+
+/* 거절 상태일 때 상단 바를 빨간색으로 변경 */
+.rejectedBox {
+  border-top-color: #dc3545;
+}
+
+/* 거절 사유를 보여주는 빨간색 박스 */
+.reasonBox {
+  background-color: #fff5f5; /* 연한 빨간 배경 */
+  border: 1px solid #ffc9c9;
+  padding: 1.2rem;
+  border-radius: 8px;
+  margin: 0 0 20px 0; /* 위아래 여백 */
+  text-align: left;
+}
+
+.reasonLabel {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #c92a2a; /* 진한 빨강 */
+  margin-bottom: 8px;
+}
+
+.reasonText {
+  color: #333;
+  font-size: 1rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* 재신청 버튼 */
+.reapplyButton {
+  width: 100%;
+  padding: 14px;
+  background-color: #007bff; /* 파란색 버튼 */
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  margin-top: 10px;
+}
+
+.reapplyButton:hover {
+  background-color: #0056b3;
+}

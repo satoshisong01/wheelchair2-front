@@ -1,0 +1,126 @@
+/* components/common/StatusPanel.module.css */
+
+.container {
+  /* 예: padding: 1rem; */
+  /* 1인 개발자님의 기존 .container 스타일이 있다면 여기에 유지됩니다 */
+}
+
+.message {
+  padding: 2rem 1rem;
+  text-align: center;
+  color: #6b7280; /* gray-500 */
+  border: 1px dashed #d1d5db; /* gray-300 */
+  border-radius: 0.5rem;
+}
+
+/* --- 🔽 "X" 닫기 버튼용 스타일 🔽 --- */
+.titleWrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.5rem; /* 8px */
+}
+
+.title {
+  font-size: 1.25rem; /* 20px */
+  font-weight: 700;
+  color: #111827; /* gray-900 */
+  flex: 1; /* 버튼을 밀어내고 공간 차지 */
+  word-break: break-all;
+}
+
+.closeButton {
+  flex-shrink: 0; /* 줄어들지 않음 */
+  margin-left: 0.5rem; /* 8px */
+  padding: 0;
+  width: 1.75rem; /* 28px */
+  height: 1.75rem; /* 28px */
+  font-size: 1.5rem; /* 24px */
+  line-height: 1.5rem; /* 24px */
+  color: #9ca3af; /* gray-400 */
+  background-color: transparent;
+  border: none;
+  border-radius: 9999px; /* full */
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.closeButton:hover {
+  background-color: #f3f4f6; /* gray-100 */
+  color: #1f2937; /* gray-800 */
+}
+/* --- 🔼 "X" 닫기 버튼용 스타일 🔼 --- */
+
+.connectionStatus {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1rem; /* 16px */
+}
+
+.statusDot {
+  width: 0.75rem; /* 12px */
+  height: 0.75rem; /* 12px */
+  border-radius: 9999px;
+  margin-right: 0.5rem; /* 8px */
+}
+
+.connected {
+  background-color: #10b981; /* green-500 */
+}
+
+.disconnected {
+  background-color: #ef4444; /* red-500 */
+}
+
+.statusText {
+  font-weight: 500;
+  color: #374151; /* gray-700 */
+}
+
+.infoSection {
+  margin-bottom: 1rem;
+  border-top: 1px solid #e5e7eb; /* gray-200 */
+  padding-top: 1rem;
+}
+
+.infoRow {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem; /* 8px */
+  font-size: 0.875rem; /* 14px */
+}
+
+.infoLabel {
+  color: #6b7280; /* gray-500 */
+}
+
+.infoValue {
+  font-weight: 600;
+  color: #1f2937; /* gray-800 */
+}
+
+.section {
+  border-top: 1px solid #e5e7eb; /* gray-200 */
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
+
+.sectionTitle {
+  font-weight: 600;
+  color: #111827; /* gray-900 */
+  margin-bottom: 0.5rem;
+}
+
+.sectionRow {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem; /* 14px */
+}
+
+.sectionLabel {
+  color: #6b7280; /* gray-500 */
+}

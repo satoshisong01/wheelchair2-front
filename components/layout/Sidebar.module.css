@@ -1,0 +1,107 @@
+/* components/layout/Sidebar.module.css (탭 아래 프로필 배치) */
+
+.sidebar {
+  width: 250px;
+  background-color: #ffffff;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  height: 100vh; /* (화면 전체 높이) */
+  position: fixed; /* (화면에 고정) */
+  left: 0;
+  top: 0;
+  z-index: 100;
+}
+
+.logo {
+  padding: 1.5rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #007bff;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0; /* (줄어들지 않음) */
+}
+
+/* [수정 1] .navList: flex-grow 제거, 스크롤 추가 */
+.navList {
+  /* flex-grow: 1; <-- [삭제] */
+  list-style: none;
+  padding: 1rem 0;
+  margin: 0;
+  overflow-y: auto;
+  flex-shrink: 0; /* (내용물만큼만 높이 차지) */
+}
+
+/* (navList li, a, hover, active 스타일은 동일) */
+.navList li a {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  margin: 0.25rem 1rem;
+  text-decoration: none;
+  color: #374151;
+  font-weight: 500;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+.navList li a:hover {
+  background-color: #f3f4f6;
+}
+.navList li.active a {
+  background-color: #e0e7ff;
+  color: #3730a3;
+  font-weight: 600;
+}
+
+/* [수정 2] .footer (프로필/로그아웃 영역) */
+.footer {
+  padding: 1.5rem;
+  /* (1인 개발자님의 "조금의 공백") */
+  margin-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  flex-shrink: 0; /* (줄어들지 않음) */
+}
+
+/* (프로필 스타일은 동일) */
+.profile {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.profileIcon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #e5e7eb;
+  display: grid;
+  place-items: center;
+}
+.profileName {
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+/* (로그아웃 버튼 스타일은 동일) */
+.logoutButton {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  background-color: #f9fafb;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-weight: 500;
+}
+.logoutButton:hover {
+  background-color: #f3f4f6;
+}
+
+/* [수정 3] .spacer: 남은 세로 공간을 모두 차지하는 빈 div */
+.spacer {
+  flex-grow: 1;
+}

@@ -1,0 +1,14 @@
+/* app/(protected)/layout.module.css */
+
+.container {
+  display: flex;
+}
+
+.main {
+  flex-grow: 1;
+  /* 사이드바 너비(250px)만큼 왼쪽 여백을 줍니다. */
+  padding-left: 250px;
+  min-height: 100vh;
+  width: 100%;
+  height: 100%;
+}

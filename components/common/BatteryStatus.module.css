@@ -1,0 +1,127 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem; /* (12px) */
+
+  /* --- 🔽🔽🔽 [신규 추가] ‼️ 최대 높이 및 스크롤 ‼️ 🔽🔽🔽 --- */
+
+  /* 휠체어 카드 1개 높이(약 90px) * 4개 + 갭(12px*3) = 약 396px */
+  /* 평소에는 최대 4개 아이템 높이 */
+  max-height: 400px;
+  /* overflow-y: auto; */
+}
+
+/* --- 🔽🔽🔽 [신규 추가] ‼️ 선택 시(shrunk) 높이 ‼️ 🔽🔽🔽 --- */
+/* 휠체어 선택 시(StatusPanel 열릴 때) 최대 2개 아이템 높이 */
+.shrunk {
+  /* 휠체어 카드 1개 높이(약 90px) * 2개 + 갭(12px*1) = 약 192px */
+  max-height: 200px;
+}
+/* --- 🔼🔼🔼 [신규 추가] 🔼🔼🔼 --- */
+
+.card {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb; /* (gray-200) */
+  border-radius: 0.5rem; /* (8px) */
+  padding: 1rem; /* (16px) */
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  /* [추가] 스크롤바 때문에 크기가 줄어들지 않도록 */
+  flex-shrink: 0;
+}
+
+/* ... (기존 .header, .name, .badge, .progressBar 등 스타일은 모두 동일) ... */
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem; /* (12px) */
+}
+
+.name {
+  font-weight: 600;
+  color: #1f2937; /* (gray-800) */
+  font-size: 0.875rem; /* (14px) */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+  margin-right: 0.5rem;
+}
+
+.badge {
+  padding: 0.25rem 0.5rem; /* (4px 8px) */
+  border-radius: 9999px; /* (full) */
+  font-size: 0.75rem; /* (12px) */
+  font-weight: 500;
+  flex-shrink: 0; /* 줄어들지 않음 */
+}
+
+.badgeNormal {
+  background-color: #d1fae5; /* (green-100) */
+  color: #065f46; /* (green-800) */
+}
+.badgeWarning {
+  background-color: #fef3c7; /* (yellow-100) */
+  color: #92400e; /* (yellow-800) */
+}
+.badgeCritical {
+  background-color: #fee2e2; /* (red-100) */
+  color: #991b1b; /* (red-800) */
+}
+
+.progressBar {
+  width: 100%;
+  background-color: #e5e7eb; /* (gray-200) */
+  border-radius: 9999px;
+  height: 0.5rem; /* (8px) */
+  overflow: hidden; /* (중요) */
+}
+
+.progressFill {
+  height: 100%;
+  transition: width 0.3s ease-in-out;
+}
+
+.progressFillHigh {
+  background-color: #10b981; /* (green-500) */
+}
+.progressFillMedium {
+  background-color: #f59e0b; /* (yellow-500) */
+}
+.progressFillLow {
+  background-color: #ef4444; /* (red-500) */
+}
+
+.batteryPercentText {
+  text-align: right;
+  font-size: 0.875rem; /* (14px) */
+  color: #6b7280; /* (gray-500) */
+  margin-top: 0.25rem; /* (4px) */
+}
+
+.emptyState {
+  padding: 2rem 1rem;
+  text-align: center;
+  border: 1px dashed #d1d5db; /* (gray-300) */
+  border-radius: 0.5rem;
+}
+
+.emptyText {
+  color: #6b7280; /* (gray-500) */
+}
+
+.clickableCard {
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.clickableCard:hover {
+  background-color: #f9fafb; /* (gray-50) */
+}
+
+.activeCard {
+  background-color: #ebf8ff; /* (blue-50) */
+  border-color: #3b82f6; /* (blue-500) */
+}

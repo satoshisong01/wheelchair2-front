@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 76 76">
+  <!-- Generator: Adobe Illustrator 29.8.3, SVG Export Plug-In . SVG Version: 2.1.1 Build 3)  -->
+  <defs>
+    <style>
+      .st0, .st1 {
+        fill: none;
+      }
+
+      .st2 {
+        fill: #ee3139;
+      }
+
+      .st1 {
+        stroke: #e9e9e9;
+        stroke-miterlimit: 10;
+      }
+
+      .st3 {
+        display: none;
+      }
+
+      .st4 {
+        fill: #fbd4d5;
+      }
+
+      .st5 {
+        fill: #a8c0e2;
+      }
+
+      .st6 {
+        fill: #fdeaeb;
+      }
+
+      .st7 {
+        fill: #c4d4ec;
+      }
+    </style>
+  </defs>
+  <g id="_레이어_1">
+    <g>
+      <rect class="st1" x=".5" y=".5" width="75" height="75" rx="7" ry="7"/>
+      <rect class="st1" x=".5" y=".5" width="75" height="75" rx="7" ry="7"/>
+    </g>
+  </g>
+  <g id="_레이어_10" data-name="레이어_10">
+    <g>
+      <rect class="st7" x="22.18" y="27.5" width="3.58" height="25.57"/>
+      <rect class="st5" x="20.99" y="25.77" width="5.96" height="1.73" rx=".48" ry=".48"/>
+      <path class="st2" d="M25.83,22.52c-.11-.6-.57-1.08-1.17-1.08h-1.38c-.59,0-1.07.47-1.17,1.08l-.45,3.25h4.62l-.45-3.25Z"/>
+      <rect class="st7" x="20.92" y="53.07" width="6.11" height="1.49" rx=".75" ry=".75"/>
+      <rect class="st5" x="22.18" y="41.25" width="3.58" height="1.08"/>
+    </g>
+    <g>
+      <rect class="st7" x="50.19" y="27.5" width="3.58" height="25.57"/>
+      <rect class="st5" x="49.01" y="25.77" width="5.96" height="1.73" rx=".48" ry=".48"/>
+      <path class="st2" d="M53.84,22.52c-.11-.6-.57-1.08-1.17-1.08h-1.38c-.59,0-1.07.47-1.17,1.08l-.45,3.25h4.62l-.45-3.25Z"/>
+      <rect class="st7" x="48.93" y="53.07" width="6.11" height="1.49" rx=".75" ry=".75"/>
+      <rect class="st5" x="50.19" y="41.25" width="3.58" height="1.08"/>
+    </g>
+    <rect class="st0" x="25.77" y="43.69" width="24.42" height="1.19"/>
+  </g>
+  <g id="_레이어_7" data-name="레이어_7">
+    <rect class="st0" x="22.19" y="41.25" width="3.58" height="1.08"/>
+  </g>
+  <g id="_레이어_8" data-name="레이어_8">
+    <rect class="st6" x="16.64" y="30.01" width="42.74" height="11.24" rx=".68" ry=".68"/>
+  </g>
+  <g id="_레이어_3" data-name="레이어_3">
+    <g class="st3">
+      <path class="st6" d="M23.04,30.01h-3.38l-3.03,5.3v5.3c0,.16.06.3.16.41l6.25-11.01Z"/>
+      <path class="st6" d="M58.74,30.01h-31.74l-6.43,11.24h38.16c.35,0,.64-.29.64-.64v-9.96c0-.35-.29-.64-.64-.64Z"/>
+    </g>
+    <g id="_레이어_4" data-name="레이어_4" class="st3">
+      <path class="st4" d="M16.63,40.12v.5c0,.35.29.64.64.64h41.47c.35,0,.64-.29.64-.64v-.5H16.63Z"/>
+    </g>
+    <polygon class="st2" points="59.38 30.6 53.34 41.25 57.25 41.25 59.38 37.53 59.38 30.6"/>
+    <polygon class="st2" points="49.91 41.25 56.34 30.01 52.38 30.01 46 41.25 49.91 41.25"/>
+    <polygon class="st2" points="42.58 41.25 49.01 30.01 45.05 30.01 38.67 41.25 42.58 41.25"/>
+    <polygon class="st2" points="27.91 41.25 34.33 30.01 30.38 30.01 24 41.25 27.91 41.25"/>
+    <polygon class="st2" points="35.24 41.25 41.67 30.01 37.71 30.01 31.33 41.25 35.24 41.25"/>
+  </g>
+  <g id="_레이어_9" data-name="레이어_9">
+    <g>
+      <path class="st2" d="M58.74,30.01H17.27s0,0,0,0h5.77l-6.27,10.98c.12.15.29.26.5.26h3.3l6.43-11.24h31.74s0,0,0,0Z"/>
+      <path class="st2" d="M17.32,30.01c-.38,0-.68.3-.68.68v4.64c1.01-1.77,2.02-3.55,3.03-5.32h-2.35Z"/>
+    </g>
+  </g>
+  <g id="_레이어_11" data-name="레이어_11">
+    <rect class="st7" x="25.77" y="43.69" width="24.43" height="1.19"/>
+  </g>
+</svg>

@@ -1,0 +1,92 @@
+/* app/(protected)/stats/page.module.css */
+
+.pageContainer {
+  padding: 2rem;
+  background-color: #f3f4f6;
+}
+
+.pageTitle {
+  font-size: 1.875rem; /* 30px */
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+
+/* 필터 (기간, 날짜, 차량명, 검색)를 감싸는 상단 바 */
+.filterBar {
+  background-color: #ffffff;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.filterLabel {
+  font-size: 0.875rem; /* 14px */
+  font-weight: 500;
+  color: #6b7280;
+  margin-bottom: 0.5rem;
+}
+
+.selectInput,
+.dateInput,
+.textInput {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  min-width: 150px;
+}
+
+.searchButton {
+  padding: 0.6rem 1.25rem;
+  background-color: #3b82f6; /* blue-500 */
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  align-self: flex-end; /* 라벨과 높이 맞춤 */
+}
+
+/* 차트와 테이블을 감싸는 컨테이너 */
+.contentBox {
+  background-color: #ffffff;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1.5rem;
+}
+
+.chartContainer {
+  height: 400px;
+  margin-top: 1rem;
+}
+
+.tableTitle {
+  font-size: 1.25rem; /* 20px */
+  font-weight: 600;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+/* TODO: 배터리 사용 일지 테이블 스타일 */
+.statsTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+.statsTable th,
+.statsTable td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+}
+.statsTable th {
+  background-color: #f9fafb;
+}

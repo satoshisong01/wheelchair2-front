@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="_레이어_1" xmlns="http://www.w3.org/2000/svg" version="1.1" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 18.11 18.1">
+  <!-- Generator: Adobe Illustrator 29.8.3, SVG Export Plug-In . SVG Version: 2.1.1 Build 3)  -->
+  <defs>
+    <style>
+      .st0 {
+        fill: url(#_무제_그라디언트);
+      }
+
+      .st1 {
+        fill: url(#_무제_그라디언트_2);
+      }
+
+      .st2 {
+        fill: url(#_무제_그라디언트_4);
+        opacity: .4;
+      }
+
+      .st2, .st3 {
+        isolation: isolate;
+      }
+
+      .st4 {
+        fill: url(#_무제_그라디언트_3);
+      }
+
+      .st5 {
+        fill: #969595;
+      }
+
+      .st3 {
+        fill: #fff;
+        opacity: .1;
+      }
+    </style>
+    <linearGradient id="_무제_그라디언트" data-name="무제 그라디언트" x1="9.06" y1="521.9" x2="9.06" y2="540" gradientTransform="translate(0 540) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#e4e3e3"/>
+      <stop offset=".41" stop-color="#4e4d4d"/>
+      <stop offset=".61" stop-color="#fff"/>
+      <stop offset=".81" stop-color="#b1b1b1"/>
+      <stop offset="1" stop-color="#4e4d4d"/>
+    </linearGradient>
+    <linearGradient id="_무제_그라디언트_2" data-name="무제 그라디언트 2" x1="9.05" y1="522.23" x2="9.05" y2="539.67" gradientTransform="translate(0 540) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset=".07" stop-color="#e4e3e3"/>
+      <stop offset=".39" stop-color="#4e4d4d"/>
+      <stop offset=".57" stop-color="#fff"/>
+      <stop offset=".75" stop-color="#b1b1b1"/>
+      <stop offset=".96" stop-color="#4e4d4d"/>
+    </linearGradient>
+    <radialGradient id="_무제_그라디언트_3" data-name="무제 그라디언트 3" cx="9.05" cy="530.94" fx="9.05" fy="530.94" r="8.05" gradientTransform="translate(0 540) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff"/>
+      <stop offset=".27" stop-color="#f3f3f4"/>
+      <stop offset=".46" stop-color="#eae8e8"/>
+      <stop offset=".62" stop-color="#dbdada"/>
+      <stop offset=".77" stop-color="#c6c3c3"/>
+      <stop offset=".91" stop-color="#aba9a8"/>
+      <stop offset="1" stop-color="#949394"/>
+    </radialGradient>
+    <linearGradient id="_무제_그라디언트_4" data-name="무제 그라디언트 4" x1="9.06" y1="533.06" x2="9.06" y2="539.25" gradientTransform="translate(0 540) scale(1 -1)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#fff"/>
+      <stop offset="1" stop-color="#fff"/>
+    </linearGradient>
+  </defs>
+  <path class="st0" d="M18.11,9.05c0,5-4.05,9.05-9.05,9.05S0,14.05,0,9.05,4.05,0,9.05,0s9.05,4.05,9.05,9.05h.01Z"/>
+  <path class="st0" d="M18.11,9.05c0,5-4.05,9.05-9.05,9.05S0,14.05,0,9.05,4.05,0,9.05,0s9.05,4.05,9.05,9.05h.01Z"/>
+  <path class="st1" d="M9.05,17.77C4.24,17.77.33,13.86.33,9.05S4.24.33,9.05.33s8.72,3.91,8.72,8.72-3.91,8.72-8.72,8.72Z"/>
+  <path class="st1" d="M9.05,17.77C4.24,17.77.33,13.86.33,9.05S4.24.33,9.05.33s8.72,3.91,8.72,8.72-3.91,8.72-8.72,8.72Z"/>
+  <path class="st5" d="M9.05,17.44C4.43,17.44.67,13.68.67,9.05S4.43.67,9.05.67s8.39,3.76,8.39,8.39-3.76,8.39-8.39,8.39h0Z"/>
+  <path class="st5" d="M9.05,17.44C4.43,17.44.67,13.68.67,9.05S4.43.67,9.05.67s8.39,3.76,8.39,8.39-3.76,8.39-8.39,8.39h0Z"/>
+  <path class="st4" d="M9.05,17.11c-4.44,0-8.05-3.62-8.05-8.06S4.61,1,9.05,1s8.05,3.61,8.05,8.05-3.61,8.05-8.05,8.05h0Z"/>
+  <path class="st4" d="M9.05,17.11c-4.44,0-8.05-3.62-8.05-8.06S4.61,1,9.05,1s8.05,3.61,8.05,8.05-3.61,8.05-8.05,8.05h0Z"/>
+  <path class="st3" d="M9.05,7.3c2.99,0,5.76.98,8.01,2.63.03-.29.05-.58.05-.88,0-4.44-3.62-8.05-8.06-8.05S1,4.61,1,9.05c0,.3.02.59.05.88,2.24-1.65,5.01-2.63,8.01-2.63h-.01Z"/>
+  <path class="st3" d="M9.05,7.3c2.99,0,5.76.98,8.01,2.63.03-.29.05-.58.05-.88,0-4.44-3.62-8.05-8.06-8.05S1,4.61,1,9.05c0,.3.02.59.05.88,2.24-1.65,5.01-2.63,8.01-2.63h-.01Z"/>
+  <path class="st2" d="M14.47,3.97c0,1.48-2.42,2.68-5.41,2.68s-5.41-1.2-5.41-2.68,2.41-2.97,5.4-2.97,5.41,1.48,5.41,2.97h.01Z"/>
+  <path class="st2" d="M14.47,3.97c0,1.48-2.42,2.68-5.41,2.68s-5.41-1.2-5.41-2.68,2.41-2.97,5.4-2.97,5.41,1.48,5.41,2.97h.01Z"/>
+</svg>

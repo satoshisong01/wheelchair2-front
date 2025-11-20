@@ -1,0 +1,36 @@
+/* 📍 경로: src/components/ui/DateRangePicker.module.css */
+
+.dateContainer {
+  /* Flexbox 설정 */
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.dateInput {
+  /* 입력 필드 스타일 */
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.dateInput:hover {
+  border-color: #007bff;
+}
+
+.dateInput:focus {
+  outline: none;
+  border-color: #0056b3;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+}
+
+.separator {
+  /* 구분자 (~) 스타일 */
+  font-weight: bold;
+  color: #555;
+}

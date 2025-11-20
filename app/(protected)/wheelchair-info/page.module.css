@@ -1,0 +1,572 @@
+/* --- [전체 레이아웃] --- */
+.container {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  gap: 1rem;
+  /* ‼️ [수정] 100vh(화면 꽉 채움)에서 Sidebar의 높이만큼(calc) 빼서 스크롤바가 생기지 않도록 함 */
+  height: 100vh;
+  background-color: #f3f4f6;
+  overflow: hidden; /* ‼️ 이 페이지 자체에서는 스크롤을 막습니다. */
+}
+
+/* 1. 상단 정보 바 (InfoBar) - (변경 없음) */
+.infoBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.1rem 1.5rem;
+  background-color: #007bff;
+  color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0; /* ‼️ 크기가 줄어들지 않도록 고정 */
+}
+.infoBarLeft {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.9rem;
+  align-items: center;
+}
+.infoItem strong {
+  font-weight: 700;
+}
+.infoBarRight {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.searchInput {
+  padding: 0.4rem 0.8rem;
+  border: none;
+  border-radius: 0.3rem;
+  font-size: 0.9rem;
+  width: 150px;
+}
+.searchButton {
+  background-color: transparent;
+  border: 1px solid white;
+  color: white;
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.3rem;
+  cursor: pointer;
+}
+
+/* 관리자 선택 드롭다운 (변경 없음) */
+.adminSelector {
+  padding: 0 1rem;
+  font-size: 0.9rem;
+  color: #555;
+  flex-shrink: 0; /* ‼️ 크기가 줄어들지 않도록 고정 */
+
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.postureImageWrapper {
+  position: relative; /* 👈 필수! */
+  width: 100px; /* 👈 원하는 이미지 너비 */
+  height: 100px; /* 👈 원하는 이미지 높이 */
+  margin: 0.5rem auto;
+}
+.postureImageWrapper img {
+  object-fit: contain; /* 👈 이미지 비율 유지 */
+}
+
+.selectControl {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #ddd;
+  border-radius: 0.3rem;
+  margin-left: 0.5rem;
+}
+
+/* --- [핵심 레이아웃 수정] --- */
+
+/* 2. 메인 콘텐츠 (좌/우 분할) */
+.mainContent {
+  display: flex;
+  flex: 1; /* ‼️ 남은 모든 수직 공간을 차지 (InfoBar 제외) */
+  gap: 1rem;
+  overflow: hidden; /* ‼️ 중요: 자식 컬럼들이 이 영역을 벗어나지 않도록 함 */
+}
+
+/* A. 좌측 컬럼 (지도, 운행정보, 상태) */
+.leftColumn {
+  display: flex;
+  flex-direction: column;
+  flex: 1; /* ‼️ 우측 컬럼보다 2배 넓게 (2/3) */
+  gap: 1rem;
+  min-width: 0; /* ‼️ flex 아이템이 찌그러지는 것을 방지 */
+}
+
+/* B. 우측 컬럼 (배터리, 자세, 이벤트) */
+.rightColumn {
+  display: flex;
+  flex-direction: column;
+  flex: 1; /* ‼️ 좌측 컬럼의 절반 넓이 (1/3) */
+  gap: 1rem;
+  min-width: 0; /* ‼️ flex 아이템이 찌그러지는 것을 방지 */
+  overflow-y: auto; /* ‼️ 우측 컬럼만 내용이 넘칠 경우 스크롤 */
+}
+
+.rightTop {
+  width: 100%;
+  display: flex;
+  flex: 1.05;
+  flex-direction: row;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
+/* ‼️ [수정] A-1. 지도 영역 (비율 조정) */
+.mapArea {
+  flex: 1.4; /* ‼️ 좌측 컬럼의 40% (0.8 / (0.8 + 1.2)) */
+  min-height: 200px; /* 최소 높이 보장 */
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+/* ‼️ [수정] A-2. 하단 영역 (비율 조정) */
+.bottomArea {
+  flex: 1.2; /* ‼️ 좌측 컬럼의 60% (1.2 / (0.8 + 1.2)) */
+  display: flex;
+  gap: 1rem;
+  min-height: 250px;
+}
+
+/* --- 공통 카드 스타일 --- */
+.card {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  padding: 1.2rem;
+  display: flex; /* ‼️ [신규] 카드를 flex-column으로 설정 */
+  flex-direction: column;
+}
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  /* margin-bottom: 1rem; */
+  color: #333;
+  flex-shrink: 0; /* ‼️ 타이틀 줄어들지 않게 */
+}
+
+/* DrivingInfoPanel (운행 정보) */
+.drivingInfoCard {
+  flex: 1; /* ‼️ bottomArea의 1/2 */
+}
+.drivingGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* 2열 */
+  gap: 0.8rem;
+  font-size: 0.9rem;
+}
+.drivingGrid p {
+  padding: 0.3rem 0;
+  border-bottom: 1px solid #eee;
+}
+.drivingGrid strong {
+  float: right;
+  font-weight: 700;
+  color: #333;
+}
+
+/* WheelchairStatePanel (휠체어 상태)
+.wheelchairStateCard {
+  flex: 1; /* ‼️ bottomArea의 1/2 */
+/* min-width: 320px; */
+/* } */
+
+.stateContainer {
+  display: flex;
+  flex-direction: column;
+  flex: 1; /* 카드 내부의 남은 공간 모두 차지 */
+  justify-content: space-around; /* 2개 행을 위아래로 분산 */
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.stateRow {
+  display: flex;
+  align-items: center; /* 라벨과 아이콘 컨테이너를 세로 중앙 정렬 */
+  gap: 10px;
+}
+
+.stateRowLabel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  writing-mode: vertical-rl; /* 세로 쓰기 (오른쪽->왼쪽) */
+  width: 40px;
+  height: 110px; /* 아이콘 박스 높이에 맞게 조절 */
+  border-radius: 8px;
+  /* font-size: 0.9rem; */
+  font-weight: 600;
+  letter-spacing: 1px;
+  padding-right: 3px;
+}
+
+.statusLabel {
+  background-color: #e6f0fa; /* Light Blue */
+  color: #619cd4;
+}
+
+.alertLabel {
+  background-color: #e8f9f3; /* Light Green */
+  color: #77c4a5;
+}
+
+.iconFlexContainer {
+  display: flex;
+  flex: 1;
+  justify-content: space-around; /* 3개 아이콘을 균등하게 배치 */
+  align-items: center;
+  gap: 10px;
+}
+
+.stateIconBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  flex: 1; /* 1:1:1 비율로 공간 차지 */
+  max-width: 110px; /* 최대 너비 제한 */
+  height: 110px;
+
+  border: 1px solid #e0e0e0;
+  background-color: #ffffff;
+  border-radius: 8px;
+  padding: 12px 8px;
+  cursor: default;
+  transition: all 0.2s ease-in-out;
+}
+
+.stateIconBox:hover {
+  border-color: #007bff;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.1);
+}
+
+.iconBackground {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 8px;
+  /* (참고) 아이콘 배경색이 시안 2에는 없습니다. */
+  /* background-color: #f0f0f0; */
+  /* border-radius: 50%; */
+}
+
+.iconBackground img {
+  /* 활성화 시 색상 변경을 위해 filter를 사용할 수 있습니다. */
+  /* 여기서는 활성/비활성 아이콘 색상이 동일하다고 가정합니다. */
+}
+
+.stateLabel {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 10px; /* 라벨과 원형 표시기 사이 간격 */
+}
+
+.stateCircle {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #ced4da; /* 비활성 테두리 */
+  background-color: #f8f9fa; /* 비활성 배경 */
+  transition: all 0.2s ease-in-out;
+  flex-shrink: 0;
+}
+
+.stateCircle.active {
+  background-color: #007bff; /* 활성 배경 (시안 1의 '대기' 색상 참고) */
+  border-color: #0056b3; /* 활성 테두리 */
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+/* --- [우측 컬럼 자식들 Flex 수정] --- */
+
+/* TopRightPanel (주행거리 & 배터리) */
+.topRightPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  flex-shrink: 0; /* ‼️ [수정] 높이 고정 (100px) */
+  height: 100%;
+  width: 25%;
+}
+.batteryStatus,
+.drivingDistance {
+  flex: 1;
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  padding: 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+}
+.batteryTitle,
+.drivingTitle {
+  font-size: 0.9rem;
+  color: #007bff;
+  font-weight: 600;
+}
+.batteryValue,
+.drivingValue {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #333;
+  /* margin-top: 0.5rem; */
+}
+
+/* PostureControlPanel (자세 조절) */
+.postureCard {
+  width: 73%;
+  /* min-height: 250px; */
+  flex-shrink: 0; /* ‼️ [수정] 높이 고정 (250px) */
+}
+.postureGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 5px;
+}
+.postureItem {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #ddd;
+  border-radius: 0.5rem;
+  padding: 0.8rem;
+  text-align: center;
+}
+/* ( ... PostureItem 내부 스타일은 변경 없음 ... ) */
+.postureTitle {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #555;
+}
+
+.postureBox {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  /* margin: 0.5rem 0; */
+}
+
+.postureGauge {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  margin: 0.5rem 0;
+}
+.currentValue {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #007bff;
+}
+.maxValue {
+  font-size: 0.8rem;
+  color: #888;
+}
+.postureTimestamp {
+  font-size: 0.75rem;
+  color: #aaa;
+}
+
+/* Event Area (경고/알림) */
+.eventArea {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  flex: 0.9; /* ‼️ [수정] 우측 컬럼의 "남은 모든 공간"을 차지 (가장 중요!) */
+  min-height: 200px; /* ‼️ 최소 높이만 보장 */
+}
+.eventCard {
+  flex: 1; /* ‼️ eventArea의 1/2 */
+  min-height: 150px;
+  /* ‼️ [신규] 자식 컨텐츠(스크롤)가 flex-item 내부에서 꽉 차도록 */
+  display: flex;
+  flex-direction: column;
+}
+
+/* ‼️ [신규] AlertList 스크롤 영역이 꽉 차도록 */
+.scrollableContent {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 100px; /* 최소 스크롤 영역 확보 */
+}
+
+/*
+ * 3. 휠체어 상태 패널 (WheelchairStatePanel)
+ * -----------------------------------------------
+ * [수정] Grid -> Flexbox 기반 2-Row 레이아웃 (시안 2)
+ */
+.wheelchairStateCard {
+  flex: 1; /* bottomArea의 1/2 */
+  min-width: 320px;
+  /* (선택) 카드 내부의 기본 패딩을 줄여서 공간 확보 */
+  /* padding: 0.8rem; */
+}
+
+.stateContainer {
+  display: flex;
+  flex-direction: column;
+  flex: 1; /* 카드 내부의 남은 공간 모두 차지 */
+  justify-content: space-around; /* 2개 행을 위아래로 분산 */
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.stateRow {
+  display: flex;
+  align-items: center; /* 라벨과 아이콘 컨테이너를 세로 중앙 정렬 */
+  gap: 10px;
+}
+
+.stateRowLabel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  writing-mode: vertical-rl; /* 세로 쓰기 (오른쪽->왼쪽) */
+
+  width: 40px;
+  height: 110px; /* 아이콘 박스 높이에 맞게 조절 */
+  padding-right: 5px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+/* 시안 2의 컬러 적용 */
+.statusLabel {
+  background-color: #e6f0fa; /* Light Blue */
+  color: #619cd4;
+}
+.alertLabel {
+  background-color: #e8f9f3; /* Light Green */
+  color: #77c4a5;
+}
+
+/* 3개 아이콘을 담는 Flex 컨테이너 */
+.iconFlexContainer {
+  display: flex;
+  flex: 1;
+  justify-content: space-around; /* 3개 아이콘을 균등하게 배치 */
+  align-items: center;
+  gap: 10px;
+}
+
+/* 개별 아이콘 박스 (시안 2 스타일) */
+.stateIconBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  flex: 1; /* 1:1:1 비율로 공간 차지 */
+  max-width: 110px; /* 최대 너비 제한 */
+  height: 110px;
+
+  border: 1px solid #e0e0e0;
+  background-color: #ffffff;
+  border-radius: 8px;
+  padding: 12px 8px;
+  cursor: default;
+  transition: all 0.2s ease-in-out;
+}
+
+.stateIconBox:hover {
+  border-color: #007bff;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.1);
+}
+
+.iconBackground {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 8px;
+  /* (참고) 아이콘 배경색이 시안 2에는 없습니다. */
+  /* background-color: #f0f0f0; */
+  /* border-radius: 50%; */
+}
+
+.iconBackground img {
+  /* 활성화 시 색상 변경을 위해 filter를 사용할 수 있습니다. */
+  /* 여기서는 활성/비활성 아이콘 색상이 동일하다고 가정합니다. */
+}
+
+.stateLabel {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 10px; /* 라벨과 원형 표시기 사이 간격 */
+}
+
+/* ‼️ [수정] 찌그러짐 방지 */
+.stateCircle {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #ced4da; /* 비활성 테두리 */
+  background-color: #f8f9fa; /* 비활성 배경 */
+  transition: all 0.2s ease-in-out;
+  flex-shrink: 0; /* ‼️ 찌그러짐 방지 */
+}
+
+/* ‼️ 원형 상태 표시기 (활성) ‼️ */
+.stateCircle.active {
+  background-color: #007bff; /* 활성 배경 (시안 1의 '대기' 색상 참고) */
+  border-color: #0056b3; /* 활성 테두리 */
+  box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+/* 이벤트 카드 헤더 (제목 + 전체보기) */
+.eventHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-shrink: 0; /* 스크롤 시 헤더 고정 */
+}
+
+/* 전체보기 링크 */
+.viewAllLink {
+  font-size: 0.8rem;
+  color: #999;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.viewAllLink:hover {
+  color: #555;
+  text-decoration: underline;
+}
+
+/* 경고/알림 타이틀 색상 분리 */
+.warningTitle {
+  color: #e74c3c; /* 붉은색 (경고) */
+}
+
+.infoTitle {
+  color: #2c3e50; /* 짙은 남색 (일반) */
+}
+
+/* 빈 데이터 메시지 */
+.emptyMessage {
+  text-align: center;
+  color: #999;
+  margin-top: 20px;
+  font-size: 0.9rem;
+}

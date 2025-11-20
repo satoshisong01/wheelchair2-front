@@ -1,0 +1,136 @@
+.container {
+  padding: 2rem;
+  height: 100vh;
+  overflow-y: auto;
+  background-color: #f9f9f9;
+}
+
+.title {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  font-size: 1rem;
+  color: #666;
+  margin-bottom: 2rem;
+}
+
+.error {
+  color: #d93025;
+}
+
+/* --- 테이블 --- */
+.tableContainer {
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse; /* 테이블 선 한줄로 */
+}
+
+.table th,
+.table td {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #eee;
+}
+
+.table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #555;
+}
+
+.table tbody tr:hover {
+  background-color: #fdfdfd;
+}
+
+.emptyCell {
+  text-align: center;
+  color: #999;
+  padding: 3rem;
+  font-size: 1rem;
+}
+
+/* --- 상태 배지 --- */
+.roleBadge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: white;
+}
+
+.pending {
+  background-color: #ffc107; /* 노란색 */
+  color: #333;
+}
+.admin {
+  background-color: #007bff; /* 파란색 */
+}
+.master {
+  background-color: #28a745; /* 초록색 */
+}
+
+/* --- 작업 버튼 --- */
+.actionButton {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.approveButton {
+  background-color: #007bff;
+  color: white;
+}
+.approveButton:hover {
+  background-color: #0056b3;
+}
+
+.actionDone {
+  color: #aaa;
+  font-style: italic;
+}
+
+.actionButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.rejectButton {
+  background-color: #dc3545; /* 빨간색 */
+  color: white;
+}
+
+.rejectButton:hover {
+  background-color: #c82333;
+}
+
+.rejected {
+  background-color: #ffebeb;
+  color: #dc3545;
+  border: 1px solid #dc3545;
+}
+
+.rejectReason {
+  font-size: 0.85rem;
+  color: #dc3545;
+  max-width: 150px;
+  display: inline-block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

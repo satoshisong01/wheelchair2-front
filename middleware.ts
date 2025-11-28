@@ -1,137 +1,68 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { getToken } from 'next-auth/jwt';
-import { rateLimiter } from '@/lib/rate-limiter';
+import { withAuth } from "next-auth/middleware";
+import { NextResponse } from "next/server";
 
-export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+export default withAuth(
+  function middleware(req) {
+    const path = req.nextUrl.pathname;
+    const token = req.nextauth.token;
+    
+    // 토큰에서 역할(Role) 추출
+    // (@ts-ignore: 커스텀 타입이라 에러 무시)
+    // @ts-ignore
+    const role = token?.role; 
 
-  // --------------------------------------------------------------------
-  // 1️⃣ [API 보안] Rate Limiter (API 요청 제한)
-  // --------------------------------------------------------------------
-  if (pathname.startsWith('/api/')) {
-    // Auth 관련 API는 제한에서 제외 (로그인/로그아웃 등)
-    if (pathname.startsWith('/api/auth/')) {
-      return NextResponse.next();
-    }
+    console.log(`🛡️ [Middleware] Path: ${path} | Role: ${role}`);
 
-    const ip = (request.headers.get('x-forwarded-for') ?? '127.0.0.1')
-      .split(',')[0]
-      .trim();
-
-    try {
-      const { success, limit, remaining, reset } = await rateLimiter.limit(ip);
-
-      if (!success) {
-        console.warn(`RATE LIMIT: IP ${ip}가 API 요청을 초과했습니다.`);
-        return new NextResponse(
-          JSON.stringify({
-            error: 'Too Many Requests',
-            message: `요청 횟수가 초과되었습니다. ${new Date(
-              reset
-            ).toLocaleTimeString()} 이후에 다시 시도해주세요.`,
-          }),
-          {
-            status: 429,
-            headers: {
-              'Content-Type': 'application/json',
-              'Retry-After': Math.ceil((reset - Date.now()) / 1000).toString(),
-            },
-          }
-        );
+    // ------------------------------------------------------------
+    // 1. 신규 가입자 (GUEST) 처리 -> Welcome 필수
+    // ------------------------------------------------------------
+    if (role === 'GUEST') {
+      if (!path.startsWith('/welcome')) {
+        console.log("🚀 [GUEST] Welcome 페이지로 이동시킴");
+        return NextResponse.redirect(new URL('/welcome', req.url));
       }
-
-      const response = NextResponse.next();
-      response.headers.set('X-RateLimit-Limit', limit.toString());
-      response.headers.set('X-RateLimit-Remaining', remaining.toString());
-      // API 요청인 경우 여기서 처리를 끝내고 통과시킴 (API는 페이지 리다이렉트 불필요)
-      return response;
-    } catch (error) {
-      console.error('Rate Limiter 에러:', error);
-      // Redis 에러가 나더라도 서비스는 돌아가야 하므로 통과
       return NextResponse.next();
     }
-  }
 
-  // --------------------------------------------------------------------
-  // 2️⃣ [페이지 권한] 정적 파일 통과 (이미지, CSS 등)
-  // --------------------------------------------------------------------
-  if (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/favicon.ico') ||
-    pathname.startsWith('/static') ||
-    pathname.startsWith('/icons') // 아이콘 폴더
-  ) {
-    return NextResponse.next();
-  }
-
-  // --------------------------------------------------------------------
-  // 3️⃣ [토큰 검사] 사용자 인증 상태 확인
-  // --------------------------------------------------------------------
-  const token = await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
-
-  // 보호해야 할 페이지 목록 (로그인 필수)
-  const protectedPaths = [
-    '/dashboard',
-    '/admin',
-    '/pending',
-    '/welcome',
-    '/user-management',
-    '/device-management',
-    '/audit-log',
-    '/wheelchair-info',
-    '/stats',
-  ];
-
-  const isProtectedPath = protectedPaths.some((path) =>
-    pathname.startsWith(path)
-  );
-  const isLoginPage = pathname === '/admin-portal';
-
-  // --- Case A: 비로그인 사용자 ---
-  if (!token) {
-    // 보호된 페이지에 들어가려 하면 -> 관리자 로그인 포털로 튕겨냄
-    if (isProtectedPath) {
-      return NextResponse.redirect(new URL('/admin-portal', request.url));
+    // ------------------------------------------------------------
+    // 2. 승인 대기자 (PENDING) 처리 -> Pending 필수
+    // ------------------------------------------------------------
+    if (role === 'PENDING') {
+      if (!path.startsWith('/pending')) {
+        console.log("⏳ [PENDING] 승인 대기 페이지로 이동시킴");
+        return NextResponse.redirect(new URL('/pending', req.url));
+      }
+      return NextResponse.next();
     }
-    // 그 외(기기 로그인 페이지인 '/' 등)는 통과
-    return NextResponse.next();
-  }
 
-  // --- Case B: 로그인한 사용자 (Role 기반 교통정리) ---
-  const role = token.role as string; // 'MASTER' | 'ADMIN' | 'PENDING' | 'REJECTED' | 'DEVICE_USER'
-
-  // B-1: 승인 대기(PENDING) 또는 거절(REJECTED) 상태
-  // -> 이들은 오직 /pending (상태확인)과 /welcome (재신청)만 갈 수 있음
-  if (role === 'PENDING' || role === 'REJECTED') {
-    if (pathname !== '/pending' && pathname !== '/welcome') {
-      // 대시보드 등을 훔쳐보려 하면 강제로 대기실로 이동
-      return NextResponse.redirect(new URL('/pending', request.url));
+    // ------------------------------------------------------------
+    // 3. 정회원 (USER, ADMIN 등) 처리 -> 로그인/대기 페이지 접근 금지
+    // ------------------------------------------------------------
+    const approvedRoles = ['USER', 'ADMIN', 'MASTER', 'DEVICE_USER'];
+    if (approvedRoles.includes(role as string)) {
+      // 이미 가입된 사람이 welcome이나 pending, login 페이지에 가려고 하면 메인으로
+      if (path.startsWith('/welcome') || path.startsWith('/pending') || path === '/login') {
+        console.log("✅ [USER] 이미 가입된 회원입니다. 메인으로 이동.");
+        return NextResponse.redirect(new URL('/', req.url));
+      }
     }
+
     return NextResponse.next();
+  },
+  {
+    callbacks: {
+      // true를 반환하면 미들웨어 로직 실행, false면 로그인 페이지로 리다이렉트
+      authorized: ({ token }) => !!token, 
+    },
+    pages: {
+      signIn: '/login', // 로그인이 안 된 상태면 여기로 보냄
+    },
   }
+);
 
-  // B-2: 승인된 관리자 (MASTER / ADMIN)
-  // -> 이들은 로그인 페이지나 대기 페이지를 볼 필요가 없음 -> 대시보드로 이동
-  if (role === 'MASTER' || role === 'ADMIN') {
-    if (isLoginPage || pathname === '/pending' || pathname === '/welcome') {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
-    }
-    // 그 외 (/dashboard, /user-management 등)는 통과
-    return NextResponse.next();
-  }
-
-  // B-3: 기기 사용자 (DEVICE_USER)
-  // (별도 제약 없음, 페이지 레벨에서 보여줄 내용만 보여주면 됨)
-
-  // 모든 검사 통과
-  return NextResponse.next();
-}
-
-// 미들웨어가 실행될 경로 설정 (모든 경로 감시)
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
+  // api, static 파일, 이미지 등은 미들웨어 검사 제외
+  matcher: [
+    "/((?!api|_next/static|_next/image|favicon.ico|login|register).*)",
+  ],
 };

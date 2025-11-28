@@ -1,183 +1,161 @@
-// 📍 경로: app/api/admin/devices/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/authOptions'; 
+import { query, default as pool } from '@/lib/db'; 
+import bcrypt from 'bcrypt'; 
+import { createAuditLog } from '@/lib/log'; // ⭐️ 감사 로그 임포트
 
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { AppDataSource, connectDatabase } from '@/lib/db';
-import { Wheelchair } from '@/entities/Wheelchair';
-import { DeviceAuth } from '@/entities/DeviceAuth';
-import { AdminAuditLog, AdminAuditLogAction } from '@/entities/AdminAuditLog';
-import bcrypt from 'bcrypt';
-
-/**
- * [GET] /api/admin/devices
- * (ADMIN/MASTER 전용) 등록된 모든 휠체어/기기 목록을 조회합니다.
- */
-export async function GET(request: Request) {
-  try {
-    // 1. 세션 확인 (ADMIN 또는 MASTER인지)
+// ------------------------------
+// GET: 휠체어/기기 목록 조회 (ADMIN/MASTER 전용)
+// ------------------------------
+export async function GET(req: NextRequest) {
     const session = await getServerSession(authOptions);
-    if (!session || !['ADMIN', 'MASTER'].includes(session.user.role || '')) {
-      return NextResponse.json(
-        { message: '접근 권한이 없습니다.' },
-        { status: 403 }
-      );
+    // @ts-ignore
+    if (!session || (session.user.role !== 'MASTER' && session.user.role !== 'ADMIN')) {
+        return NextResponse.json({ message: '접근 권한이 없습니다.' }, { status: 403 });
     }
-
-    // 2. DB 연결
-    await connectDatabase();
-    const WheelchairRepo = AppDataSource.getRepository(Wheelchair);
-
-    // 3. 휠체어 목록 조회 (등록한 관리자, 기기 로그인 ID 포함)
-    const devices = await WheelchairRepo.find({
-      relations: {
-        registeredBy: true, // 등록한 관리자 정보
-        deviceAuth: true, // 연결된 기기 로그인 계정
-      },
-      select: {
-        id: true,
-        deviceSerial: true,
-        modelName: true,
-        createdAt: true,
-        physicalStatus: true,
-        registeredBy: {
-          // (보안) 관리자의 민감 정보 제외
-          id: true,
-          name: true,
-          email: true,
-        },
-        deviceAuth: {
-          // (보안) 비밀번호 제외
-          id: true,
-          deviceId: true,
-        },
-      },
-      order: {
-        createdAt: 'DESC',
-      },
-    });
-
-    return NextResponse.json(devices, { status: 200 });
-  } catch (error) {
-    console.error('[/api/admin/devices] GET 오류:', error);
-    return NextResponse.json(
-      { message: '서버 내부 오류가 발생했습니다.' },
-      { status: 500 }
-    );
-  }
-}
-
-/**
- * [POST] /api/admin/devices
- * (ADMIN/MASTER 전용) 신규 휠체어 기기 및 기기 로그인 계정을 등록합니다.
- */
-export async function POST(request: Request) {
-  try {
-    // 1. 세션 확인 (ADMIN 또는 MASTER인지)
-    const session = await getServerSession(authOptions);
-    if (
-      !session ||
-      !['ADMIN', 'MASTER'].includes(session.user.role || '') ||
-      !session.user.dbUserId
-    ) {
-      return NextResponse.json(
-        { message: '접근 권한이 없습니다.' },
-        { status: 403 }
-      );
-    }
-
-    const adminId = session.user.dbUserId; // 작업을 수행하는 관리자 ID
-
-    // 2. 요청 본문(body) 파싱
-    const { deviceSerial, modelName, deviceId, password } =
-      await request.json();
-
-    // 3. 필수 정보 유효성 검사
-    if (!deviceSerial || !modelName || !deviceId || !password) {
-      return NextResponse.json(
-        { message: '기기 시리얼, 모델명, 기기 ID, 비밀번호는 필수입니다.' },
-        { status: 400 }
-      );
-    }
-
-    // 4. 비밀번호 해싱
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // 5. DB 연결 (트랜잭션 사용)
-    await connectDatabase();
-    const queryRunner = AppDataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
 
     try {
-      const DeviceAuthRepo = queryRunner.manager.getRepository(DeviceAuth);
-      const WheelchairRepo = queryRunner.manager.getRepository(Wheelchair);
-      const LogRepo = queryRunner.manager.getRepository(AdminAuditLog);
+        // ⭐️ SQL FIX: registrant_user_id를 기준으로 users 테이블을 조인하여 등록자 이름을 가져옵니다.
+        const sql = `
+            SELECT 
+                w.id, w.device_serial, w.model_name, w.status, w.created_at,
+                d.device_id,
+                u.name AS registered_by_name, 
+                u.email AS registered_by_email
+            FROM wheelchairs w
+            LEFT JOIN device_auths d ON w.id = d.wheelchair_id
+            LEFT JOIN users u ON w.registrant_user_id = u.id -- ⭐️ 등록자 FK 사용
+            ORDER BY w.created_at DESC
+        `;
+        const result = await query(sql);
 
-      // 6. 작업 1: 기기 로그인 계정(DeviceAuth) 생성
-      const newDeviceAuth = DeviceAuthRepo.create({
-        deviceId: deviceId,
-        password: hashedPassword,
-      });
-      await DeviceAuthRepo.save(newDeviceAuth);
-
-      // 7. 작업 2: 휠체어(Wheelchair) 생성 및 계정 연결
-      const newWheelchair = WheelchairRepo.create({
-        deviceSerial: deviceSerial,
-        modelName: modelName,
-        registeredById: adminId,
-        deviceAuth: newDeviceAuth, // deviceAuthId 대신 객체를 직접 넣어도 됩니다 (TypeORM이 처리)
-      });
-      await WheelchairRepo.save(newWheelchair);
-
-      newDeviceAuth.wheelchair = newWheelchair;
-      await DeviceAuthRepo.save(newDeviceAuth);
-
-      // 8. 작업 3: 감사 로그 기록
-      const logDetails = `관리자(ID: ${adminId})가 새 기기(S/N: ${deviceSerial}, ID: ${deviceId})를 등록했습니다.`;
-      const newLog = LogRepo.create({
-        actionType: AdminAuditLogAction.DEVICE_CREATE,
-        details: logDetails,
-        adminUserId: adminId,
-      });
-      await LogRepo.save(newLog);
-
-      // 9. 트랜잭션 완료
-      await queryRunner.commitTransaction();
-
-      console.log(`[API /admin/devices] ${logDetails}`);
-
-      return NextResponse.json(newWheelchair, { status: 201 }); // 201 Created
-    } catch (txError: any) {
-      // 트랜잭션 중 오류 발생 시 롤백
-      await queryRunner.rollbackTransaction();
-
-      // [오류 처리] 고유 ID 중복 오류 (deviceId 또는 deviceSerial)
-      if (txError.code === '23505') {
-        // PostgreSQL Unique Violation
-        if (txError.detail.includes('device_id')) {
-          return NextResponse.json(
-            { message: `기기 ID '${deviceId}'가 이미 존재합니다.` },
-            { status: 409 }
-          );
-        }
-        if (txError.detail.includes('device_serial')) {
-          return NextResponse.json(
-            { message: `기기 시리얼 '${deviceSerial}'이 이미 존재합니다.` },
-            { status: 409 }
-          );
-        }
-      }
-      throw txError; // 외부 catch 블록으로 에러 던지기
-    } finally {
-      // 쿼리 러너 해제
-      await queryRunner.release();
+        // Raw SQL 결과는 snake_case이며, UI에서 요구하는 registered_by_name 등을 포함합니다.
+        return NextResponse.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching device list:', error);
+        return NextResponse.json({ message: '장치 목록을 불러오는 데 실패했습니다.' }, { status: 500 });
     }
-  } catch (error) {
-    console.error('[/api/admin/devices] POST 오류:', error);
-    return NextResponse.json(
-      { message: '서버 내부 오류가 발생했습니다.' },
-      { status: 500 }
-    );
-  }
+}
+
+// ------------------------------
+// POST: 새 휠체어/기기 등록 (ADMIN/MASTER 전용)
+// ------------------------------
+export async function POST(req: NextRequest) {
+    const session = await getServerSession(authOptions);
+    // @ts-ignore
+    const userId = session?.user?.id; // 현재 로그인된 관리자 ID
+    // @ts-ignore
+    const userRole = session?.user?.role;
+    
+    // @ts-ignore
+    if (!session || (userRole !== 'MASTER' && userRole !== 'ADMIN')) {
+        return NextResponse.json({ message: '접근 권한이 없습니다.' }, { status: 403 });
+    }
+
+    const { deviceSerial, deviceId, password, modelName } = await req.json();
+
+    if (!deviceSerial || !deviceId || !password) {
+        return NextResponse.json({ message: '필수 필드가 누락되었습니다.' }, { status: 400 });
+    }
+    
+    // 비밀번호 해시
+    const hashedPassword = await bcrypt.hash(password, 10);
+    
+    const client = await pool.connect();
+    try {
+        await client.query('BEGIN'); // 트랜잭션 시작
+
+        // 1. Wheelchair 테이블에 새 장치 정보 및 등록자 ID 삽입
+        const insertWheelchairSql = `
+            INSERT INTO wheelchairs (device_serial, model_name, registrant_user_id)
+            VALUES ($1, $2, $3)
+            RETURNING id;
+        `;
+        const wheelchairResult = await client.query(insertWheelchairSql, [deviceSerial, modelName || null, userId]); 
+        const wheelchairId = wheelchairResult.rows[0].id;
+
+        // 2. DeviceAuth 테이블에 로그인 정보 삽입
+        const insertDeviceAuthSql = `
+            INSERT INTO device_auths (device_id, password, wheelchair_id)
+            VALUES ($1, $2, $3);
+        `;
+        await client.query(insertDeviceAuthSql, [deviceId, hashedPassword, wheelchairId]);
+
+        // 3. User-Wheelchair 연결 테이블에도 현재 유저 연결 (N:M 관계)
+        const insertUserWheelchairSql = `
+            INSERT INTO user_wheelchairs (user_id, wheelchair_id)
+            VALUES ($1, $2);
+        `;
+        await client.query(insertUserWheelchairSql, [userId, wheelchairId]);
+
+
+        await client.query('COMMIT'); // 트랜잭션 종료 및 저장
+        
+        // ⭐️ [LOG INJECTION] 기기 생성 로그 기록
+        createAuditLog({ 
+            userId: userId, 
+            userRole: userRole, 
+            action: 'DEVICE_REGISTER', 
+            details: { serial: deviceSerial, wcId: wheelchairId, model: modelName } 
+        });
+
+        return NextResponse.json({ message: '장치 및 계정이 성공적으로 등록되었습니다.' });
+
+    } catch (error: any) {
+        await client.query('ROLLBACK'); // 오류 발생 시 롤백
+
+        if (error.code === '23505') { // PostgreSQL unique violation code
+            return NextResponse.json({ message: '이미 존재하는 시리얼 번호 또는 기기 ID입니다.' }, { status: 409 });
+        }
+        console.error('Device registration failed:', error);
+        return NextResponse.json({ message: '장치 등록에 실패했습니다.' }, { status: 500 });
+    } finally {
+        client.release();
+    }
+}
+
+// ------------------------------
+// DELETE: 휠체어/기기 삭제 (MASTER 전용)
+// ------------------------------
+export async function DELETE(req: NextRequest) {
+    const session = await getServerSession(authOptions);
+    // @ts-ignore
+    const userRole = session?.user?.role;
+    // @ts-ignore
+    const userId = session?.user?.id;
+
+    // @ts-ignore
+    if (!session || userRole !== 'MASTER') { // MASTER만 삭제 권한을 갖는다고 가정
+        return NextResponse.json({ message: '접근 권한이 없습니다.' }, { status: 403 });
+    }
+
+    const { wheelchairId } = await req.json();
+
+    if (!wheelchairId) {
+        return NextResponse.json({ message: '휠체어 ID가 필요합니다.' }, { status: 400 });
+    }
+    
+    // Wheelchair를 삭제하면 CASCADE 옵션으로 device_auths 및 user_wheelchairs 관계도 자동으로 삭제됨
+    try {
+        const deleteSql = `DELETE FROM wheelchairs WHERE id = $1;`;
+        const result = await query(deleteSql, [wheelchairId]);
+
+        if (result.rowCount === 0) {
+            return NextResponse.json({ message: '해당 휠체어를 찾을 수 없습니다.' }, { status: 404 });
+        }
+        
+        // ⭐️ [LOG INJECTION] 기기 삭제 로그 기록
+        createAuditLog({ 
+            userId: userId, 
+            userRole: userRole, 
+            action: 'DEVICE_DELETE', 
+            details: { wheelchairId: wheelchairId } 
+        });
+
+        return NextResponse.json({ message: '장치가 성공적으로 삭제되었습니다.' });
+    } catch (error) {
+        console.error('Device deletion failed:', error);
+        return NextResponse.json({ message: '장치 삭제에 실패했습니다.' }, { status: 500 });
+    }
 }

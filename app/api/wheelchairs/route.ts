@@ -1,102 +1,85 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
-import { Repository } from 'typeorm';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import { AppDataSource, connectDatabase } from '@/lib/db';
-import { Wheelchair } from '@/entities/Wheelchair';
-import { DashboardWheelchair } from '@/types/wheelchair';
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/authOptions'; // ⭐️ 수정된 경로 사용
+import { query } from '@/lib/db'; // Raw SQL 헬퍼 임포트
 
-export async function GET(request: Request) {
-  try {
-    // --- 1. 사용자 인증 및 권한 확인 ---
+export async function GET(request: NextRequest) {
+    
+    // 1. 세션 확인 및 역할/ID 추출
     const session = await getServerSession(authOptions);
+    // @ts-ignore
+    const userId = session?.user?.id;
+    // @ts-ignore
+    const userRole = session?.user?.role;
 
-    // 🔍 [디버깅용 로그] 실제 세션에 들어있는 역할이 무엇인지 확인합니다.
-    console.log(
-      '[DEBUG /api/wheelchairs] 22현재 로그인 세션 정보:',
-      session?.user
-    );
-
-    const userRole = (session?.user?.role as string) || '';
-
-    // ‼️ [수정] 'DEVICE' 뿐만 아니라 'DEVICE_USER'도 허용하도록 변경
-    if (
-      !session ||
-      !session.user ||
-      !['ADMIN', 'MASTER', 'DEVICE', 'DEVICE_USER'].includes(userRole)
-    ) {
-      console.log(`[DEBUG] 🚨 접근 거부됨 (Role: ${userRole})`);
-      return NextResponse.json(
-        { error: 'Unauthorized: 접근 권한이 없습니다.' },
-        { status: 401 }
-      );
+    if (!userId) {
+        return NextResponse.json({ message: '인증되지 않은 사용자입니다.' }, { status: 401 });
     }
 
-    // --- 2. DB 연결 ---
-    await connectDatabase();
-    const wheelchairRepo: Repository<Wheelchair> =
-      AppDataSource.getRepository(Wheelchair);
+    try {
+        let sql: string;
+        let params: any[] = [];
+        
+        // 2. 권한별 SQL 쿼리 로직 분기 (MASTER/ADMIN은 전체, USER는 본인 휠체어만)
+        if (userRole === 'ADMIN' || userRole === 'MASTER') {
+            // ✅ CASE 1: ADMIN/MASTER -> 모든 휠체어와 연결된 사용자 정보를 조회
+            sql = `
+                SELECT 
+                    w.id, w.device_serial, w.model_name, w.status, w.created_at,
+                    u.name AS user_name, u.email AS user_email
+                FROM wheelchairs w
+                LEFT JOIN user_wheelchairs uw ON w.id = uw.wheelchair_id
+                LEFT JOIN users u ON uw.user_id = u.id
+                ORDER BY w.created_at DESC
+            `;
+            // params는 비어있음
+        } else {
+            // ✅ CASE 2: USER -> 자신이 등록한 휠체어만 조회 (N:M 조인)
+            sql = `
+                SELECT 
+                    w.id, w.device_serial, w.model_name, w.status, w.created_at,
+                    u.name AS user_name, u.email AS user_email
+                FROM wheelchairs w
+                JOIN user_wheelchairs uw ON w.id = uw.wheelchair_id
+                JOIN users u ON uw.user_id = u.id
+                WHERE uw.user_id = $1
+                ORDER BY w.created_at DESC
+            `;
+            params = [userId];
+        }
 
-    let rawWheelchairs: Wheelchair[] = [];
+        // 3. 쿼리 실행
+        const result = await query(sql, params);
 
-    // --- 3. 권한별 조회 로직 분기 ---
+        // 4. 데이터 매핑 및 그룹화
+        // Raw SQL 결과는 중복되므로, 휠체어 ID 기준으로 데이터를 그룹화합니다.
+        const wheelchairsMap = new Map();
 
-    // ✅ CASE A: 기기(DEVICE 또는 DEVICE_USER)로 로그인한 경우
-    if (userRole === 'DEVICE' || userRole === 'DEVICE_USER') {
-      const myDeviceId = session.user.dbUserId;
-      console.log(`[DEBUG] 기기 로그인 확인됨. ID: ${myDeviceId}`);
-
-      const myWheelchair = await wheelchairRepo.findOne({
-        where: {
-          // 현재 로그인한 DeviceAuth ID와 연결된 휠체어 찾기
-          deviceAuth: { id: myDeviceId },
-        },
-        relations: ['registeredBy', 'deviceAuth', 'status'],
-      });
-
-      rawWheelchairs = myWheelchair ? [myWheelchair] : [];
-      console.log(`[DEBUG] 조회된 휠체어 수: ${rawWheelchairs.length}`);
-    }
-
-    // ✅ CASE B: 관리자(ADMIN/MASTER)인 경우 -> 전체 조회
-    else {
-      rawWheelchairs = await wheelchairRepo.find({
-        relations: ['registeredBy', 'deviceAuth', 'status'],
-        order: { createdAt: 'DESC' },
-      });
-    }
-
-    // --- 4. 데이터 매핑 (TypeORM Entity -> Frontend Type) ---
-    const wheelchairsData: DashboardWheelchair[] = rawWheelchairs.map(
-      (wheelchair) => {
-        const userEntity = wheelchair.registeredBy
-          ? {
-              id: wheelchair.registeredBy.id,
-              name: wheelchair.registeredBy.name,
-              email: wheelchair.registeredBy.email,
-              nickname: wheelchair.registeredBy.name,
+        for (const row of result.rows) {
+            if (!wheelchairsMap.has(row.id)) {
+                wheelchairsMap.set(row.id, {
+                    id: row.id,
+                    device_serial: row.device_serial,
+                    model_name: row.model_name,
+                    status: row.status,
+                    created_at: row.created_at,
+                    users: [],
+                });
             }
-          : null;
+            // 사용자 정보가 있을 경우 추가 (GROUP_BY 역할)
+            if (row.user_name) {
+                wheelchairsMap.get(row.id).users.push({
+                    name: row.user_name,
+                    email: row.user_email,
+                });
+            }
+        }
 
-        return {
-          ...wheelchair,
-          deviceId: wheelchair.deviceAuth?.deviceId || null,
-          users: userEntity ? [userEntity] : [],
-        };
-      }
-    );
+        // 5. 성공 응답 (배열로 변환)
+        return NextResponse.json(Array.from(wheelchairsMap.values()));
 
-    return NextResponse.json(wheelchairsData);
-  } catch (error: unknown) {
-    let errorMessage = 'Internal Server Error';
-    if (error instanceof Error) {
-      errorMessage = error.message;
+    } catch (error) {
+        console.error('❌ Wheelchair List API Failed:', error);
+        return NextResponse.json({ message: '휠체어 목록을 불러오는 데 실패했습니다.' }, { status: 500 });
     }
-    console.error(
-      '[API /wheelchairs] GET 요청 처리 실패:',
-      errorMessage,
-      error
-    );
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
-  }
 }

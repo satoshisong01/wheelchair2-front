@@ -1,194 +1,143 @@
+// app/(protected)/user-management/page.tsx (최종 수정)
+
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { User, UserRole } from '@/entities/User';
-import styles from './page.module.css';
-import LoadingSpinner from '../../../components/ui/LoadingSpinner';
+// import styles from './management.module.css'; // ❌ 빌드 에러 방지를 위해 제거
 
-// 타입 정의 업데이트
-type AdminUserView = Pick<
-  User,
-  | 'id'
-  | 'name'
-  | 'email'
-  | 'organization'
-  | 'phoneNumber'
-  | 'role'
-  | 'createdAt'
-  | 'rejectionReason'
->;
+interface PendingUser {
+    id: string;
+    email: string;
+    name: string;
+    organization: string;
+    phoneNumber: string;
+    createdAt: string;
+}
+
+// 임시 로딩 스피너 컴포넌트
+const LoadingSpinner = () => <div style={{ padding: '20px', textAlign: 'center' }}>데이터 로딩 중...</div>;
+
 
 export default function UserManagementPage() {
-  const { data: session, status } = useSession();
-  const [users, setUsers] = useState<AdminUserView[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+    const { data: session, status } = useSession();
+    const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [rejectionReason, setRejectionReason] = useState('');
 
-  // 1. 사용자 목록 불러오기
-  const fetchUsers = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch('/api/admin/users');
-      if (!res.ok) throw new Error('사용자 목록 로딩 실패');
-      const data = await res.json();
-      setUsers(data);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
+    const fetchPendingUsers = async () => {
+        setLoading(true);
+        try {
+            const res = await fetch('/api/admin/users'); // MASTER용 GET API
+            if (res.ok) {
+                setPendingUsers(await res.json());
+            } else {
+                alert('사용자 목록을 불러오는 데 실패했습니다.');
+            }
+        } catch (error) {
+            console.error('Error fetching pending users:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    // 컴포넌트 마운트 시 데이터 로딩
+    useEffect(() => {
+        // @ts-ignore
+        if (status === 'loading' || session?.user?.role !== 'MASTER') return;
+        fetchPendingUsers();
+    }, [session, status]);
+
+    // 승인/거절 처리 핸들러
+    const handleUpdateRole = async (userId: string, role: 'USER' | 'REJECTED') => {
+        if (role === 'REJECTED' && !rejectionReason) {
+            alert('거절 사유를 입력해주세요.');
+            return;
+        }
+
+        const confirmMessage = role === 'USER' 
+            ? '정말로 승인(USER)하시겠습니까?'
+            : `정말로 거절하시겠습니까?\n사유: ${rejectionReason}`;
+
+        if (!confirm(confirmMessage)) return;
+
+        try {
+            const res = await fetch('/api/admin/users', { // MASTER용 PUT API
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId,
+                    newRole: role,
+                    rejectionReason: role === 'REJECTED' ? rejectionReason : undefined,
+                }),
+            });
+
+            if (res.ok) {
+                alert(role === 'USER' ? '승인되었습니다.' : '거절되었습니다.');
+                fetchPendingUsers(); // 목록 갱신
+                setRejectionReason(''); 
+            } else {
+                alert('업데이트 실패: ' + (await res.json()).message);
+            }
+        } catch (error) {
+            console.error('Update error:', error);
+            alert('업데이트 중 오류가 발생했습니다.');
+        }
+    };
+    
+    // 렌더링
+    // @ts-ignore
+    if (status === 'loading' || session?.user?.role !== 'MASTER') {
+         // MASTER가 아니거나 로딩 중일 때
+         if (status === 'loading') return <LoadingSpinner />;
+         return <div>접근 권한이 없습니다. (MASTER만 접근 가능)</div>;
     }
-  }, []);
 
-  useEffect(() => {
-    if (status === 'authenticated' && session.user.role === 'MASTER') {
-      fetchUsers();
-    }
-  }, [status, session, fetchUsers]);
+    if (loading) return <LoadingSpinner />;
 
-  // 2. 승인 핸들러
-  const handleApprove = async (userId: number, userName: string) => {
-    if (!confirm(`${userName}님을 관리자로 승인하시겠습니까?`)) return;
-
-    try {
-      const res = await fetch(`/api/admin/users/${userId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: 'ADMIN' }),
-      });
-
-      if (!res.ok) throw new Error('승인 실패');
-
-      alert(`${userName}님이 승인되었습니다.`);
-      fetchUsers(); // 목록 새로고침 (확실한 데이터 동기화)
-    } catch (err: any) {
-      alert(err.message);
-    }
-  };
-
-  // 3. 거절 핸들러
-  const handleReject = async (userId: number, userName: string) => {
-    // 거절 사유 입력받기 (간단히 prompt 사용, 추후 모달로 고도화 가능)
-    const reason = prompt(
-      `${userName}님의 승인을 거절하시겠습니까?\n거절 사유를 입력해주세요:`
-    );
-
-    if (reason === null) return; // 취소 누름
-    if (reason.trim() === '') {
-      alert('거절 사유를 반드시 입력해야 합니다.');
-      return;
-    }
-
-    try {
-      const res = await fetch(`/api/admin/users/${userId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ role: 'REJECTED', reason: reason }),
-      });
-
-      if (!res.ok) throw new Error('거절 처리 실패');
-
-      alert(`${userName}님의 승인이 거절되었습니다.\n(사유: ${reason})`);
-      fetchUsers(); // 목록 새로고침
-    } catch (err: any) {
-      alert(err.message);
-    }
-  };
-
-  // UI 렌더링
-  if (isLoading || status === 'loading')
     return (
-      <LoadingSpinner />
-    );
-  if (error)
-    return (
-      <div className={styles.container}>
-        <p className={styles.error}>{error}</p>
-        <button onClick={fetchUsers}>다시 시도</button>
-      </div>
-    );
-  if (status !== 'authenticated' || session.user.role !== 'MASTER') return null;
+        <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
+            <h1 style={{ fontSize: '24px', borderBottom: '2px solid #333', paddingBottom: '10px' }}>
+                승인 대기 사용자 관리 ({pendingUsers.length}명)
+            </h1>
+            
+            <input
+                type="text"
+                placeholder="거절 시 사용할 공통 사유 입력"
+                value={rejectionReason}
+                onChange={(e) => setRejectionReason(e.target.value)}
+                style={{ marginBottom: '20px', padding: '10px', width: '100%', border: '1px solid #ccc', borderRadius: '4px' }}
+            />
 
-  return (
-    <div className={styles.container}>
-      <h1 className={styles.title}>회원 관리 (MASTER)</h1>
-      <p className={styles.subtitle}>관리자 계정 승인 및 관리</p>
-
-      <div className={styles.tableContainer}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>상태</th>
-              <th>이름</th>
-              <th>소속</th>
-              <th>연락처</th>
-              <th>가입일</th>
-              <th>작업</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.length === 0 ? (
-              <tr>
-                <td colSpan={7} className={styles.emptyCell}>
-                  사용자가 없습니다.
-                </td>
-              </tr>
+            {pendingUsers.length === 0 ? (
+                <p>현재 승인 대기 중인 사용자가 없습니다.</p>
             ) : (
-              users.map((user) => (
-                <tr key={user.id}>
-                  <td>{user.id}</td>
-                  <td>
-                    <span
-                      className={`${styles.roleBadge} ${
-                        styles[user.role.toLowerCase()]
-                      }`}
-                    >
-                      {user.role}
-                    </span>
-                  </td>
-                  <td>{user.name}</td>
-                  <td>{user.organization}</td>
-                  <td>{user.phoneNumber}</td>
-                  <td>{new Date(user.createdAt).toLocaleDateString()}</td>
-                  <td>
-                    {user.role === 'PENDING' && (
-                      <div className={styles.actionButtons}>
-                        <button
-                          className={`${styles.actionButton} ${styles.approveButton}`}
-                          onClick={() =>
-                            handleApprove(user.id, user.name || '')
-                          }
-                        >
-                          승인
-                        </button>
-                        <button
-                          className={`${styles.actionButton} ${styles.rejectButton}`}
-                          onClick={() => handleReject(user.id, user.name || '')}
-                        >
-                          거절
-                        </button>
-                      </div>
-                    )}
-                    {user.role === 'REJECTED' && (
-                      <span
-                        className={styles.rejectReason}
-                        title={user.rejectionReason || ''}
-                      >
-                        거절됨 ({user.rejectionReason})
-                      </span>
-                    )}
-                    {user.role === 'ADMIN' && (
-                      <span className={styles.actionDone}>-</span>
-                    )}
-                  </td>
-                </tr>
-              ))
+                <ul style={{ listStyle: 'none', padding: 0 }}>
+                    {pendingUsers.map(user => (
+                        <li key={user.id} style={{ border: '1px solid #ddd', padding: '15px', marginBottom: '10px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div style={{ flexGrow: 1 }}>
+                                <strong style={{ fontSize: '16px' }}>{user.name}</strong> ({user.email})
+                                <p style={{ margin: '5px 0 0 0', fontSize: '14px' }}>소속: {user.organization}</p>
+                                <p style={{ margin: '0', fontSize: '14px' }}>연락처: {user.phoneNumber}</p>
+                            </div>
+                            <div style={{ marginTop: '10px' }}>
+                                <button 
+                                    onClick={() => handleUpdateRole(user.id, 'USER')}
+                                    style={{ padding: '8px 15px', marginRight: '10px', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                                >
+                                    ✅ 승인 (USER)
+                                </button>
+                                <button 
+                                    onClick={() => handleUpdateRole(user.id, 'REJECTED')}
+                                    style={{ padding: '8px 15px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                                >
+                                    ❌ 거절
+                                </button>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
             )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
+        </div>
+    );
 }

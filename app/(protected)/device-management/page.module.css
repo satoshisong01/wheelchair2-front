@@ -1,325 +1,327 @@
 .container {
-  padding: 2rem;
-  height: 100vh;
-  overflow-y: auto;
-  background-color: #f9f9f9;
+  padding: 30px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-.title {
-  font-size: 1.8rem;
-  font-weight: 700;
-  color: #333;
-  margin-bottom: 0.5rem;
+.header {
+  text-align: left;
+  margin-bottom: 30px;
 }
 
-.subtitle {
-  font-size: 1rem;
+.header h1 {
+  font-size: 28px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.header p {
   color: #666;
-  margin-bottom: 2rem;
+  margin: 0;
 }
 
-.sectionTitle {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #444;
-  margin-bottom: 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid #eee;
+.alert {
+  padding: 10px;
+  border: 1px solid;
+  border-radius: 4px;
+  margin-bottom: 15px;
 }
 
-.error {
-  color: #d93025;
-  margin-top: 0.5rem;
+.alert.success {
+  color: green;
+  border-color: green;
+  background-color: #d4edda;
 }
 
-/* --- 등록 폼 --- */
-.formContainer {
-  background-color: #ffffff;
+.alert.error {
+  color: red;
+  border-color: red;
+  background-color: #f8d7da;
+}
+
+.mainContent {
+  display: flex;
+  gap: 30px;
+}
+
+.formSection,
+.listSection {
+  padding: 20px;
+  border: 1px solid #ccc;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  padding: 1.5rem 2rem;
-  margin-bottom: 2rem;
+}
+
+.formSection {
+  flex: 1;
+  min-width: 400px;
+}
+
+.listSection {
+  flex: 2;
+}
+
+.formSection h2,
+.listSection h2 {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 15px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
 }
 
 .formGrid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr); /* 2열 그리드 */
-  gap: 1rem 1.5rem;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
 }
 
-.inputGroup {
+.formGroup {
   display: flex;
   flex-direction: column;
 }
 
-.inputGroup label {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #444;
-  margin-bottom: 0.5rem;
+.formGroup label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 5px;
 }
 
-.inputGroup input {
-  font-size: 1rem;
-  padding: 0.7rem 0.9rem;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background-color: #fcfcfc;
+.formGroup input {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.inputGroup input:disabled {
-  background-color: #eee;
-  color: #888;
+.formGroup input:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.formGroup input.error {
+  border: 2px solid red;
+}
+
+.errorText {
+  color: red;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.capsLock {
+  color: orange;
+  text-align: center;
+  margin: 10px 0;
+}
+
+.formError {
+  color: red;
+  text-align: center;
+  margin: 0;
 }
 
 .formActions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid #f0f0f0;
+  text-align: right;
+  margin-top: 15px;
 }
 
 .submitButton {
-  padding: 0.7rem 1.5rem;
-  font-size: 1rem;
-  font-weight: 600;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  background-color: #007bff; /* 파란색 */
+  padding: 10px 20px;
+  background-color: #007bff;
   color: white;
-  transition: background-color 0.2s;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 1;
+  transition: opacity 0.2s;
 }
-.submitButton:disabled {
-  background-color: #a0cfff;
+
+.submitButton:disabled,
+.submitButton:hover:disabled {
+  opacity: 0.7;
   cursor: not-allowed;
 }
-.submitButton:hover:not(:disabled) {
+
+.submitButton:not(:disabled):hover {
   background-color: #0056b3;
 }
 
-/* --- 기기 목록 테이블 --- */
-.tableContainer {
-  background-color: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
+.loadingSpinner {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+}
+
+.errorBox {
+  padding: 10px;
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
+  margin-top: 10px;
 }
 
 .table th,
 .table td {
-  padding: 12px 16px;
+  border: 1px solid #ccc;
+  padding: 8px;
   text-align: left;
-  font-size: 0.9rem;
-  border-bottom: 1px solid #eee;
-  /* (테이블 셀 줄바꿈 방지) */
-  white-space: nowrap;
 }
 
 .table th {
   background-color: #f8f9fa;
-  font-weight: 600;
-  color: #555;
+  font-weight: bold;
 }
 
-.table tbody tr:hover {
-  background-color: #fdfdfd;
-}
-
-.emptyCell {
-  text-align: center;
-  color: #999;
-  padding: 3rem;
-  font-size: 1rem;
-}
-
-/* --- 작업 버튼 --- */
-.actionButton {
-  padding: 6px 12px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.emptyState {
+  text-align: center !important;
+  color: #666;
 }
 
 .deleteButton {
-  background-color: #dc3545; /* 빨간색 */
-  color: white;
+  background: none;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
 }
+
 .deleteButton:hover {
-  background-color: #c82333;
-}
-
-/* --- 상단 알림 메시지 박스 (성공/실패) --- */
-.actionMessage {
-  padding: 1rem;
-  border-radius: 6px;
-  margin-bottom: 1.5rem;
-  font-size: 0.95rem;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-/* 성공 메시지 테마 (초록색) */
-.success {
-  background-color: #d4edda;
-  color: #155724;
-  border: 1px solid #c3e6cb;
-}
-
-/* 에러 메시지 테마 (빨간색) - 기존 .error 클래스와 함께 쓰일 때 배경색 추가 */
-.actionMessage.error {
-  background-color: #f8d7da;
-  color: #721c24;
-  border: 1px solid #f5c6cb;
-  margin-top: 0; /* 기존 .error의 margin 상쇄 */
-}
-
-/* --- 입력 폼 유효성 검사 --- */
-/* 비밀번호 불일치 시 빨간 테두리 */
-.inputError {
-  border-color: #dc3545 !important;
-  background-color: #fff8f8 !important;
-}
-
-/* 입력창 아래 작은 에러 메시지 */
-.validationMessage {
-  color: #dc3545;
-  font-size: 0.85rem;
-  margin-top: 4px;
-  display: block;
-}
-
-/* --- Caps Lock 경고 박스 --- */
-.capsLockWarning {
-  background-color: #fff3cd; /* 노란색 배경 */
-  color: #856404;
-  border: 1px solid #ffeeba;
-  padding: 0.75rem 1rem;
-  border-radius: 6px;
-  margin-bottom: 1rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  animation: slideDown 0.2s ease-out;
-}
-
-/* 애니메이션 효과 (선택사항) */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  background-color: #fee2e2;
+  color: #dc2626;
 }
 
 .modalOverlay {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5); /* 반투명 검은 배경 */
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  animation: fadeIn 0.2s ease-in-out;
 }
 
-.modalContent {
+.modal {
   background-color: white;
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  width: 400px;
-  max-width: 90%;
+  padding: 30px;
+  border-radius: 8px;
+  max-width: 400px;
+  width: 90%;
   text-align: center;
-  animation: slideUp 0.2s ease-out;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
 }
 
-.modalTitle {
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: #d93025; /* 경고색 */
-  margin-bottom: 1rem;
+.modal h3 {
+  font-size: 20px;
+  font-weight: bold;
+  color: #dc3545;
+  margin-bottom: 15px;
 }
 
-.modalText {
-  font-size: 1rem;
-  color: #555;
-  margin-bottom: 2rem;
+.modal p {
+  margin-bottom: 20px;
   line-height: 1.5;
 }
 
 .modalActions {
   display: flex;
-  justify-content: center;
-  gap: 1rem;
+  justify-content: space-around;
+  gap: 10px;
+}
+
+.cancelButton,
+.confirmButton {
+  padding: 10px 20px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
 }
 
 .cancelButton {
-  padding: 0.7rem 1.5rem;
-  border: 1px solid #ddd;
-  background-color: white;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  color: #555;
-  transition: all 0.2s;
-}
-.cancelButton:hover {
-  background-color: #f5f5f5;
+  border: 1px solid #ccc;
+  background-color: #f0f0f0;
 }
 
-.confirmDeleteButton {
-  padding: 0.7rem 1.5rem;
-  border: none;
+.cancelButton:hover {
+  background-color: #e0e0e0;
+}
+
+.confirmButton {
   background-color: #dc3545;
   color: white;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
-  transition: all 0.2s;
 }
-.confirmDeleteButton:hover {
+
+.confirmButton:hover {
   background-color: #c82333;
 }
 
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
+.unauthorized {
+  text-align: center;
+  padding: 40px;
+}
+
+.unauthorized h1 {
+  font-size: 20px;
+  margin-bottom: 10px;
+}
+
+@media (max-width: 768px) {
+  .mainContent {
+    flex-direction: column;
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  
+  .formGrid {
+    grid-template-columns: 1fr;
   }
 }
+
+/* 기존 CSS에 다음 스타일들 추가 */
+
+.input {
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.input:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.inputError {
+  border: 2px solid red !important;
+}
+
+.modalTitle {
+  font-size: 20px;
+  font-weight: bold;
+  color: #dc3545;
+  margin-bottom: 15px;
+}
+
+.modalText {
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+/* 기존 CSS 그대로 유지 */

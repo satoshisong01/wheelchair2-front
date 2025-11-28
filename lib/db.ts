@@ -1,61 +1,34 @@
-import { DataSource } from 'typeorm';
-import 'reflect-metadata';
+import { Pool } from 'pg';
 
-// 1. 엔티티 정적 임포트 (모든 엔티티를 명시적으로 가져옴)
-// 🚨 이렇게 하면 "User#medicalInfo metadata not found" 에러가 해결됩니다.
-import { User } from '@/entities/User';
-import { Wheelchair } from '@/entities/Wheelchair';
-import { WheelchairStatus } from '@/entities/WheelchairStatus';
-import { Alarm } from '@/entities/Alarm';
-import { DeviceAuth } from '@/entities/DeviceAuth';
-import { AdminAuditLog } from '@/entities/AdminAuditLog';
-import { MaintenanceLog } from '@/entities/MaintenanceLog';
-import { MedicalInfo } from '@/entities/MedicalInfo'; // 🚨 [필수] 누락되었던 엔티티 복구
+// 전역 객체에 pool 타입 정의 (TypeScript 에러 방지)
+declare global {
+  var pool: Pool | undefined;
+}
 
-// 2. DataSource 설정
-export const AppDataSource = new DataSource({
-  type: 'postgres',
-  // 로컬 .env 파일에서 DB 정보 읽기 (우선순위: DATABASE_HOST > DB_HOST > localhost)
-  host: process.env.DATABASE_HOST || process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DATABASE_PORT || process.env.DB_PORT || '5432'),
-  username:
-    process.env.DATABASE_USERNAME || process.env.DB_USERNAME || 'postgres',
-  password:
-    process.env.DATABASE_PASSWORD || process.env.DB_PASSWORD || 'postgres',
-  database: process.env.DATABASE_NAME || process.env.DB_NAME || 'postgres',
-
-  // 🚨 AWS RDS 연결 시 SSL 필수 (로컬 -> RDS 접속 시 필요)
-  ssl:
-    process.env.DATABASE_HOST?.includes('rds.amazonaws.com') ||
-    process.env.DB_HOST?.includes('rds.amazonaws.com')
-      ? { rejectUnauthorized: false }
-      : false,
-
-  // 🚨 [주의] 로컬 개발환경에서는 true로 해서 테이블을 자동 수정하게 둡니다.
-  synchronize: false,
-
-  logging: false,
-
-  // 3. 엔티티 목록 명시 (여기에 MedicalInfo가 꼭 있어야 함!)
-  entities: [
-    User,
-    Wheelchair,
-    WheelchairStatus,
-    Alarm,
-    DeviceAuth,
-    AdminAuditLog,
-    MaintenanceLog,
-    MedicalInfo,
-  ],
-  subscribers: [],
-  migrations: [],
+// 1. 커넥션 풀 생성 (싱글톤 패턴)
+// 개발 중 재시작될 때마다 연결이 늘어나는 것을 방지합니다.
+const pool = global.pool || new Pool({
+  connectionString: process.env.DATABASE_URL,
+  // AWS RDS 연결 시 SSL 설정 (기존 코드의 로직 유지)
+  ssl: process.env.DATABASE_URL?.includes('rds.amazonaws.com') 
+    ? { rejectUnauthorized: false } 
+    : undefined,
 });
 
-// 4. 연결 함수
-export const connectDatabase = async () => {
-  if (!AppDataSource.isInitialized) {
-    await AppDataSource.initialize();
-    console.log('✅ Database connected successfully');
+if (process.env.NODE_ENV !== 'production') {
+  global.pool = pool;
+}
+
+// 2. 쿼리 실행 헬퍼 함수
+// 이제 어디서든 import { query } from '@/lib/db' 하고 쓰면 됩니다.
+export const query = async (text: string, params?: any[]) => {
+  try {
+    const res = await pool.query(text, params);
+    return res;
+  } catch (error) {
+    console.error('❌ [DB Error] 쿼리 실행 실패:', error);
+    throw error;
   }
-  return AppDataSource;
 };
+
+export default pool;

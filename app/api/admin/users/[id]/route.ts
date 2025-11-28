@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/authOptions';
 import { AppDataSource, connectDatabase } from '@/lib/db';
 import { User, UserRole } from '@/entities/User';
 import { AdminAuditLog, AdminAuditLogAction } from '@/entities/AdminAuditLog';

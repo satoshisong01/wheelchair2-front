@@ -1,10 +1,8 @@
-// 📍 경로: lib/authOptions.ts
-
 import { NextAuthOptions } from "next-auth";
 import KakaoProvider from "next-auth/providers/kakao";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { query } from "@/lib/db"; 
-import { createAuditLog } from "@/lib/log"; 
+import { createAuditLog } from "@/lib/log"; // 감사 로그 유틸리티
 
 export const authOptions: NextAuthOptions = {
     providers: [
@@ -17,7 +15,7 @@ export const authOptions: NextAuthOptions = {
         }),
         
         // ------------------------------
-        // 2. 관리자용 Credentials 프로바이더 (선택 사항)
+        // 2. 기기 로그인 프로바이더 (Credentials)
         // ------------------------------
         CredentialsProvider({
             name: "Credentials",
@@ -26,9 +24,7 @@ export const authOptions: NextAuthOptions = {
                 password: { label: "Password", type: "password" }
             },
             async authorize(credentials) {
-                // 이 로직은 로컬 관리자 계정(DB에 별도 저장된)을 위한 것일 수 있습니다.
-                // 현재는 카카오 로그인을 주력으로 사용한다고 가정하고 DB 조회 로직을 생략합니다.
-                // 필요하다면 여기에 DB에서 email/password를 확인하는 코드를 추가해야 합니다.
+                // 이 로직은 현재 구현 주체가 아니므로 null 반환 (실제 코드는 device login)
                 return null; 
             }
         })
@@ -41,27 +37,27 @@ export const authOptions: NextAuthOptions = {
 
     callbacks: {
         async signIn({ user, account, profile }) {
-             if (account?.provider === 'kakao') {
+            if (account?.provider === 'kakao') {
                 const kakaoId = String((profile as any).id);
                 const email = (profile as any).kakao_account?.email || '';
                 const name = (profile as any).kakao_account?.profile?.nickname || '';
 
                 try {
-                    // 사용자 조회 및 업데이트/생성 로직
+                    // 1. 사용자 조회 (kakao_id로)
                     const userRes = await query(`
                         SELECT id, role FROM users WHERE kakao_id = $1
                     `, [kakaoId]);
 
                     if (userRes.rowCount > 0) {
-                        // 기존 사용자: 마지막 로그인 시간 업데이트
+                        // 2. [기존 사용자] last_login_at 업데이트 ⭐️ FIX: 컬럼 누락 에러 해결
                         await query(`
                             UPDATE users SET last_login_at = NOW() WHERE kakao_id = $1
                         `, [kakaoId]);
                     } else {
-                        // 신규 사용자: PENDING 상태로 가입
+                        // 3. [신규 사용자] GUEST 상태로 가입 ⭐️ last_login_at 컬럼 추가
                         await query(`
                             INSERT INTO users (kakao_id, email, name, role, created_at, last_login_at)
-                            VALUES ($1, $2, $3, 'PENDING', NOW(), NOW())
+                            VALUES ($1, $2, $3, 'GUEST', NOW(), NOW())
                         `, [kakaoId, email, name]);
                     }
                     return true;
@@ -79,7 +75,7 @@ export const authOptions: NextAuthOptions = {
                  const kakaoId = String((profile as any).id);
                  
                  const dbUserRes = await query(
-                    // ⭐️ [쿼리] 모든 필수 필드 조회
+                    // ⭐️ [쿼리] 모든 필드 조회: 토큰에 organization, phoneNumber 주입을 위함
                     `SELECT id, role, organization, phone_number, name, email FROM users WHERE kakao_id = $1`, 
                     [kakaoId]
                  );
@@ -107,11 +103,13 @@ export const authOptions: NextAuthOptions = {
                  }
             }
             
+            // Credentials 로그인 등 기타 경우 처리 (생략)
+            
             return token;
         },
 
         async session({ session, token }) {
-            // 세션 객체에 모든 토큰 정보 주입 (UI 컴포넌트에서 useSession으로 사용 가능)
+            // 세션 객체에 모든 토큰 정보 주입 (클라이언트 사용 목적)
             if (session.user) {
                 session.user.id = token.id as string;
                 session.user.role = token.role as string;
@@ -124,13 +122,8 @@ export const authOptions: NextAuthOptions = {
         },
     },
     
-    // 에러 페이지 설정
     pages: {
-        signIn: "/auth/signin", // 로그인 페이지 경로
-        error: "/auth/error", // 에러 발생 시 경로
-        // signOut: "/auth/signout", // 로그아웃 경로 (옵션)
+        signIn: "/login",
+        error: "/auth/error", 
     },
-    
-    // NextAuth 내부 디버그 설정 (개발 시 유용)
-    // debug: process.env.NODE_ENV === "development",
 };

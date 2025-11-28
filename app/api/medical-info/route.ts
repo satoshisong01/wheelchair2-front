@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 
 // 1. 인증(authOptions)과 DB 연결 로직
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from '@/lib/authOptions';
 import { AppDataSource, connectDatabase } from '@/lib/db'; // [수정 1] getEntityClass 제거
 
 // 2. 암/복호화 헬퍼 함수 import (동일)

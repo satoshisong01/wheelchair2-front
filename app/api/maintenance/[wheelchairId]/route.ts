@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import { AppDataSource, connectDatabase } from '@/lib/db';
 import { MaintenanceLog } from '@/entities/MaintenanceLog';
-import { UserWheelchair } from '@/entities/UserWheelchair';
 import { Wheelchair } from '@/entities/Wheelchair';
 
 // [수정] context 타입은 간단하게 유지

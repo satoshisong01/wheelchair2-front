@@ -1,92 +1,174 @@
-/* app/(protected)/stats/page.module.css */
-
-.pageContainer {
-  padding: 2rem;
-  background-color: #f3f4f6;
+.container {
+  padding: 30px;
+  background-color: #f5f7fa; /* 전체 배경색 (연한 회색) */
+  min-height: 100vh;
 }
 
 .pageTitle {
-  font-size: 1.875rem; /* 30px */
-  font-weight: 700;
-  margin-bottom: 1.5rem;
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 20px;
+  color: #333;
 }
 
-/* 필터 (기간, 날짜, 차량명, 검색)를 감싸는 상단 바 */
-.filterBar {
-  background-color: #ffffff;
-  padding: 1.5rem;
+/* --- 필터 박스 --- */
+.filterBox {
+  background-color: white;
+  padding: 20px;
   border-radius: 8px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  margin-bottom: 1.5rem;
   display: flex;
-  align-items: center;
-  gap: 1.5rem;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-end;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  margin-bottom: 30px;
+  border-top: 3px solid #2ea090; /* 이미지의 초록색 포인트 */
 }
 
 .filterGroup {
   display: flex;
   flex-direction: column;
+  gap: 8px;
 }
 
-.filterLabel {
-  font-size: 0.875rem; /* 14px */
-  font-weight: 500;
-  color: #6b7280;
-  margin-bottom: 0.5rem;
+.filterGroup label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
 }
 
-.selectInput,
-.dateInput,
-.textInput {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  min-width: 150px;
+.select,
+.input {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  min-width: 120px;
+}
+
+.dateInputs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .searchButton {
-  padding: 0.6rem 1.25rem;
-  background-color: #3b82f6; /* blue-500 */
+  padding: 8px 20px;
+  background-color: #007bff; /* 파란색 검색 버튼 */
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 4px;
+  font-weight: bold;
   cursor: pointer;
-  font-weight: 500;
-  align-self: flex-end; /* 라벨과 높이 맞춤 */
+  height: 38px; /* 인풋 높이와 맞춤 */
+  margin-left: auto; /* 우측 정렬 효과 */
 }
 
-/* 차트와 테이블을 감싸는 컨테이너 */
-.contentBox {
-  background-color: #ffffff;
-  padding: 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  margin-bottom: 1.5rem;
+.searchButton:hover {
+  background-color: #0056b3;
 }
 
+/* --- 차트 컨테이너 --- */
 .chartContainer {
-  height: 400px;
-  margin-top: 1rem;
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  margin-bottom: 30px;
+  height: 500px; /* 차트 높이 고정 */
+  display: flex;
+  flex-direction: column;
+}
+
+.chartHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.chartToggle button {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  background-color: white;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.chartToggle button:first-child {
+  border-radius: 4px 0 0 4px;
+}
+
+.chartToggle button:last-child {
+  border-radius: 0 4px 4px 0;
+  border-left: none;
+}
+
+.chartToggle button.activeType {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.canvasWrapper {
+  flex: 1;
+  position: relative;
+}
+
+.noData {
+  text-align: center;
+  margin-top: 100px;
+  color: #999;
+}
+
+/* --- 테이블 --- */
+.tableContainer {
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 }
 
 .tableTitle {
-  font-size: 1.25rem; /* 20px */
-  font-weight: 600;
-  margin-top: 2rem;
-  margin-bottom: 1rem;
+  font-size: 18px;
+  margin-bottom: 15px;
+  color: #333;
 }
 
-/* TODO: 배터리 사용 일지 테이블 스타일 */
-.statsTable {
+.table {
   width: 100%;
   border-collapse: collapse;
+  font-size: 14px;
 }
-.statsTable th,
-.statsTable td {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #e5e7eb;
-  text-align: left;
+
+.table th {
+  background-color: #eef4fa; /* 이미지의 연한 파란색 헤더 */
+  color: #333;
+  font-weight: 600;
+  padding: 12px;
+  text-align: center;
+  border-bottom: 2px solid #dbe8f3;
 }
-.statsTable th {
-  background-color: #f9fafb;
+
+.table td {
+  padding: 12px;
+  text-align: center;
+  border-bottom: 1px solid #eee;
+  color: #555;
+}
+
+.loadingCell,
+.emptyCell {
+  padding: 30px;
+  color: #999;
+}
+
+.datePickerWrapper {
+  /* border: 1px solid #ddd; */
+  border-radius: 4px;
+  padding: 2px 8px;
+  background-color: white;
+  height: 38px; /* select 박스와 높이 맞춤 */
+  display: flex;
+  align-items: center;
 }

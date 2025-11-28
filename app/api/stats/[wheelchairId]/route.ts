@@ -1,3 +1,5 @@
+// app/api/stats/[wheelchairId]/route.ts
+
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
@@ -8,7 +10,7 @@ import {
 
 // 1. Timestream 클라이언트 설정
 const queryClient = new TimestreamQueryClient({
-  region: process.env.AWS_REGION || 'ap-northeast-2',
+  region: process.env.AWS_REGION || 'ap-northeast-1',
   credentials: {
     accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',

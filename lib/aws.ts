@@ -2,14 +2,15 @@
  * AWS SDK 설정
  * Amazon Timestream 사용을 위한 클라이언트
  */
-
 import {
-  //WriteClient,
-  QueryClient,
+  WriteRecordsCommand,
+  _Record,
+  // 🚨 [FIX] 문제의 'QueryClient' 임포트 라인을 제거했습니다.
   TimestreamWriteClient,
-  TimestreamQueryClient,
 } from '@aws-sdk/client-timestream-write';
-import { TimestreamQueryClient as QueryClientType } from '@aws-sdk/client-timestream-query';
+
+// 🚨 [FIX] 만약 쿼리 클라이언트가 이 파일에서 필요하다면 이 줄을 추가합니다.
+import { TimestreamQueryClient } from '@aws-sdk/client-timestream-query';
 
 // AWS 리전 설정
 const region = process.env.AWS_REGION || 'ap-northeast-2';

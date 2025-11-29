@@ -15,9 +15,17 @@ interface AuditLog {
   user_id: string;
   userRole: string;
   action: string;
+  // ⭐️ [핵심 수정] details는 JSON 파싱된 객체일 수도, 문자열일 수도 있음 -> any 허용
   details: any;
+
+  // ⭐️ [핵심 수정] user_name (DB 컬럼)과 userName (로직상 변수) 둘 다 허용
+  user_name?: string;
+  userName?: string;
+
   createdAt: string;
-  device_serial?: string; // 백엔드에서 조인하여 추가된 필드
+  created_at?: string; // DB 컬럼명 대응
+  device_serial?: string;
+  [key: string]: any; // 나머지 필드 유연하게 허용
 }
 
 // ------------------------------------------------

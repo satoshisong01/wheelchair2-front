@@ -190,13 +190,14 @@ export default function DashboardPage() {
           <span>{wheelchairs.length}</span> wheelchair
         </div>
       </div>
-
       <div className={styles.topRow}>
         <div className={styles.mapSection}>
           <MapView
             wheelchairs={wheelchairs}
             selectedWheelchair={selectedWheelchair}
-            onSelectWheelchair={handleWheelchairSelect}
+            // 🚨 [FIX] MapView가 인자 1개(wheelchair)만 받으므로,
+            // handleWheelchairSelect에 null 이벤트와 휠체어 객체를 전달하도록 감싸줍니다.
+            onSelectWheelchair={(wc) => handleWheelchairSelect(null, wc)}
           />
         </div>
         <DashboardSummaryCards wheelchairs={wheelchairs} />

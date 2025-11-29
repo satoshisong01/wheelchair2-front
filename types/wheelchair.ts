@@ -1,41 +1,72 @@
 /**
- * 휠체어 기본 정보
+ * 휠체어 기본 정보 (deviceSerial -> device_serial)
  */
 export interface Wheelchair {
-  id: number;
-  deviceSerial: string;
-  modelName?: string;
-  createdAt: Date;
+  id: string; // ✅ DB UUID에 맞춰 number에서 string으로 변경
+  device_serial: string; // ✅ FIX: deviceSerial -> device_serial
+  model_name?: string | null; // ✅ DB NULL 허용
+  created_at: Date | string; // ✅ DB 타입 유연성 확보
 }
 
 /**
- * 휠체어 실시간 상태 (WheelchairStatus 테이블)
+ * 휠체어 실시간 상태 (Worker/DB 캐시 구조)
+ * ✅ FIX: batteryPercent, speed 등 CamelCase를 DB 컬럼명으로 변경
  */
 export interface WheelchairStatus {
-  wheelchairId?: number;
-  statusId?: number;
-  isConnected?: boolean;
-  lastSeen?: Date;
-  batteryPercent?: number;
-  voltage?: number;
-  current?: number;
-  latitude?: number;
-  longitude?: number;
-  altitude?: number;
-  temperature?: number;
-  humidity?: number;
-  pressure?: number;
-  speed?: number;
-  inclineAngle?: number;
-  distance?: number;
-  runtime?: number;
-  angleBack?: number;
-  angleSeat?: number;
-  footAngle?: number;
+  wheelchairId?: string; // ✅ DB UUID에 맞춰 number에서 string으로 변경
+
+  // ⭐️ [FIXED METRICS] Worker가 DB에 저장하는 실제 컬럼명 사용
+  current_battery?: number | null;
+  current_speed?: number | null;
+  current_amperage?: number | null;
+  last_seen?: Date | string | null;
+
+  // 기존 MQTT 데이터 구조 중 필요한 것만 유지
+  voltage?: number | null;
+  current?: number | null;
+  latitude?: number | null;
+  longitude?: number | null;
+
+  // (이하 나머지 필드는 DB 컬럼명에 맞춰 유지)
+  altitude?: number | null;
+  temperature?: number | null;
+  humidity?: number | null;
+  pressure?: number | null;
+  inclineAngle?: number | null;
+  distance?: number | null;
+  runtime?: number | null;
+  angleBack?: number | null;
+  angleSeat?: number | null;
+  footAngle?: number | null;
 }
 
-// (MQTTWheelchairData, Alarm, User, Role, MedicalInfo, UserWheelchair... 등)
-// (... 1인 개발자님의 다른 인터페이스들은 모두 여기에 그대로 둡니다 ...)
+// ---------------------------------------------------------------------
+
+/**
+ * 대시보드용 휠체어 데이터 타입
+ * (API가 /api/wheelchairs에서 반환하는 최종 형태)
+ */
+export interface DashboardWheelchair extends Wheelchair {
+  // ✅ FIX: status는 Worker가 쓰는 WheelchairStatus 인터페이스를 참조
+  status?: WheelchairStatus | null;
+
+  nickname?: string | null;
+
+  // ✅ FIX: 등록자 정보 (API에서 LEFT JOIN으로 가져온 데이터)
+  registrant: {
+    name: string | null;
+    email: string | null;
+  } | null;
+
+  users?: {
+    nickname: string;
+  }[];
+  // users 필드는 DB에서 N:M 관계로 오지만, 현재 API에서 사용하지 않으므로 간소화
+  // users?: { nickname: string; }[];
+}
+
+// ---------------------------------------------------------------------
+
 export interface MQTTWheelchairData {
   deviceId: string;
   imei?: string;
@@ -59,9 +90,9 @@ export interface Alarm {
   alarmTime: Date;
   wheelchair?: {
     id: number;
-    deviceSerial: string;
-    modelName?: string;
-    createdAt: Date;
+    device_serial: string; // ✅ FIX: deviceSerial -> device_serial
+    model_Name?: string;
+    created_at: Date;
   };
 }
 export interface User {
@@ -83,8 +114,8 @@ export interface Role {
 export interface MedicalInfo {
   id: number;
   userId: number;
-  disabilityGrade: string; // 암호화된 데이터
-  medicalConditions: string; // 암호화된 데이터
+  disabilityGrade: string;
+  medicalConditions: string;
   createdAt: Date;
   updatedAt?: Date;
 }
@@ -106,27 +137,6 @@ export interface StatisticsData {
   distance: number;
   runtime: number;
 }
-
-/**
- * 대시보드용 휠체어 데이터 타입
- * [‼️‼️‼️ 여기를 수정했습니다 ‼️‼️‼️]
- * (API가 /api/wheelchairs에서 반환하는 최종 형태)
- */
-export interface DashboardWheelchair extends Wheelchair {
-  // [수정 1] Wheelchair 타입을 상속받아 id, deviceSerial, modelName 등을 포함
-
-  // [수정 2] status는 휠체어에 포함된 '객체'
-  status?: WheelchairStatus | null; // [수정 3] user_wheelchair 테이블에서 가져온 '별명'
-
-  nickname?: string | null;
-
-  // ‼️ [신규 추가] 휠체어와 연결된 사용자(User 엔티티) 목록
-  // (User 인터페이스 69라인을 참고하여 'nickname' 사용)
-  users?: {
-    nickname: string;
-  }[];
-}
-
 export interface TimestreamStat {
   binned_time: string; // (d.binned_time)
   avg_voltage: number; // (d.avg_voltage)

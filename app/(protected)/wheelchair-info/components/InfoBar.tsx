@@ -1,13 +1,14 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import styles from '../page.module.css';
+import styles from '../page.module.css'; // 부모 CSS 모듈 사용
 import { DashboardWheelchair } from '@/types/wheelchair';
 
 interface InfoBarProps {
   wc: DashboardWheelchair | null;
-  allWheelchairs?: DashboardWheelchair[]; // 관리자용 전체 목록
-  onSelectWheelchair?: (id: number) => void; // 선택 핸들러
+  allWheelchairs?: DashboardWheelchair[];
+  // ⭐️ [FIX] ID 타입 변경 (number -> string)
+  onSelectWheelchair?: (id: string) => void;
   disableDropdown?: boolean;
 }
 
@@ -18,13 +19,13 @@ export const InfoBar = ({
   disableDropdown = false,
 }: InfoBarProps) => {
   const { data: session } = useSession();
+  // @ts-ignore
   const userRole = (session?.user?.role as string) || '';
 
   // 관리자 여부 (드롭다운 표시용)
   const isManager = userRole === 'ADMIN' || userRole === 'MASTER';
 
   // 기기 로그인 여부 확인 (검색창 숨김용)
-  // DEVICE_USER도 기기 사용자로 인식
   const isDevice = userRole === 'DEVICE' || userRole === 'DEVICE_USER';
 
   return (
@@ -37,7 +38,8 @@ export const InfoBar = ({
             <select
               className={styles.selectControl}
               value={wc?.id || ''}
-              onChange={(e) => onSelectWheelchair(Number(e.target.value))}
+              // ⭐️ [FIX] ID가 UUID 문자열이므로 Number() 변환 제거
+              onChange={(e) => onSelectWheelchair(e.target.value)}
               disabled={disableDropdown}
               style={{
                 opacity: disableDropdown ? 0.6 : 1,
@@ -49,7 +51,8 @@ export const InfoBar = ({
               )}
               {allWheelchairs.map((item) => (
                 <option key={item.id} value={item.id}>
-                  {item.deviceSerial} ({item.modelName})
+                  {/* ⭐️ [FIX] DB 컬럼명(snake_case)에 맞춰 수정 -> 괄호() 문제 해결 */}
+                  {item.device_serial} ({item.model_name || '모델명 없음'})
                 </option>
               ))}
             </select>
@@ -57,17 +60,18 @@ export const InfoBar = ({
         ) : (
           /* 2. 일반 사용자(기기 포함)일 경우: 텍스트로 차량명만 표시 */
           <span className={styles.infoItem}>
-            차량명: <strong>{wc?.deviceSerial || 'N/A'}</strong>
+            {/* ⭐️ [FIX] device_serial 사용 */}
+            차량명: <strong>{wc?.device_serial || 'N/A'}</strong>
           </span>
         )}
 
         {/* 공통 정보 표시 */}
         <span className={styles.infoItem}>
-          모델명: <strong>{wc?.modelName || 'N/A'}</strong>
+          {/* ⭐️ [FIX] model_name 사용 */}
+          모델명: <strong>{wc?.model_name || 'N/A'}</strong>
         </span>
 
-        {/* [삭제됨] 사용자 정보 표시는 요청하신 대로 완전히 제거했습니다. */}
-
+        {/* 환경 정보 (Worker가 데이터를 보내주면 표시됨) */}
         <span className={styles.infoItem}>
           온도: <strong>{wc?.status?.temperature?.toFixed(1) || 0}°C</strong>
         </span>
@@ -79,7 +83,7 @@ export const InfoBar = ({
         </span>
       </div>
 
-      {/* 기기 로그인(isDevice)이 아닐 때만 검색창 표시 (기기는 검색 불필요) */}
+      {/* 기기 로그인(isDevice)이 아닐 때만 검색창 표시 (기존 유지) */}
       {!isDevice && (
         <div className={styles.infoBarRight}>
           <input

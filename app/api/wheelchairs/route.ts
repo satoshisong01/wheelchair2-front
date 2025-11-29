@@ -1,85 +1,125 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/authOptions'; // ⭐️ 수정된 경로 사용
-import { query } from '@/lib/db'; // Raw SQL 헬퍼 임포트
+// app/api/wheelchairs/route.ts
+// 📝 설명: 최신 DB 구조(JOIN) 조회 + 기기 등록(POST) 기능 포함 (최종본)
 
-export async function GET(request: NextRequest) {
-    
-    // 1. 세션 확인 및 역할/ID 추출
-    const session = await getServerSession(authOptions);
-    // @ts-ignore
-    const userId = session?.user?.id;
-    // @ts-ignore
-    const userRole = session?.user?.role;
+import { NextResponse } from 'next/server';
+import { Pool } from 'pg';
+import * as dotenv from 'dotenv';
 
-    if (!userId) {
-        return NextResponse.json({ message: '인증되지 않은 사용자입니다.' }, { status: 401 });
-    }
+dotenv.config();
 
-    try {
-        let sql: string;
-        let params: any[] = [];
+// 워커와 동일한 DB 설정
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }, // RDS SSL 옵션
+});
+
+// 1. 휠체어 목록 조회 (GET)
+export async function GET() {
+  try {
+    // ⭐️ [핵심] wheelchairs(기기정보) + wheelchair_status(상태) JOIN 쿼리
+    const query = `
+      SELECT 
+        w.id, 
+        w.device_serial, 
+        w.model_name, 
+        w.created_at,
         
-        // 2. 권한별 SQL 쿼리 로직 분기 (MASTER/ADMIN은 전체, USER는 본인 휠체어만)
-        if (userRole === 'ADMIN' || userRole === 'MASTER') {
-            // ✅ CASE 1: ADMIN/MASTER -> 모든 휠체어와 연결된 사용자 정보를 조회
-            sql = `
-                SELECT 
-                    w.id, w.device_serial, w.model_name, w.status, w.created_at,
-                    u.name AS user_name, u.email AS user_email
-                FROM wheelchairs w
-                LEFT JOIN user_wheelchairs uw ON w.id = uw.wheelchair_id
-                LEFT JOIN users u ON uw.user_id = u.id
-                ORDER BY w.created_at DESC
-            `;
-            // params는 비어있음
-        } else {
-            // ✅ CASE 2: USER -> 자신이 등록한 휠체어만 조회 (N:M 조인)
-            sql = `
-                SELECT 
-                    w.id, w.device_serial, w.model_name, w.status, w.created_at,
-                    u.name AS user_name, u.email AS user_email
-                FROM wheelchairs w
-                JOIN user_wheelchairs uw ON w.id = uw.wheelchair_id
-                JOIN users u ON uw.user_id = u.id
-                WHERE uw.user_id = $1
-                ORDER BY w.created_at DESC
-            `;
-            params = [userId];
-        }
+        -- 상태 정보 (wheelchair_status 테이블에서 가져옴)
+        s.current_battery,
+        s.current_speed,
+        s.voltage,
+        s.current,
+        s.runtime,
+        s.distance,
+        s.is_connected,
+        s.last_seen,
+        
+        -- 위치 정보
+        s.latitude,
+        s.longitude,
+        
+        -- 환경/자세 정보
+        s.temperature,
+        s.humidity,
+        s.angle_back,
+        s.angle_seat,
+        s.incline_angle,
+        s.foot_angle
 
-        // 3. 쿼리 실행
-        const result = await query(sql, params);
+      FROM wheelchairs w
+      LEFT JOIN wheelchair_status s ON w.id = s.wheelchair_id
+      ORDER BY w.created_at DESC;
+    `;
 
-        // 4. 데이터 매핑 및 그룹화
-        // Raw SQL 결과는 중복되므로, 휠체어 ID 기준으로 데이터를 그룹화합니다.
-        const wheelchairsMap = new Map();
+    const result = await pool.query(query);
 
-        for (const row of result.rows) {
-            if (!wheelchairsMap.has(row.id)) {
-                wheelchairsMap.set(row.id, {
-                    id: row.id,
-                    device_serial: row.device_serial,
-                    model_name: row.model_name,
-                    status: row.status,
-                    created_at: row.created_at,
-                    users: [],
-                });
-            }
-            // 사용자 정보가 있을 경우 추가 (GROUP_BY 역할)
-            if (row.user_name) {
-                wheelchairsMap.get(row.id).users.push({
-                    name: row.user_name,
-                    email: row.user_email,
-                });
-            }
-        }
+    // 프론트엔드 인터페이스에 맞춰 데이터 매핑
+    const formattedData = result.rows.map((row) => ({
+      id: row.id,
+      device_serial: row.device_serial,
+      modelName: row.model_name,
+      createdAt: row.created_at,
 
-        // 5. 성공 응답 (배열로 변환)
-        return NextResponse.json(Array.from(wheelchairsMap.values()));
+      // status 객체로 묶어서 반환
+      status: {
+        current_battery: row.current_battery ?? 0,
+        current_speed: row.current_speed ?? 0,
+        voltage: row.voltage ?? 0,
+        current: row.current ?? 0,
+        runtime: row.runtime ?? 0,
+        distance: row.distance ?? 0,
+        is_connected: row.is_connected ?? false,
+        last_seen: row.last_seen,
 
-    } catch (error) {
-        console.error('❌ Wheelchair List API Failed:', error);
-        return NextResponse.json({ message: '휠체어 목록을 불러오는 데 실패했습니다.' }, { status: 500 });
-    }
+        // 위치 (없으면 서울 시청 기본값)
+        latitude: row.latitude ?? 37.5665,
+        longitude: row.longitude ?? 126.978,
+
+        // 기타 센서
+        temperature: row.temperature,
+        humidity: row.humidity,
+        angle_back: row.angle_back,
+        angle_seat: row.angle_seat,
+        incline_angle: row.incline_angle,
+        foot_angle: row.foot_angle,
+      },
+
+      registrant: null,
+    }));
+
+    // 캐시 방지 헤더 추가 (실시간성 보장)
+    return NextResponse.json(formattedData, {
+      headers: { 'Cache-Control': 'no-store, max-age=0' },
+    });
+  } catch (error) {
+    console.error('API Error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch wheelchairs' },
+      { status: 500 }
+    );
+  }
+}
+
+// 2. 휠체어 기기 등록 (POST) - 기존 기능 유지
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const { device_serial, model_name } = body;
+
+    // UUID 자동 생성 (gen_random_uuid)
+    const query = `
+      INSERT INTO wheelchairs (id, device_serial, model_name, created_at)
+      VALUES (gen_random_uuid(), $1, $2, NOW())
+      RETURNING *
+    `;
+
+    const result = await pool.query(query, [device_serial, model_name]);
+    return NextResponse.json(result.rows[0]);
+  } catch (error) {
+    console.error('Insert Error:', error);
+    return NextResponse.json(
+      { error: 'Failed to create wheelchair' },
+      { status: 500 }
+    );
+  }
 }

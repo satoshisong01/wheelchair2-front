@@ -1,17 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react'; // 🚨 [FIX] Suspense import 추가
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import styles from './page.module.css'; // ‼️ (CSS 파일도 새로 만듭니다)
+import styles from './page.module.css';
 import LoadingSpinner from '../../../components/ui/LoadingSpinner';
 
-export default function AdminPortalPage() {
+// ⭐️ [FIX 1] useSearchParams를 사용하는 핵심 로직을 내부 함수로 분리
+function AdminPortalContent() {
   const router = useRouter();
   const { data: session, status } = useSession();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams(); // 🚨 [FIX] 이 함수가 Suspense 내부에 있게 됨
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false); // 1. 에러 메시지 처리 (유지)
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const authError = searchParams.get('error');
@@ -20,24 +21,21 @@ export default function AdminPortalPage() {
     }
   }, [searchParams]);
 
-  // ❌ 2. [제거됨] 이미 로그인된 경우 리디렉션 로직 제거!
-  // 이 역할은 서버의 middleware.ts가 대신합니다.
-  // 여기에 router.push 로직을 두면 middleware와 충돌하여 무한 루프를 유발합니다.
   useEffect(() => {
-    // [APP-PORTAL-DEBUG] 로그인 상태 확인용 로그 추가
     if (status === 'authenticated') {
       console.log(
-        `[APP-PORTAL-DEBUG] 로그인 상태 확인됨. 역할: ${session.user.role}. (Middleware가 리다이렉트 처리 중)`
+        `[APP-PORTAL-DEBUG] 로그인 상태 확인됨. 역할: ${session.user.role}.`
       );
     }
-  }, [status, session]); // 3. 카카오 로그인 핸들러 (유지)
+  }, [status, session]);
 
   const handleKakaoLogin = () => {
     setIsLoading(true);
-    setError(null); // 성공 시 Next-Auth 콜백이 /welcome 또는 /dashboard로 리디렉션합니다.
+    setError(null);
     signIn('kakao');
-  }; // 로딩 중이거나 이미 로그인된 상태면 (미들웨어 처리 대기 중) 로딩 UI를 보여줌
+  };
 
+  // 로딩 중이거나 이미 로그인된 상태면 (미들웨어 처리 대기 중) 로딩 UI를 보여줌
   if (status === 'loading' || status === 'authenticated') {
     return <LoadingSpinner />;
   }
@@ -62,5 +60,14 @@ export default function AdminPortalPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// ⭐️ [FIX 2] Suspense Wrapper를 메인 export에 추가
+export default function AdminPortalPage() {
+  return (
+    <Suspense fallback={<LoadingSpinner />}>
+      <AdminPortalContent />
+    </Suspense>
   );
 }

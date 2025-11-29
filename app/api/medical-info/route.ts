@@ -1,89 +1,88 @@
-// app/api/medical-info/route.ts (any 타입 제거 및 리팩토링 완료)
+// app/api/medical-info/route.ts
+// 📝 설명: TypeORM 제거, Raw SQL 적용, 암호화/복호화 로직 유지
 
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
+import { Pool } from 'pg';
 
-// 1. 인증(authOptions)과 DB 연결 로직
+// 1. 인증 및 암호화 헬퍼 임포트
 import { authOptions } from '@/lib/authOptions';
-import { AppDataSource, connectDatabase } from '@/lib/db'; // [수정 1] getEntityClass 제거
-
-// 2. 암/복호화 헬퍼 함수 import (동일)
 import { encryptMedicalInfo, decryptMedicalInfo } from '@/lib/crypto';
 
-// 3. [수정 2] 엔티티를 상단에서 직접 import
-import { MedicalInfo } from '@/entities/MedicalInfo';
-import { Repository } from 'typeorm';
-
-// 4. [수정 3] 헬퍼 함수 (initializeApi, dbInitialized, let User: any...) 모두 삭제
+// 2. DB 연결 설정
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }, // RDS 연결 필수
+});
 
 /**
- * [GET] 현재 로그인한 사용자의 의료 정보를 *복호화*하여 반환
+ * [GET] 의료 정보 조회 (복호화 반환)
  */
 export async function GET(request: Request) {
   try {
-    // --- 1. 사용자 인증 ---
+    // 1. 사용자 인증
     const session = await getServerSession(authOptions);
-    if (!session || !session.user || !session.user.id) {
+    if (!session?.user?.dbUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const userId = session.user.id;
+    const userId = session.user.dbUserId;
 
-    // --- 2. DB 연결 ---
-    await connectDatabase(); // [수정 4] initializeApi() 대신 직접 호출
+    // 2. DB 조회 (Raw SQL)
+    // DB 컬럼(snake_case)을 가져옵니다.
+    const query = `
+      SELECT disability_grade, medical_conditions, emergency_contact, created_at
+      FROM medical_info
+      WHERE user_id = $1
+    `;
 
-    // --- 3. [수정 5] Repository 타입을 명시하고, 엔티티 클래스를 직접 사용
-    const medicalRepo: Repository<MedicalInfo> =
-      AppDataSource.getRepository(MedicalInfo);
+    const result = await pool.query(query, [userId]);
 
-    // --- 4. DB에서 내 의료 정보 조회
-    const medicalInfo: MedicalInfo | null = await medicalRepo.findOne({
-      where: { userId: userId },
-    });
-
-    if (!medicalInfo) {
+    if (result.rows.length === 0) {
       return NextResponse.json(null);
     }
 
-    // --- 5. [‼️ 핵심 ‼️] DB에서 가져온 데이터를 *복호화*
-    const decryptedData = decryptMedicalInfo(medicalInfo);
+    const row = result.rows[0];
 
-    // --- 6. 복호화된 데이터를 클라이언트에 반환
+    // 3. 복호화를 위해 엔티티 형태(camelCase)로 매핑
+    // (decryptMedicalInfo 함수가 객체의 속성을 읽어서 복호화한다고 가정)
+    const encryptedObject = {
+      disabilityGrade: row.disability_grade,
+      medicalConditions: row.medical_conditions,
+      emergencyContact: row.emergency_contact,
+    };
+
+    // 4. 복호화 수행
+    // (기존 헬퍼 함수가 Partial<MedicalInfo> 형태를 받는다면 호환됩니다)
+    const decryptedData = decryptMedicalInfo(encryptedObject as any);
+
     return NextResponse.json(decryptedData);
   } catch (error: unknown) {
-    // [‼️‼️ 핵심 수정 ‼️‼️] 'any' -> 'unknown'
     let errorMessage = 'Internal Server Error';
     if (error instanceof Error) {
       errorMessage = error.message;
     }
-    console.error(
-      '[API /medical-info] GET 요청 처리 실패:',
-      errorMessage,
-      error
-    );
+    console.error('[API /medical-info] GET Error:', errorMessage, error);
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
 
 /**
- * [POST] 현재 로그인한 사용자의 의료 정보를 *암호화*하여 저장/업데이트
- * (참고: 이 POST는 'welcome' 페이지의 /api/profile이 대신 처리하게 됩니다.
- * 하지만 나중에 사용자가 프로필 '수정' 페이지에서 의료 정보만 따로 바꿀 때
- * 이 API를 사용할 수 있으므로, 로직을 수정하여 남겨둡니다.)
+ * [POST] 의료 정보 저장 (암호화 저장)
  */
 export async function POST(request: Request) {
   try {
-    // --- 1. 사용자 인증 ---
+    // 1. 사용자 인증
     const session = await getServerSession(authOptions);
-    if (!session || !session.user || !session.user.id) {
+    if (!session?.user?.dbUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    const userId = session.user.id;
+    const userId = session.user.dbUserId;
 
-    // --- 2. 요청 바디(body) 파싱 ---
+    // 2. 요청 데이터 파싱
     const body = await request.json();
-    const { disabilityGrade, medicalConditions } = body;
+    const { disabilityGrade, medicalConditions, emergencyContact } = body;
 
-    // [수정 6] 'welcome' 페이지의 유효성 검사와 동일하게 변경
+    // 유효성 검사
     if (!disabilityGrade || !medicalConditions) {
       return NextResponse.json(
         { error: '장애 등급과 특이사항은 필수입니다. "없음"을 입력해주세요.' },
@@ -91,37 +90,48 @@ export async function POST(request: Request) {
       );
     }
 
-    // --- 3. [‼️ 핵심 ‼️] 데이터 암호화
+    // 3. 데이터 암호화
     const encryptedData = encryptMedicalInfo({
-      disabilityGrade: disabilityGrade,
-      medicalConditions: medicalConditions,
+      disabilityGrade,
+      medicalConditions,
+      emergencyContact, // 있는 경우 함께 암호화
     });
 
-    // --- 4. DB 연결 ---
-    await connectDatabase(); // [수정 7] initializeApi() 대신 직접 호출
-    const medicalRepo: Repository<MedicalInfo> =
-      AppDataSource.getRepository(MedicalInfo);
+    // 4. DB 저장 (Upsert: 없으면 생성, 있으면 수정)
+    // ON CONFLICT (user_id) 구문 사용
+    const query = `
+      INSERT INTO medical_info (
+        user_id, 
+        disability_grade, 
+        medical_conditions, 
+        emergency_contact, 
+        created_at, 
+        updated_at
+      )
+      VALUES ($1, $2, $3, $4, NOW(), NOW())
+      ON CONFLICT (user_id) 
+      DO UPDATE SET 
+        disability_grade = $2, 
+        medical_conditions = $3,
+        emergency_contact = $4,
+        updated_at = NOW()
+      RETURNING *
+    `;
 
-    // --- 5. DB에 암호화된 데이터 저장 (Upsert)
-    await medicalRepo.save({
-      userId: userId, // PK
-      ...encryptedData, // 암호화된 데이터
-      updatedAt: new Date(),
-    });
+    await pool.query(query, [
+      userId,
+      encryptedData.disabilityGrade,
+      encryptedData.medicalConditions,
+      encryptedData.emergencyContact || null, // 없을 경우 null
+    ]);
 
-    // --- 6. 성공 응답 ---
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
-    // [‼️‼️ 핵심 수정 ‼️‼️] 'any' -> 'unknown'
     let errorMessage = 'Internal Server Error';
     if (error instanceof Error) {
       errorMessage = error.message;
     }
-    console.error(
-      '[API /medical-info] POST 요청 처리 실패:',
-      errorMessage,
-      error
-    );
+    console.error('[API /medical-info] POST Error:', errorMessage, error);
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }

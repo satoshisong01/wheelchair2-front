@@ -78,19 +78,27 @@ export default function DashboardPage() {
       status === 'authenticated' &&
       (session?.user?.role === 'ADMIN' || session?.user?.role === 'MASTER')
     ) {
+      console.log('🔌 [Dashboard] 소켓 연결 시도:', SOCKET_SERVER_URL);
+
       const socket = io(SOCKET_SERVER_URL, {
         transports: ['websocket'],
         rejectUnauthorized: false,
         secure: true,
       });
 
+      socket.on('connect', () => {
+        console.log('✅ [Dashboard] 소켓 연결 성공!');
+      });
+
       socket.on('wheelchair_status_update', (payload: any) => {
-        setWheelchairs((prev) =>
-          prev.map((wc) => {
-            if (
-              String(wc.id) ===
-              String(payload.wheelchairId || payload.wheelchair_id)
-            ) {
+        setWheelchairs((prevList) =>
+          prevList.map((wc) => {
+            const wcId = String(wc.id);
+            const payloadId = String(
+              payload.wheelchairId || payload.wheelchair_id
+            );
+
+            if (wcId === payloadId) {
               return {
                 ...wc,
                 status: {
@@ -117,18 +125,15 @@ export default function DashboardPage() {
         );
       });
 
-      socket.on('new_alarm', (newAlarmData: any) => {
-        // 소켓 데이터가 들어올 때도 타입 맞춤
-        const formattedAlarm: Alarm = {
-          ...newAlarmData,
-          wheelchairId: String(
-            newAlarmData.wheelchairId || newAlarmData.wheelchair_id
-          ),
-        };
-        setAlarms((prev) => [formattedAlarm, ...prev]);
+      socket.on('new_alarm', (newAlarmData: Alarm) => {
+        console.log('🚨 [Dashboard] 알람 수신:', newAlarmData);
+        setAlarms((prevAlarms) => [newAlarmData, ...prevAlarms]);
       });
 
-      return () => socket.disconnect();
+      // ⭐️ [핵심 수정] 화살표 함수에 중괄호 {}를 쳐서 return void로 만듦
+      return () => {
+        socket.disconnect();
+      };
     }
   }, [status, session]);
 

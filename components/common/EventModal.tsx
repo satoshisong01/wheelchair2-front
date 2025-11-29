@@ -13,8 +13,8 @@ import styles from './EventModal.module.css';
 interface AlarmItem {
   id?: string | number;
   imei?: string;
-  wheelchairId?: string;
-  wheelchair_id?: string;
+  wheelchairId?: string | number;
+  wheelchair_id?: string | number;
   alarmType?: string;
   alarmTime?: string | Date;
   alarm_time?: string | Date;

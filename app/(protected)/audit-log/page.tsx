@@ -1,3 +1,6 @@
+// 경로: app/(protected)/audit-log/page.tsx
+// 📝 설명: Raw SQL 데이터 호환성, 날짜/시간 파싱, 상세 메시지 포맷팅 최종 완료
+
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -5,25 +8,25 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 // ⚠️ 반드시 npm install date-fns 를 실행해야 합니다.
 import { format } from 'date-fns';
+import { ko } from 'date-fns/locale/ko'; // 한국어 포맷을 위해 locale 필요
 import styles from './page.module.css';
+import LoadingSpinner from '../../../components/ui/LoadingSpinner';
 
 // ------------------------------------------------
-// 1. 데이터 타입 정의
+// 1. 데이터 타입 정의 (Raw SQL 호환성 확보)
 // ------------------------------------------------
 interface AuditLog {
   id: string;
+  admin_user_id: string; // DB 컬럼명
   user_id: string;
   userRole: string;
   action: string;
-  // ⭐️ [핵심 수정] details는 JSON 파싱된 객체일 수도, 문자열일 수도 있음 -> any 허용
-  details: any;
-
-  // ⭐️ [핵심 수정] user_name (DB 컬럼)과 userName (로직상 변수) 둘 다 허용
-  user_name?: string;
+  // ⭐️ [FIX] details 필드는 JSON 문자열로 넘어오므로 any로 정의
+  details: string | any; 
+  user_name?: string; 
   userName?: string;
-
   createdAt: string;
-  created_at?: string; // DB 컬럼명 대응
+  created_at: string; // 🚨 [FIX] Raw SQL created_at 컬럼 사용
   device_serial?: string;
   [key: string]: any; // 나머지 필드 유연하게 허용
 }
@@ -32,10 +35,12 @@ interface AuditLog {
 // 2. Helper Functions (Time Parsing, Color Coding, Message Formatting)
 // ------------------------------------------------
 
-// ⭐️ [DATE FIX] PostgreSQL 타임스탬프 문자열을 안전하게 Date 객체로 변환
+/**
+ * ⭐️ [DATE FIX] PostgreSQL 타임스탬프 문자열을 안전하게 Date 객체로 변환
+ */
 const safeParseDate = (dateString: string) => {
   if (!dateString) return null;
-  // '2025-11-28 18:09:443' 형태의 공백을 ISO 포맷 'T'로 치환하여 파싱 오류 방지
+  // DB에서 오는 '2025-11-28 18:09:443' 형태를 ISO 포맷 'T'로 치환하여 파싱 오류 방지
   const cleanString = dateString.replace(' ', 'T').split('.')[0];
   const date = new Date(cleanString);
   return isNaN(date.getTime()) ? null : date;
@@ -47,6 +52,8 @@ const LOG_CONFIG = {
   DEVICE_REGISTER: { color: '#28a745', label: '기기 등록', bg: '#e6ffed' },
   DEVICE_DELETE: { color: '#dc3545', label: '기기 삭제', bg: '#f8d7da' },
   USER_UPDATE: { color: '#ffc107', label: '사용자 수정', bg: '#fff3cd' },
+  ADMIN_APPROVE: { color: '#28a745', label: '관리자 승인', bg: '#e6ffed' },
+  ADMIN_REJECT: { color: '#dc3545', label: '관리자 거절', bg: '#f8d7da' },
   DEFAULT: { color: '#000', label: '기타 활동', bg: '#fff' },
 };
 
@@ -55,33 +62,41 @@ const getLogStyle = (action: string) => {
 };
 
 /**
- * ⭐️ [MESSAGE FIX] 로그 상세(Details) 메시지 포맷팅 함수
+ * ⭐️ [MESSAGE FIX] 로그 상세(Details) 메시지 포맷팅 함수 (시리얼 정보 표시)
  */
 const formatLogMessage = (log: AuditLog) => {
-  const details = log.details;
-  const action = log.action;
+  let details: any;
+  try {
+    // details 필드가 JSON 문자열이라면 파싱 (DB 로직에 의해 JSON으로 저장됨)
+    details = JSON.parse(log.details) || {};
+  } catch (e) {
+    details = { text: log.details || '상세 정보 없음' }; 
+  }
 
-  const serial = details?.deviceSerial;
-  const userName = details?.userName || log.user_name;
+  const action = log.action || log.action_type;
+  // 🚨 [FIX] 백엔드에서 저장한 serial 필드를 읽어옴
+  const serial = details?.serial || details?.deviceSerial; 
+  const userName = log.userName || log.user_name || 'N/A';
+  const model = details?.model || 'N/A';
+
 
   switch (action) {
     case 'DEVICE_REGISTER':
       return serial
-        ? `기기 시리얼 ${serial}이 등록되었습니다. (모델: ${
-            details.model || 'N/A'
-          })`
+        ? `기기 등록 (S/N: ${serial}, 모델: ${model})`
         : `기기 등록 (시리얼 정보 없음)`;
+        
     case 'DEVICE_DELETE':
       return serial
-        ? `기기 시리얼 ${serial}이 삭제되었습니다.`
-        : `기기 삭제 (시리얼 정보 없음)`;
+        ? `기기 삭제 (S/N: ${serial} 삭제 완료)`
+        : `기기 삭제 (시리얼 정보 없음)`; // 👈 시리얼이 없으면 여전히 이 메시지가 뜸
+
     case 'LOGIN':
-      return `사용자 ${userName || 'N/A'} 님이 로그인했습니다.`;
     case 'LOGOUT':
-      return `사용자 ${userName || 'N/A'} 님이 로그아웃했습니다.`;
+      return `사용자 ${userName} 님이 ${action.toLowerCase()}했습니다.`;
 
     default:
-      const detailStr = details ? JSON.stringify(details) : '상세 정보 없음';
+      const detailStr = details.text || JSON.stringify(details);
       return detailStr.length > 100
         ? `${detailStr.substring(0, 100)}...`
         : detailStr;
@@ -141,7 +156,7 @@ export default function AuditLogPage() {
     status === 'loading' ||
     !(session?.user?.role === 'MASTER' || session?.user?.role === 'ADMIN')
   ) {
-    return <div>접근 권한이 없거나 로딩 중입니다.</div>;
+    return <LoadingSpinner />;
   }
 
   return (
@@ -230,9 +245,9 @@ export default function AuditLogPage() {
             ) : (
               logs.map((log) => {
                 const style = getLogStyle(log.action);
-
-                // ⭐️ [DATE FIX] Invalid Date 해결: 안전하게 파싱
-                const logDate = safeParseDate(log.createdAt);
+                
+                // 🚨 [FIX] DB 컬럼명 created_at을 사용
+                const logDate = safeParseDate(log.created_at); 
 
                 return (
                   <tr key={log.id} style={{ backgroundColor: style.bg }}>
@@ -244,7 +259,7 @@ export default function AuditLogPage() {
                       }}
                     >
                       {logDate && !isNaN(logDate.getTime())
-                        ? format(logDate, 'yyyy. MM. dd. HH:mm')
+                        ? format(logDate, 'yyyy. MM. dd. HH:mm', { locale: ko })
                         : 'N/A'}
                     </td>
                     <td
@@ -257,7 +272,6 @@ export default function AuditLogPage() {
                     >
                       {style.label} ({log.action})
                     </td>
-                    {/* ⭐️ [MESSAGE FIX] 포맷팅 함수에 log 전체 객체 전달 */}
                     <td
                       style={{
                         border: '1px solid #ccc',

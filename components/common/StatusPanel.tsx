@@ -86,7 +86,7 @@ export default function StatusPanel({
         <div className={styles.infoRow}>
           <span className={styles.infoLabel}>속도:</span>
           {/* 🚨 [FIX] current_speed 사용 */}
-          <span className={styles.infoValue}>{speed.toFixed(1)} km/h</span>
+          <span className={styles.infoValue}>{speed.toFixed(1)} m/s</span>
         </div>
 
         <div className={styles.infoRow}>

@@ -8,7 +8,7 @@ import { useSearchParams } from 'next/navigation';
 import MapView from '@/components/maps/MapView';
 import AlertList from '@/components/common/AlertList';
 import styles from './page.module.css';
-import { DashboardWheelchair, Alarm } from '@/types/wheelchair'; // 🚨 기존 import 유지
+import { DashboardWheelchair, Alarm } from '@/types/wheelchair';
 import { InfoBar } from './components/InfoBar';
 import { DrivingInfoPanel } from './components/DrivingInfoPanel';
 import { WheelchairStatePanel } from './components/WheelchairStatePanel';
@@ -27,31 +27,29 @@ const CRITICAL_KEYWORDS = [
   'COLLISION',
 ];
 
-// ⭐️ [FIX] 최종 DetailData 타입 정의 (API 응답과 완벽 호환되도록 유연화)
-// 이 타입이 모든 문제를 일으키던 원인이었습니다.
+// 타입 정의 (기존 유지)
 type WheelchairDetailData = DashboardWheelchair & {
   alarms: Alarm[];
   maintenanceLogs: any[];
-  // 🚨 [핵심 FIX] status 타입이 API 응답 (snake_case)과 호환되도록 명시
   status: {
+    // ... (기존 status 필드들 유지)
     current_battery: number;
     current_speed: number;
     voltage: number;
     current: number;
     latitude: number;
     longitude: number;
-
-    // DB 컬럼명 (snake_case)
     angle_back?: number;
     angle_seat?: number;
     foot_angle?: number;
-    elevation_dist?: number; // 높이 (cm)
-    slope_fr?: number; // 전후방 경사 (A_FLRY)
-    slope_side?: number; // 측면 경사 (A_FLRX)
-
+    elevation_dist?: number;
+    slope_fr?: number;
+    slope_side?: number;
     temperature?: number;
     is_connected: boolean;
     last_seen?: string;
+    posture_time?: number;
+    operating_time?: number;
     [key: string]: any;
   };
 };
@@ -63,65 +61,67 @@ function WheelchairInfoContent() {
   const [allWheelchairs, setAllWheelchairs] = useState<DashboardWheelchair[]>(
     []
   );
-  // 🚨 detailData 상태 타입도 수정된 WheelchairDetailData를 사용
   const [detailData, setDetailData] = useState<WheelchairDetailData | null>(
     null
   );
   const [isLoading, setIsLoading] = useState(true);
 
-  // ⭐️ [수정 1] 소켓 중복 연결 방지를 위한 ref
   const socketRef = useRef<Socket | null>(null);
-
-  // ⭐️ [수정 2] 현재 보고 있는 ID를 ref로 관리
   const currentIdRef = useRef<string | null>(null);
 
   const userRole = (session?.user?.role as string) || '';
   const isManager = userRole === 'ADMIN' || userRole === 'MASTER';
 
-  // 1. 데이터 로딩 (초기 상태 설정)
+  // 1. 초기 데이터 로딩
   useEffect(() => {
     if (status !== 'authenticated') return;
 
     const fetchData = async () => {
       setIsLoading(true);
       try {
+        // 1. 휠체어 목록 가져오기
         const listRes = await fetch(`/api/wheelchairs?t=${Date.now()}`);
         if (!listRes.ok) throw new Error('목록 로딩 실패');
-
-        // 🚨 [강제 타입 캐스팅] API 응답을 임시로 any로 받은 후 detailData에 할당
         const list: any[] = await listRes.json();
         setAllWheelchairs(list);
 
+        // 2. 현재 선택된 ID 결정
         const urlId = searchParams.get('id');
         let targetId = urlId;
-
         if (!targetId && list.length > 0) {
           targetId = list[0].id;
         }
 
         if (targetId) {
-          currentIdRef.current = targetId;
+          currentIdRef.current = String(targetId); // 문자열로 통일
           const selectedWc = list.find(
-            (wc: any) => wc.id === targetId
+            (wc: any) => String(wc.id) === String(targetId)
           ) as WheelchairDetailData;
+
           if (selectedWc) {
             let fetchedAlarms: any[] = [];
             try {
+              // 3. 알람 가져오기 (API 호출)
               const alarmRes = await fetch(`/api/alarms`);
               if (alarmRes.ok) {
-                const all = await alarmRes.json();
-                // 🚨 [FIX] 알람 필터링 시 wheelchair_id / wheelchairId 둘 다 string으로 비교
-                fetchedAlarms = all.filter(
+                const allAlarms = await alarmRes.json();
+
+                // ⭐️ [핵심 수정] 알람 필터링 로직 강화
+                // API가 'wheelchairId' (camelCase)로 보내주는지, 'wheelchair_id'로 보내주는지 모두 체크
+                // 그리고 targetId와 문자열(String)로 비교
+                fetchedAlarms = allAlarms.filter(
                   (a: any) =>
-                    String(a.wheelchairId || a.wheelchair_id) === targetId
+                    String(a.wheelchairId || a.wheelchair_id) ===
+                    String(targetId)
                 );
               }
-            } catch (e) {}
+            } catch (e) {
+              console.error('알람 로딩 실패', e);
+            }
 
-            // 🚨 [FIX] detailData 할당 시, API에서 넘어온 status 객체 그대로 사용
             setDetailData({
               ...selectedWc,
-              alarms: fetchedAlarms,
+              alarms: fetchedAlarms, // 필터링된 알람 넣기
               maintenanceLogs: [],
             });
           }
@@ -137,25 +137,31 @@ function WheelchairInfoContent() {
 
   // 2. 휠체어 선택 핸들러
   const handleSelectWheelchair = async (id: string) => {
-    const selected = allWheelchairs.find((wc) => wc.id === id);
+    const selected = allWheelchairs.find((wc) => String(wc.id) === String(id));
     if (selected) {
-      currentIdRef.current = id;
-      // 🚨 [FIX] alarms 필터링 로직 수정 (최신 타입 에러 해결)
-      setDetailData((prev) =>
-        prev
-          ? ({
-              ...selected,
-              alarms: prev.alarms.filter(
-                (a: any) => String(a.wheelchairId || a.wheelchair_id) === id
-              ),
-              maintenanceLogs: [],
-            } as WheelchairDetailData) // ⭐️ [FINAL FIX] 타입스크립트에게 최종 타입을 명시적으로 알려줌
-          : null
-      );
+      currentIdRef.current = String(id);
+
+      // ⭐️ 알람 다시 가져오기 (선택 변경 시 최신 알람 반영)
+      let fetchedAlarms: any[] = [];
+      try {
+        const alarmRes = await fetch(`/api/alarms`);
+        if (alarmRes.ok) {
+          const allAlarms = await alarmRes.json();
+          fetchedAlarms = allAlarms.filter(
+            (a: any) => String(a.wheelchairId || a.wheelchair_id) === String(id)
+          );
+        }
+      } catch (e) {}
+
+      setDetailData({
+        ...selected,
+        alarms: fetchedAlarms, // ⭐️ 업데이트된 알람 설정
+        maintenanceLogs: [],
+      } as WheelchairDetailData);
     }
   };
 
-  // 3. ⭐️ [핵심 수정] 소켓 연결
+  // 3. 소켓 연결
   useEffect(() => {
     if (socketRef.current || status !== 'authenticated') return;
 
@@ -167,22 +173,14 @@ function WheelchairInfoContent() {
 
     socketRef.current = socket;
 
-    socket.on('connect', () => {
-      console.log('✅ [Socket] 서버 연결 성공!');
-    });
-
-    socket.on('connect_error', (err) => {
-      console.error('❌ [Socket] 연결 실패:', err.message);
-    });
-
-    // 데이터 수신
+    // 상태 업데이트 수신
     socket.on('wheelchair_status_update', (payload: any) => {
       const currentTargetId = currentIdRef.current;
-
+      // ID 비교 (문자열 변환 후 비교)
       if (
         currentTargetId &&
-        (payload.wheelchairId === currentTargetId ||
-          payload.wheelchair_id === currentTargetId)
+        String(payload.wheelchairId || payload.wheelchair_id) ===
+          String(currentTargetId)
       ) {
         setDetailData((prev) => {
           if (!prev) return null;
@@ -190,15 +188,10 @@ function WheelchairInfoContent() {
             ...prev,
             status: {
               ...prev.status,
-              // 🚨 [FIX] payload의 camelCase와 DB의 snake_case 호환 처리
+              // ... (기존 매핑 로직 유지)
               current_battery:
-                payload.batteryPercent ??
-                payload.current_battery ??
-                prev.status.current_battery,
-              current_speed:
-                payload.speed ??
-                payload.current_speed ??
-                prev.status.current_speed,
+                payload.batteryPercent ?? prev.status.current_battery,
+              current_speed: payload.speed ?? prev.status.current_speed,
               voltage: payload.voltage ?? prev.status.voltage,
               current: payload.current ?? prev.status.current,
               angle_back: payload.angleBack ?? prev.status.angle_back,
@@ -208,9 +201,12 @@ function WheelchairInfoContent() {
                 payload.elevationDist ?? prev.status.elevation_dist,
               slope_fr: payload.slopeFr ?? prev.status.slope_fr,
               slope_side: payload.slopeSide ?? prev.status.slope_side,
-              temperature: payload.temperature ?? prev.status.temperature,
               latitude: payload.latitude ?? prev.status.latitude,
               longitude: payload.longitude ?? prev.status.longitude,
+              temperature: payload.temperature ?? prev.status.temperature,
+              posture_time: payload.postureTime ?? prev.status.posture_time,
+              operating_time:
+                payload.operatingTime ?? prev.status.operating_time,
               is_connected: true,
               last_seen: new Date().toISOString(),
             },
@@ -219,13 +215,14 @@ function WheelchairInfoContent() {
       }
     });
 
-    // 알람 수신
+    // ⭐️ [신규 알람] 실시간 수신 처리
     socket.on('new_alarm', (newAlarm: any) => {
       const currentTargetId = currentIdRef.current;
+      // 현재 보고 있는 휠체어의 알람이면 리스트에 추가
       if (
         currentTargetId &&
-        (newAlarm.wheelchairId === currentTargetId ||
-          newAlarm.wheelchair_id === currentTargetId)
+        String(newAlarm.wheelchairId || newAlarm.wheelchair_id) ===
+          String(currentTargetId)
       ) {
         setDetailData((prev) =>
           prev ? { ...prev, alarms: [newAlarm, ...prev.alarms] } : null
@@ -241,15 +238,18 @@ function WheelchairInfoContent() {
     };
   }, [status]);
 
-  // --- UI ---
   if (status === 'loading' || isLoading) return <LoadingSpinner />;
   if (!detailData)
     return (
       <div className={styles.loadingContainer}>등록된 휠체어가 없습니다.</div>
     );
 
-  const isCritical = (alarm: any) =>
-    CRITICAL_KEYWORDS.some((k) => (alarm.alarmType || '').includes(k));
+  // ⭐️ [필터링] 알람 타입 체크 (대소문자 무시 등 안전하게)
+  const isCritical = (alarm: any) => {
+    const type = (alarm.alarmType || alarm.type || '').toUpperCase();
+    return CRITICAL_KEYWORDS.some((k) => type.includes(k));
+  };
+
   const warningEvents = detailData.alarms.filter(isCritical);
   const infoEvents = detailData.alarms.filter((a) => !isCritical(a));
 
@@ -262,6 +262,7 @@ function WheelchairInfoContent() {
         disableDropdown={!isManager}
       />
       <div className={styles.mainContent}>
+        {/* ... (이하 JSX 레이아웃은 기존과 100% 동일) ... */}
         <div className={styles.leftColumn}>
           <div className={styles.mapArea}>
             <MapView
@@ -281,7 +282,6 @@ function WheelchairInfoContent() {
             <PostureControlPanel wc={detailData} />
           </div>
           <div className={styles.eventArea}>
-            {/* 이벤트 리스트 UI 유지 */}
             <div className={`${styles.card} ${styles.eventCard}`}>
               <div className={styles.eventHeader}>
                 <h2 className={`${styles.sectionTitle} ${styles.warningTitle}`}>
@@ -289,6 +289,7 @@ function WheelchairInfoContent() {
                 </h2>
               </div>
               <div className={styles.scrollableContent}>
+                {/* ⭐️ 필터링된 경고 목록 전달 */}
                 <AlertList title="" alarms={warningEvents} />
               </div>
             </div>
@@ -299,6 +300,7 @@ function WheelchairInfoContent() {
                 </h2>
               </div>
               <div className={styles.scrollableContent}>
+                {/* ⭐️ 필터링된 알림 목록 전달 */}
                 <AlertList title="" alarms={infoEvents} />
               </div>
             </div>

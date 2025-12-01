@@ -69,7 +69,7 @@ export function WheelchairInfoModal({
           <p>
             {/* ⭐️ [FIX] current_speed 사용 */}
             <strong>속도:</strong> {speedValue?.toFixed(1) || '0'}
-            km/h
+            m/s
           </p>
         </div>
 

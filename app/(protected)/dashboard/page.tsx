@@ -29,6 +29,7 @@ type Alarm = {
   alarmTime?: Date | string;
   alarmStatus?: string; // AlertList가 허용하도록 추가
   statusId?: number; // AlertList가 허용하도록 추가
+  deviceSerial?: string;
   [key: string]: any; // 유연성 확보
 };
 

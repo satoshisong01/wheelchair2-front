@@ -22,9 +22,22 @@ export const DrivingInfoPanel = ({
   const current = status.current ?? 0;
   const speed = status.current_speed ?? status.speed ?? 0;
   const distance = status.distance ?? 0;
+  const operatingTime = status.operating_time ?? status.operatingTime ?? 0;
+  const postureTime = status.light ?? 0;
 
   // (추가 데이터가 없다면 0 또는 기본값 처리)
   const runtime = status.runtime ?? 0;
+
+  const formatTime = (minutes: number) => {
+    const num = Number(minutes);
+    if (isNaN(num)) return '0 min';
+
+    const h = Math.floor(num / 60);
+    const m = Math.floor(num % 60);
+
+    if (h > 0) return `${h} h ${m} min`;
+    return `${m} min`;
+  };
 
   return (
     <div className={styles.card}>
@@ -40,7 +53,7 @@ export const DrivingInfoPanel = ({
           {/* 주행 시간은 분 단위로 온다고 가정하고 시간/분 변환 */}
           주행 시간:{' '}
           <strong>
-            {Math.floor(runtime / 60)} h {Math.floor(runtime % 60)} min
+            주행 시간: <strong>{formatTime(runtime)}</strong>
           </strong>
         </p>
         <p>
@@ -53,14 +66,14 @@ export const DrivingInfoPanel = ({
           전류: <strong>{current} A</strong>
         </p>
         <p>
-          속도: <strong>{speed} km/h</strong>
+          속도: <strong>{speed} m/s</strong>
         </p>
         {/* 아래 두 항목은 DB에 컬럼이 없으면 하드코딩 유지하거나 0 처리 */}
         <p>
-          주행유지시간: <strong>3 min</strong>
+          자세유지시간: <strong>{formatTime(postureTime)}</strong>
         </p>
         <p>
-          휠체어 사용 시간: <strong>7 h</strong>
+          휠체어 사용 시간: <strong>{formatTime(operatingTime)}</strong>
         </p>
       </div>
     </div>

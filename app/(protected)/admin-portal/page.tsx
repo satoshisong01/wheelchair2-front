@@ -1,16 +1,15 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react'; // 🚨 [FIX] Suspense import 추가
+import { useState, useEffect, Suspense } from 'react';
 import { signIn, useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import styles from './page.module.css';
 import LoadingSpinner from '../../../components/ui/LoadingSpinner';
 
-// ⭐️ [FIX 1] useSearchParams를 사용하는 핵심 로직을 내부 함수로 분리
 function AdminPortalContent() {
   const router = useRouter();
   const { data: session, status } = useSession();
-  const searchParams = useSearchParams(); // 🚨 [FIX] 이 함수가 Suspense 내부에 있게 됨
+  const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -21,21 +20,23 @@ function AdminPortalContent() {
     }
   }, [searchParams]);
 
+  // ⭐️ [FIX] 로그인이 되어있으면 대시보드로 강제 이동 (무한 로딩 방지)
   useEffect(() => {
     if (status === 'authenticated') {
       console.log(
-        `[APP-PORTAL-DEBUG] 로그인 상태 확인됨. 역할: ${session.user.role}.`
+        `[Redirect] 이미 로그인됨 (${session?.user?.role}) -> 대시보드 이동`
       );
+      router.replace('/dashboard'); // 🚀 이 줄이 없어서 멈춰있던 것입니다.
     }
-  }, [status, session]);
+  }, [status, session, router]);
 
   const handleKakaoLogin = () => {
     setIsLoading(true);
     setError(null);
-    signIn('kakao');
+    signIn('kakao', { callbackUrl: '/dashboard' }); // 로그인 후 이동할 곳 명시
   };
 
-  // 로딩 중이거나 이미 로그인된 상태면 (미들웨어 처리 대기 중) 로딩 UI를 보여줌
+  // 로딩 중이거나 로그인 확인 중일 때만 스피너 표시
   if (status === 'loading' || status === 'authenticated') {
     return <LoadingSpinner />;
   }
@@ -63,7 +64,6 @@ function AdminPortalContent() {
   );
 }
 
-// ⭐️ [FIX 2] Suspense Wrapper를 메인 export에 추가
 export default function AdminPortalPage() {
   return (
     <Suspense fallback={<LoadingSpinner />}>

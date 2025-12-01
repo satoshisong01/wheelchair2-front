@@ -1,182 +1,120 @@
 'use client';
 
-import { signIn, useSession } from 'next-auth/react';
+import { signIn } from 'next-auth/react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import styles from './page.module.css';
 
-export default function LoginPage() {
-  const { data: session, status } = useSession();
+export default function LandingPage() {
   const router = useRouter();
-
-  // 기기 로그인용 State
   const [deviceId, setDeviceId] = useState('');
   const [password, setPassword] = useState('');
-  const [isDeviceLoading, setIsDeviceLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  // 🚨 [핵심 수정] 리다이렉트 로직
-  useEffect(() => {
-    if (status === 'authenticated') {
-      const user = session.user;
-
-      // 1. PENDING(대기) 또는 REJECTED(거절) 사용자 -> /pending 페이지로 이동
-      // (거기서 거절 사유를 확인하고 재신청할 수 있음)
-      if (user.role === 'PENDING' || user.role === 'REJECTED') {
-        console.log(`[LOGIN-PAGE] ${user.role} 상태 -> /pending 이동`);
-        router.push('/pending');
-        return;
-      }
-
-      // 2. MASTER (마스터) -> 대시보드로 직행
-      if (user.role === 'MASTER') {
-        router.push('/dashboard');
-        return;
-      }
-
-      // 3. ADMIN (관리자) -> 프로필 미완료 시 Welcome, 완료 시 대시보드
-      if (user.role === 'ADMIN') {
-        if (!user.organization || !user.phoneNumber) {
-          router.push('/welcome');
-          return;
-        }
-        router.push('/dashboard');
-        return;
-      }
-
-      // 4. DEVICE_USER (기기 사용자) -> 휠체어 정보
-      if (user.role === 'DEVICE_USER') {
-        router.push('/wheelchair-info');
-        return;
-      }
-
-      // 5. 기타 -> 대시보드 (안전 장치)
-      router.push('/dashboard');
-    } else if (status === 'unauthenticated') {
-      console.log('[LOGIN-PAGE] 로그인 대기 중');
-    }
-  }, [status, session, router]);
-
-  // 🔐 기기 로그인 핸들러
+  // 1. 기기 로그인 처리 (이건 여기서 바로 함)
   const handleDeviceLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsDeviceLoading(true);
+    setLoading(true);
 
-    const result = await signIn('credentials', {
-      redirect: false,
+    const res = await signIn('device-login', {
       deviceId,
       password,
+      redirect: false,
     });
 
-    if (result?.error) {
-      alert('로그인 실패: 아이디 또는 비밀번호를 확인하세요.');
-      setIsDeviceLoading(false);
+    if (res?.error) {
+      alert(res.error);
+      setLoading(false);
     } else {
-      console.log('기기 로그인 성공');
-      // useEffect가 리다이렉트 처리
+      // 로그인 성공 시 미들웨어가 /device-view 등으로 보냄
+      router.refresh();
     }
   };
 
-  // 로딩 화면
-  if (status === 'loading' || status === 'authenticated') {
-    return (
-      <div className={`${styles.pageWrapper} ${styles.darkPageWrapper}`}>
-        <main className={`${styles.main} ${styles.darkMain}`}>
-          <div className={styles.content}>
-            <h1 className={`${styles.title} ${styles.darkTitle}`}>
-              로그인 중...
-            </h1>
-            <p className={`${styles.description} ${styles.darkDescription}`}>
-              권한을 확인하고 있습니다...
-            </p>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  // 로그인 화면 (기기 로그인 + 관리자 로그인)
   return (
-    <div className={`${styles.pageWrapper} ${styles.darkPageWrapper}`}>
-      <main className={`${styles.main} ${styles.darkMain}`}>
-        <div className={styles.logo}>
-          <span
-            style={{ color: '#007bff', fontSize: '1.5rem', fontWeight: 700 }}
-          >
-            FIRST C&D
-          </span>
-        </div>
-
-        <div className={styles.content}>
-          <h1 className={`${styles.title} ${styles.darkTitle}`}>
-            IoT 커넥티드 모빌리티
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-100 p-4">
+      <div className="w-full max-w-md space-y-8 rounded-xl bg-white p-8 shadow-lg">
+        {/* 헤더 */}
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900">
+            전동 휠체어 관제 시스템
           </h1>
-          <p className={`${styles.description} ${styles.darkDescription}`}>
-            기기 사용자는 ID로 로그인하고,
-            <br />
-            관리자는 카카오 계정으로 로그인하세요.
+          <p className="mt-2 text-sm text-gray-600">
+            서비스 이용을 위해 로그인해주세요.
           </p>
         </div>
 
         {/* 1. 기기 로그인 폼 */}
-        <form
-          onSubmit={handleDeviceLogin}
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '10px',
-            width: '100%',
-            maxWidth: '320px',
-          }}
-        >
-          <input
-            type="text"
-            placeholder="기기 ID 입력"
-            style={{
-              padding: '12px',
-              borderRadius: '8px',
-              border: '1px solid #ddd',
-            }}
-            value={deviceId}
-            onChange={(e) => setDeviceId(e.target.value)}
-            required
-            disabled={isDeviceLoading}
-          />
-          <input
-            type="password"
-            placeholder="비밀번호"
-            style={{
-              padding: '12px',
-              borderRadius: '8px',
-              border: '1px solid #ddd',
-            }}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            disabled={isDeviceLoading}
-          />
-          <button
-            type="submit"
-            className={`${styles.primaryButton} ${styles.darkPrimaryButton}`}
-            disabled={isDeviceLoading}
-          >
-            {isDeviceLoading ? '로그인 중...' : '기기 로그인'}
-          </button>
+        <form onSubmit={handleDeviceLogin} className="mt-8 space-y-6">
+          <div className="space-y-4 rounded-md shadow-sm">
+            <div>
+              <label htmlFor="device-id" className="sr-only">
+                기기 ID
+              </label>
+              <input
+                id="device-id"
+                name="deviceId"
+                type="text"
+                required
+                className="relative block w-full rounded-t-md border-0 py-2.5 pl-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                placeholder="기기 ID (예: S/N-12345)"
+                value={deviceId}
+                onChange={(e) => setDeviceId(e.target.value)}
+              />
+            </div>
+            <div>
+              <label htmlFor="password" className="sr-only">
+                비밀번호
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                className="relative block w-full rounded-b-md border-0 py-2.5 pl-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                placeholder="비밀번호"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="group relative flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50"
+            >
+              {loading ? '로그인 중...' : '기기 로그인'}
+            </button>
+          </div>
         </form>
 
-        <div style={{ margin: '20px 0', color: '#666', fontSize: '0.9rem' }}>
-          또는
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-300" />
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="bg-white px-2 text-gray-500">관리자 / 마스터</span>
+          </div>
         </div>
 
-        {/* 2. 관리자 로그인 버튼 */}
-        <div className={styles.buttons}>
+        {/* 2. 카카오 로그인 페이지 이동 버튼 (FIX: signIn 아님, router.push 사용) */}
+        <div>
           <button
-            onClick={() => signIn('kakao')}
-            className={`${styles.secondaryButton} ${styles.darkSecondaryButton}`}
+            onClick={() => router.push('/login')}
+            className="flex w-full items-center justify-center rounded-md bg-[#FEE500] px-3 py-2.5 text-sm font-semibold text-[#000000] shadow-sm hover:bg-[#FDD835]"
           >
-            관리자(카카오) 로그인
+            <svg
+              className="mr-2 h-5 w-5"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              <path d="M12 3c5.523 0 10 4.053 10 9.053 0 2.92-1.536 5.516-3.927 7.156.241 1.25.962 4.095 1.002 4.295a.394.394 0 0 1-.397.464c-.066 0-.13-.016-.188-.047-.323-.172-3.867-2.61-4.48-3.023-.65.09-1.32.14-2.01.14-5.523 0-10-4.053-10-9.053C2 7.053 6.477 3 12 3z" />
+            </svg>
+            카카오 로그인 & 회원가입
           </button>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

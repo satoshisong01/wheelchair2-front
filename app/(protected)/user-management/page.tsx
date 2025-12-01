@@ -66,8 +66,11 @@ export default function UserManagementPage() {
       return;
     }
 
+    // ⭐️ [FIX] 메시지 조건 수정 (ADMIN으로 승인하므로)
     const confirmMsg =
-      role === 'USER' ? '승인하시겠습니까?' : '거절하시겠습니까?';
+      role === 'ADMIN'
+        ? '관리자(ADMIN)로 승인하시겠습니까?'
+        : '거절하시겠습니까?';
     if (!confirm(confirmMsg)) return;
 
     try {
@@ -93,16 +96,26 @@ export default function UserManagementPage() {
     }
   };
 
-  // 3. 상태 뱃지 렌더링 (CSS 클래스 활용)
+  // 3. 상태 뱃지 렌더링
   const renderStatusBadge = (role: string) => {
-    if (['ADMIN', 'USER', 'MASTER'].includes(role)) {
-      // CSS 모듈에 .approved 클래스가 없으면 인라인 스타일로 대체 (안전장치)
+    if (['ADMIN', 'MASTER'].includes(role)) {
       return (
         <span
           className={styles.roleBadge}
           style={{ backgroundColor: '#28a745', color: 'white' }}
         >
-          ✅ 승인된 회원 ({role})
+          ✅ 승인된 관리자 ({role})
+        </span>
+      );
+    }
+    // 기기 사용자인 경우 (혹시 목록에 뜬다면)
+    if (role === 'USER' || role === 'DEVICE_USER') {
+      return (
+        <span
+          className={styles.roleBadge}
+          style={{ backgroundColor: '#17a2b8', color: 'white' }}
+        >
+          🤖 기기 사용자 ({role})
         </span>
       );
     }
@@ -133,7 +146,7 @@ export default function UserManagementPage() {
         승인 대기 사용자 관리 ({pendingCount}명 / 총 {users.length}명)
       </h1>
 
-      {/* 거절 사유 입력창 (대기자가 있을 때만 표시해도 됨) */}
+      {/* 거절 사유 입력창 */}
       {pendingCount > 0 && (
         <div style={{ marginBottom: '20px' }}>
           <input
@@ -158,7 +171,6 @@ export default function UserManagementPage() {
           {users.map((user) => (
             <li
               key={user.id}
-              // ⭐️ 기존 인라인 스타일을 CSS 모듈과 조건부 스타일로 대체
               style={{
                 border: '1px solid #ddd',
                 padding: '15px',
@@ -179,10 +191,6 @@ export default function UserManagementPage() {
                 <strong style={{ fontSize: '16px' }}>
                   {user.name || user.nickname}
                 </strong>
-                <span
-                  style={{ fontSize: '14px', color: '#666', marginLeft: '5px' }}
-                ></span>
-
                 {user.role === 'PENDING' && (
                   <span
                     style={{
@@ -231,10 +239,10 @@ export default function UserManagementPage() {
 
               <div style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
                 {user.role === 'PENDING' ? (
-                  // ⭐️ 대기 상태: 버튼 표시
                   <>
+                    {/* ⭐️ [FIX] 승인 시 'ADMIN' 권한 부여 */}
                     <button
-                      onClick={() => handleUpdateRole(user.id, 'USER')}
+                      onClick={() => handleUpdateRole(user.id, 'ADMIN')}
                       style={{
                         padding: '8px 15px',
                         backgroundColor: '#28a745',
@@ -245,7 +253,7 @@ export default function UserManagementPage() {
                         fontWeight: 'bold',
                       }}
                     >
-                      ✅ 승인
+                      ✅ 승인 (관리자)
                     </button>
                     <button
                       onClick={() => handleUpdateRole(user.id, 'REJECTED')}
@@ -263,7 +271,6 @@ export default function UserManagementPage() {
                     </button>
                   </>
                 ) : (
-                  // ⭐️ 완료 상태: 배지 표시
                   renderStatusBadge(user.role)
                 )}
               </div>

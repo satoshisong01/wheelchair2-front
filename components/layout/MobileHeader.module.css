@@ -10,13 +10,18 @@
   top: 0;
   left: 0;
   right: 0;
-  z-index: 50; /* 사이드바보다 낮게, 컨텐츠보다 높게 */
+  z-index: 50;
 }
 
 .logo {
   font-size: 1.2rem;
   font-weight: 800;
   color: #007bff;
+}
+
+.logo a {
+  text-decoration: none;
+  color: inherit;
 }
 
 .actions {
@@ -28,11 +33,14 @@
 .iconBtn {
   background: none;
   border: none;
-  font-size: 1.2rem;
+  font-size: 1.3rem; /* 아이콘 크기 키움 */
   cursor: pointer;
   position: relative;
-  padding: 0;
+  padding: 5px; /* 터치 영역 확보 */
   color: #555;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .badge {
@@ -43,4 +51,10 @@
   height: 6px;
   background-color: red;
   border-radius: 50%;
+}
+
+/* ⭐️ [추가] 로그아웃 버튼 전용 스타일 */
+.logoutBtn {
+  /* margin-right: 5px; */
+  font-size: 1.2rem;
 }

@@ -54,7 +54,7 @@ export const TopRightPanel = ({ wc }: Props) => {
         />
         <p className={styles.drivingValue}>
           {/* 수정한 변수 사용 */}
-          <strong>{distance.toFixed(1)}</strong> km
+          <strong>{distance.toFixed(1)}</strong> m
         </p>
       </div>
     </div>

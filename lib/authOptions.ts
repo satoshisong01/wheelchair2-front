@@ -131,7 +131,7 @@ export const authOptions: NextAuthOptions = {
     },
 
     // 2. JWT 토큰 생성
-    async jwt({ token, user, account, profile }) {
+    async jwt({ token, user, account, profile, trigger, session }) {
       // [A] 최초 로그인 (기기 로그인 포함)
       if (user) {
         token.id = user.id;
@@ -140,11 +140,44 @@ export const authOptions: NextAuthOptions = {
         token.deviceId = (user as any).deviceId; // 기기 ID 저장
       }
 
+      // ⭐️ [C] 세션 업데이트 요청 (update() 호출 시 실행) -> 이 부분이 누락되었음!
+     if (trigger === "update") {
+        try {
+          // 🚨 [핵심 수정] token.sub 대신 token.id 사용!
+          // token.sub은 카카오 로그인 시 카카오 ID(숫자)일 수 있음 -> DB 에러 원인
+          // token.id는 우리가 signIn 콜백에서 직접 넣은 UUID임 -> 안전함
+          const userId = token.id; 
+
+          if (!userId) {
+             console.error("❌ [NextAuth] 업데이트 실패: 사용자 ID(UUID)가 토큰에 없습니다.");
+             return token;
+          }
+
+          // DB에서 최신 정보를 다시 조회 (phone_number -> phone 수정 포함)
+          const sql = `SELECT role, name, organization, phone_number FROM users WHERE id = $1`;
+          const result = await query(sql, [userId]);
+          
+          if (result.rows.length > 0) {
+            const freshUser = result.rows[0];
+            
+            // 토큰 정보 갱신
+            token.role = freshUser.role;
+            token.name = freshUser.name;
+            token.organization = freshUser.organization;
+            token.phoneNumber = freshUser.phone_number; // DB 컬럼(phone) 사용
+            
+            console.log(`✅ [NextAuth] 토큰 갱신 성공: ${token.role} (UUID: ${userId})`);
+          }
+        } catch (e) {
+          console.error("❌ [NextAuth] 토큰 갱신 중 DB 에러:", e);
+        }
+      }
+
       // [B] 카카오 유저 DB 동기화 (기기 로그인은 pass)
       // wheelchairId가 없다는 건 관리자/유저라는 뜻이므로 DB 조회
       if (
         (account?.provider === 'kakao' || token.email) &&
-        !token.wheelchairId
+        !token.wheelchairId && trigger !== "update"
       ) {
         let sql = '';
         let params: any[] = [];

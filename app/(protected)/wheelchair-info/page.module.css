@@ -838,4 +838,26 @@
     color: #fff !important; /* 헤더는 흰색 유지 */
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); /* 헤더 글씨에 그림자 줘서 선명하게 */
   }
+
+  .batteryTitle,
+  .drivingTitle {
+    font-weight: 800;
+    font-size: 0.95rem;
+  }
+
+  /* 2. 숫자 값 (95%, 0.0km) 완전 검정색으로 */
+  .batteryValue,
+  .drivingValue {
+    color: #000 !important;
+    font-weight: 900; /* 아주 두껍게 */
+  }
+
+  /* 3. [핵심] 흐릿한 날짜/시간 텍스트 진하게 변경 */
+  .batteryTimestamp {
+    color: #333 !important; /* 옅은 회색(#ccc) -> 진한 회색(#333) */
+    font-weight: 600; /* 두께감 추가 */
+    font-size: 0.75rem; /* 폰트 크기 살짝 키움 */
+    opacity: 0.8; /* 너무 새카맣지 않게 살짝 조절 (선택사항) */
+    margin-top: 5px;
+  }
 }

@@ -2,15 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react'; // ⭐️ signOut 추가
 import styles from './Sidebar.module.css';
 
 export default function Sidebar() {
   const { data: session, status } = useSession();
   const pathname = usePathname();
 
-  // ⭐️ [FIX 1] 로딩 중일 때 '사용자' 화면이 깜빡이는 현상 방지
-  // 세션 정보를 불러오는 중이면 사이드바 내용이나 전체를 숨깁니다.
+  // 로딩 중일 때 깜빡임 방지
   if (status === 'loading') {
     return (
       <nav className={styles.sidebar}>
@@ -38,20 +37,21 @@ export default function Sidebar() {
     }
   }
 
-  // ⭐️ [FIX 2] 강력한 커스텀 로그아웃
+  // ⭐️ [수정] Next-Auth 공식 로그아웃 함수 사용
   const handleLogout = async () => {
-    try {
-      // 1. 우리가 만든 쿠키 삭제 API 호출
-      await fetch('/api/logout', { method: 'POST' });
+    if (!confirm('정말 로그아웃 하시겠습니까?')) return;
 
-      // 2. 클라이언트 스토리지 청소
+    try {
+      // 1. 클라이언트 스토리지 청소 (유지)
       localStorage.clear();
       sessionStorage.clear();
 
-      // 3. 페이지 완전 새로고침하며 이동 (캐시 무시)
-      window.location.href = '/';
+      // 2. [핵심] Next-Auth 공식 로그아웃 (서버/로컬 모두 작동)
+      // - HTTPS 환경의 보안 쿠키까지 완벽하게 삭제합니다.
+      await signOut({ callbackUrl: '/', redirect: true });
     } catch (error) {
       console.error('Logout failed', error);
+      // 실패 시 강제 이동
       window.location.href = '/';
     }
   };

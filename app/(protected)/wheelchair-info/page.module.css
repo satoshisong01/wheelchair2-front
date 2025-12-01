@@ -573,87 +573,269 @@
 
 /* 🔥🔥🔥 [반응형 추가] 모바일 스타일 (768px 미만) 🔥🔥🔥 */
 @media (max-width: 768px) {
-  /* 1. 전체 컨테이너: 패딩 추가 (하단 탭바 공간) & 스크롤 허용 */
+  /* --- [기본 레이아웃 수정] --- */
+  /* 1. 전체 컨테이너: 패딩 추가 & 스크롤 허용 */
   .container {
-    padding: 1rem;
+    padding: 10px; /* 패딩 조금 더 축소 */
     height: auto;
     min-height: 100vh;
     overflow-y: auto;
-    padding-bottom: 90px; /* BottomNavigation 가리지 않게 */
+    padding-bottom: 90px; /* BottomNavigation 공간 확보 */
   }
 
-  /* 2. InfoBar (헤더): 정보가 많으니 세로로 배치 */
+  /* 2. InfoBar (헤더) */
   .infoBar {
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
-    height: auto;
+    padding: 1rem;
   }
   .infoBarLeft {
     display: grid;
-    grid-template-columns: 1fr 1fr; /* 2열로 정보 나열 */
-    gap: 10px;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px; /* 간격 축소 */
     width: 100%;
+    font-size: 0.85rem; /* 폰트 축소 */
   }
   .infoBarRight {
     width: 100%;
-    justify-content: flex-end;
+    justify-content: space-between; /* 검색창과 버튼 양끝 정렬 */
+  }
+  .searchInput {
+    width: auto;
+    flex: 1; /* 검색창 늘리기 */
   }
 
   /* 3. 메인 콘텐츠 (Grid -> Column Stack) */
   .mainContent {
-    flex-direction: column; /* 좌/우 컬럼을 위/아래로 */
+    flex-direction: column;
     height: auto;
     overflow: visible;
+    gap: 10px;
   }
 
-  /* 4. 좌/우 컬럼 너비 100% & 높이 자동 */
+  /* 4. 컬럼 및 패널 너비/높이 조정 */
   .leftColumn,
-  .rightColumn {
+  .rightColumn,
+  .bottomArea,
+  .rightTop {
     width: 100%;
     flex: none;
-    overflow: visible;
+    height: auto;
+    flex-direction: column; /* 내부 요소들도 세로로 */
+    gap: 10px;
   }
 
-  /* 5. 지도 높이 고정 (모바일에서 너무 크지 않게) */
   .mapArea {
-    height: 300px;
+    height: 250px; /* 지도 높이 약간 축소 */
     flex: none;
   }
 
-  /* 6. 하단 패널 (운행정보, 휠체어 상태) 세로 배치 */
-  .bottomArea {
+  /* ‼️ 카드 공통 너비 100% 설정 (삐져나감 방지 핵심) */
+  .drivingInfoCard,
+  .wheelchairStateCard,
+  .topRightPanel,
+  .postureCard,
+  .eventArea {
+    width: 100% !important; /* 강제 적용 */
+    flex: none;
+    min-width: 0;
+  }
+
+  .topRightPanel {
+    flex-direction: row; /* 배터리/주행거리는 가로 유지 */
+    height: auto;
+  }
+
+  /* 카드 내부 패딩 축소 */
+  .card {
+    padding: 1rem;
+  }
+
+  /* --- [컴포넌트별 세부 수정] --- */
+
+  /* 🔧 [수정 1] 휠체어 상태 패널 */
+  .wheelchairStateCard .stateContainer {
+    gap: 0.8rem; /* 행 간격 축소 */
+    margin-top: 0.8rem;
+  }
+  .wheelchairStateCard .stateRow {
+    gap: 5px; /* 라벨-아이콘 간격 축소 */
+  }
+  .wheelchairStateCard .stateRowLabel {
+    width: 30px; /* 라벨 너비 축소 */
+    font-size: 0.8rem;
+    padding-right: 2px;
+  }
+  .wheelchairStateCard .iconFlexContainer {
+    gap: 5px; /* 아이콘 박스 사이 간격 축소 */
+  }
+  .wheelchairStateCard .stateIconBox {
+    padding: 8px 4px; /* 아이콘 박스 내부 패딩 축소 */
+    height: 100px; /* 높이 약간 축소 */
+  }
+  .wheelchairStateCard .iconBackground {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 5px; /* 아이콘 배경 축소 */
+  }
+  .wheelchairStateCard .stateLabel {
+    font-size: 0.85rem;
+    margin-bottom: 5px; /* 라벨 폰트/여백 축소 */
+  }
+
+  /* 🔧 [수정 2] 자세 조절 패널 */
+  .postureGrid {
+    gap: 0.8rem; /* 그리드 간격 축소 */
+  }
+  .postureItem {
+    padding: 0.6rem; /* 아이템 내부 패딩 축소 */
+  }
+  .postureTitle {
+    font-size: 0.8rem; /* 타이틀 폰트 축소 */
+    margin-bottom: 5px;
+  }
+  .postureImageWrapper {
+    width: 35px;
+    height: 35px; /* 이미지 크기 축소 */
+  }
+  .currentValue {
+    font-size: 1rem; /* 현재값 폰트 약간 축소 */
+  }
+  .maxValue {
+    font-size: 0.7rem; /* 최대값 폰트 축소 */
+  }
+  /* ‼️ 날짜/시간 폰트 대폭 축소 및 줄바꿈 허용 */
+  .postureTimestamp {
+    font-size: 0.65rem;
+    white-space: normal; /* 필요시 줄바꿈 */
+    line-height: 1.2;
+    margin-top: 3px;
+  }
+
+  /* 기타: 이벤트 목록 높이 */
+  .eventArea {
     flex-direction: column;
     height: auto;
   }
-  .drivingInfoCard,
-  .wheelchairStateCard {
-    width: 100%;
-    flex: none;
-    min-width: 0; /* min-width 해제 */
-  }
-
-  /* 7. 우측 상단 패널 (배터리/자세) 재배치 */
-  .rightTop {
-    flex-direction: column; /* 가로(Row) -> 세로(Column) */
-    height: auto;
-  }
-  .topRightPanel {
-    width: 100%;
-    height: auto;
-    flex-direction: row; /* 배터리/주행거리는 가로로 나란히 */
-  }
-  .postureCard {
-    width: 100%;
-  }
-
-  /* 8. 이벤트 목록 */
-  .eventArea {
-    flex-direction: column; /* 경고/알림 세로 배치 */
-    height: auto;
-    flex: none;
-  }
   .eventCard {
-    height: 300px; /* 높이 고정 */
+    height: 250px;
+    min-height: auto;
+  }
+
+  .infoBar {
+    flex-direction: column;
+    align-items: stretch; /* 가로 꽉 채우기 */
+    gap: 15px;
+    padding: 1.2rem;
+    height: auto;
+  }
+
+  /* 왼쪽 정보 영역 (그리드 배치) */
+  .infoBarLeft {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* 2열로 나눔 */
+    gap: 12px 10px; /* 세로 가로 간격 */
+    width: 100%;
+    align-items: center;
+  }
+
+  /* 개별 정보 아이템 */
+  .infoItem {
+    font-size: 0.9rem; /* 폰트 살짝 조정 */
+    color: #e0f2fe; /* 텍스트 색상 (밝은 하늘색) */
+    display: flex;
+    justify-content: space-between; /* 라벨과 값을 양끝 정렬 */
+    background-color: rgba(255, 255, 255, 0.1); /* 살짝 배경 깔아서 구분감 */
+    padding: 6px 10px;
+    border-radius: 6px;
+  }
+
+  .infoItem strong {
+    color: #fff;
+    font-weight: 700;
+    margin-left: 5px;
+  }
+
+  /* 관리자 차량 선택기 (전체 너비 사용) */
+  .adminSelector {
+    grid-column: 1 / -1; /* 2열 전체 차지 */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: rgba(255, 255, 255, 0.15);
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-bottom: 5px;
+  }
+
+  .adminSelector span {
+    font-weight: 600;
+    color: #fff;
+    font-size: 0.95rem;
+  }
+
+  .selectControl {
+    background-color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 10px;
+    font-size: 0.9rem;
+    color: #333;
+    flex: 1;
+    margin-left: 10px;
+    max-width: 200px; /* 너무 길어지지 않게 */
+  }
+
+  /* 오른쪽 검색창 영역 */
+  .infoBarRight {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+    margin-top: 5px;
+  }
+
+  .searchInput {
+    flex: 1; /* 검색창이 남은 공간 차지 */
+    padding: 10px;
+    font-size: 0.95rem;
+    background-color: rgba(255, 255, 255, 0.9);
+    border: none;
+  }
+
+  .searchButton {
+    background-color: rgba(255, 255, 255, 0.2);
+    padding: 0 15px;
+    font-size: 1.2rem;
+  }
+
+  .drivingGrid p {
+    color: #111 !important; /* 옅은 회색(#666) -> 진한 검정(#111)으로 변경 */
+    font-weight: 600; /* 글자 두께를 약간 두껍게 */
+    font-size: 0.95rem; /* 글자 크기도 미세하게 키움 */
+  }
+
+  .drivingGrid strong {
+    color: #000 !important; /* 값은 완전 블랙 */
+    font-weight: 800; /* 값은 더 두껍게 */
+  }
+
+  /* 🔧 [추가] 휠체어 상태 / 경고 / 알림 텍스트도 진하게 */
+  .stateLabel {
+    color: #222 !important;
+    font-weight: 600;
+  }
+
+  /* 자세 조절 등 다른 카드 텍스트도 진하게 */
+  .currentValue,
+  .maxValue,
+  .postureTitle {
+    color: #111 !important;
+  }
+
+  /* 회색으로 죽어보이는 라벨들 전부 진하게 */
+  .infoItem {
+    color: #fff !important; /* 헤더는 흰색 유지 */
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2); /* 헤더 글씨에 그림자 줘서 선명하게 */
   }
 }

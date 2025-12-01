@@ -12,18 +12,18 @@ export function WheelchairInfoModal({
 }: {
   isOpen: boolean;
   onClose: () => void;
-  wheelchair: DashboardWheelchair | null;
+  wheelchair: DashboardWheelchair | any | null; // 🚨 any 허용 (유연한 접근)
   onViewDetails: () => void;
 }) {
   if (!isOpen || !wheelchair) return null;
 
-  // ⭐️ [FIX] Worker가 DB에 저장하는 snake_case 필드에 대한 안전한 접근
-  // @ts-ignore
-  const batteryValue = wheelchair.status?.current_battery;
-  // @ts-ignore
-  const speedValue = wheelchair.status?.current_speed;
-  // @ts-ignore
-  const modelName = wheelchair.model_name; // DB에서 snake_case로 오므로 모델명도 확인 필요
+  const modelName =
+    wheelchair.modelName || wheelchair.model_name || '정보 없음';
+
+  // 상태 정보 안전하게 가져오기
+  const status = wheelchair.status || {};
+  const batteryValue = status.current_battery ?? status.batteryPercent ?? 0;
+  const speedValue = status.current_speed ?? status.speed ?? 0;
 
   return (
     // 모달 배경 (Backdrop)
@@ -36,7 +36,9 @@ export function WheelchairInfoModal({
         <div className={styles.modalHeader}>
           <h3>
             {/* ⭐️ [FIX] ID 대신 시리얼 넘버를 크게 표시 */}
-            {wheelchair.device_serial}
+            {wheelchair.deviceSerial ||
+              wheelchair.device_serial ||
+              'Unknown Device'}
           </h3>
           {/* ‼️ 디버깅용 ID 노출 (요청에 따라 숨김) */}
           <span style={{ fontSize: '10px', color: '#999' }}>
@@ -50,7 +52,7 @@ export function WheelchairInfoModal({
 
         <div className={styles.modalBody}>
           <p>
-            <strong>모델명:</strong> {modelName || '정보 없음'}
+            <strong>모델명:</strong> {modelName}
           </p>
 
           <p>

@@ -312,3 +312,77 @@
 .modalViewDetailsButton:hover {
   background-color: #0056b3;
 }
+
+/* 🔥🔥🔥 [반응형 추가] 모바일 스타일 (768px 미만) 🔥🔥🔥 */
+@media (max-width: 768px) {
+  /* 1. 전체 컨테이너: 패딩 줄이고 스크롤 허용 (모바일은 세로로 기니까) */
+  .container {
+    padding: 1rem;
+    gap: 1rem;
+    height: auto; /* 높이 제한 해제 */
+    overflow-y: auto; /* 전체 페이지 스크롤 */
+    /* 하단 탭바 가리지 않게 패딩 추가 (layout에서 처리했지만 안전하게) */
+    padding-bottom: 80px;
+  }
+
+  /* 2. 헤더: 폰트 크기 조정 */
+  .headerTitle {
+    font-size: 1.2rem;
+  }
+  .headerCount {
+    font-size: 1rem;
+  }
+  .headerCount span {
+    font-size: 1.2rem;
+  }
+
+  /* 3. [핵심] 상단 영역 (TopRow) 재배치 */
+  .topRow {
+    flex-direction: column-reverse; /* ⭐️ 지도(좌)와 카드(우) 순서 뒤집기 -> 카드 위, 지도 아래 */
+    max-height: none; /* 높이 제한 해제 */
+    height: auto;
+  }
+
+  /* 3-1. 상태 카드 (SummarySection) */
+  .summarySection {
+    flex: none; /* flex 비율 무시 */
+    width: 100%; /* 가로 꽉 채움 */
+    max-height: none; /* 높이 제한 해제 */
+    overflow: visible; /* 스크롤 없애고 다 보여줌 */
+  }
+
+  /* 카드 크기 조정 (2열 유지하되 좀 더 작게) */
+  .summaryCard {
+    padding: 0.8rem;
+  }
+  .summaryCardValue {
+    font-size: 1.8rem;
+  }
+  .iconWrapper {
+    width: 60px;
+    height: 60px;
+    margin-left: 10px;
+  } /* 아이콘 작게 */
+
+  /* 3-2. 지도 (MapSection) */
+  .mapSection {
+    width: 100%; /* 가로 꽉 채움 */
+    height: 300px; /* 모바일 지도 높이 고정 */
+    flex: none; /* flex 비율 무시 */
+  }
+
+  /* 4. 하단 영역 (BottomRow) 재배치 */
+  .bottomRow {
+    flex-direction: column; /* 세로로 쌓기 */
+    max-height: none; /* 높이 제한 해제 */
+    height: auto;
+  }
+
+  /* 경고/알림/배터리 섹션 */
+  .eventSection,
+  .batterySection {
+    flex: none;
+    width: 100%;
+    min-height: 250px; /* 최소 높이 확보 */
+  }
+}

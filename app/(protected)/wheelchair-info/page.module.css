@@ -570,3 +570,90 @@
   margin-top: 20px;
   font-size: 0.9rem;
 }
+
+/* 🔥🔥🔥 [반응형 추가] 모바일 스타일 (768px 미만) 🔥🔥🔥 */
+@media (max-width: 768px) {
+  /* 1. 전체 컨테이너: 패딩 추가 (하단 탭바 공간) & 스크롤 허용 */
+  .container {
+    padding: 1rem;
+    height: auto;
+    min-height: 100vh;
+    overflow-y: auto;
+    padding-bottom: 90px; /* BottomNavigation 가리지 않게 */
+  }
+
+  /* 2. InfoBar (헤더): 정보가 많으니 세로로 배치 */
+  .infoBar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    height: auto;
+  }
+  .infoBarLeft {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* 2열로 정보 나열 */
+    gap: 10px;
+    width: 100%;
+  }
+  .infoBarRight {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  /* 3. 메인 콘텐츠 (Grid -> Column Stack) */
+  .mainContent {
+    flex-direction: column; /* 좌/우 컬럼을 위/아래로 */
+    height: auto;
+    overflow: visible;
+  }
+
+  /* 4. 좌/우 컬럼 너비 100% & 높이 자동 */
+  .leftColumn,
+  .rightColumn {
+    width: 100%;
+    flex: none;
+    overflow: visible;
+  }
+
+  /* 5. 지도 높이 고정 (모바일에서 너무 크지 않게) */
+  .mapArea {
+    height: 300px;
+    flex: none;
+  }
+
+  /* 6. 하단 패널 (운행정보, 휠체어 상태) 세로 배치 */
+  .bottomArea {
+    flex-direction: column;
+    height: auto;
+  }
+  .drivingInfoCard,
+  .wheelchairStateCard {
+    width: 100%;
+    flex: none;
+    min-width: 0; /* min-width 해제 */
+  }
+
+  /* 7. 우측 상단 패널 (배터리/자세) 재배치 */
+  .rightTop {
+    flex-direction: column; /* 가로(Row) -> 세로(Column) */
+    height: auto;
+  }
+  .topRightPanel {
+    width: 100%;
+    height: auto;
+    flex-direction: row; /* 배터리/주행거리는 가로로 나란히 */
+  }
+  .postureCard {
+    width: 100%;
+  }
+
+  /* 8. 이벤트 목록 */
+  .eventArea {
+    flex-direction: column; /* 경고/알림 세로 배치 */
+    height: auto;
+    flex: none;
+  }
+  .eventCard {
+    height: 300px; /* 높이 고정 */
+  }
+}

@@ -44,8 +44,11 @@ type WheelchairDetailData = DashboardWheelchair & {
     // DB 컬럼명 (snake_case)
     angle_back?: number;
     angle_seat?: number;
-    incline_angle?: number;
     foot_angle?: number;
+    elevation_dist?: number; // 높이 (cm)
+    slope_fr?: number; // 전후방 경사 (A_FLRY)
+    slope_side?: number; // 측면 경사 (A_FLRX)
+
     temperature?: number;
     is_connected: boolean;
     last_seen?: string;
@@ -198,22 +201,13 @@ function WheelchairInfoContent() {
                 prev.status.current_speed,
               voltage: payload.voltage ?? prev.status.voltage,
               current: payload.current ?? prev.status.current,
-              angle_back:
-                payload.angleBack ??
-                payload.angle_back ??
-                prev.status.angle_back,
-              angle_seat:
-                payload.angleSeat ??
-                payload.angle_seat ??
-                prev.status.angle_seat,
-              incline_angle:
-                payload.inclineAngle ??
-                payload.incline_angle ??
-                prev.status.incline_angle,
-              foot_angle:
-                payload.footAngle ??
-                payload.foot_angle ??
-                prev.status.foot_angle,
+              angle_back: payload.angleBack ?? prev.status.angle_back,
+              angle_seat: payload.angleSeat ?? prev.status.angle_seat,
+              foot_angle: payload.footAngle ?? prev.status.foot_angle,
+              elevation_dist:
+                payload.elevationDist ?? prev.status.elevation_dist,
+              slope_fr: payload.slopeFr ?? prev.status.slope_fr,
+              slope_side: payload.slopeSide ?? prev.status.slope_side,
               temperature: payload.temperature ?? prev.status.temperature,
               latitude: payload.latitude ?? prev.status.latitude,
               longitude: payload.longitude ?? prev.status.longitude,

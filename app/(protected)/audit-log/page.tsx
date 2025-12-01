@@ -22,8 +22,8 @@ interface AuditLog {
   userRole: string;
   action: string;
   // ⭐️ [FIX] details 필드는 JSON 문자열로 넘어오므로 any로 정의
-  details: string | any; 
-  user_name?: string; 
+  details: string | any;
+  user_name?: string;
   userName?: string;
   createdAt: string;
   created_at: string; // 🚨 [FIX] Raw SQL created_at 컬럼 사용
@@ -70,22 +70,21 @@ const formatLogMessage = (log: AuditLog) => {
     // details 필드가 JSON 문자열이라면 파싱 (DB 로직에 의해 JSON으로 저장됨)
     details = JSON.parse(log.details) || {};
   } catch (e) {
-    details = { text: log.details || '상세 정보 없음' }; 
+    details = { text: log.details || '상세 정보 없음' };
   }
 
   const action = log.action || log.action_type;
   // 🚨 [FIX] 백엔드에서 저장한 serial 필드를 읽어옴
-  const serial = details?.serial || details?.deviceSerial; 
+  const serial = details?.serial || details?.deviceSerial;
   const userName = log.userName || log.user_name || 'N/A';
   const model = details?.model || 'N/A';
-
 
   switch (action) {
     case 'DEVICE_REGISTER':
       return serial
         ? `기기 등록 (S/N: ${serial}, 모델: ${model})`
         : `기기 등록 (시리얼 정보 없음)`;
-        
+
     case 'DEVICE_DELETE':
       return serial
         ? `기기 삭제 (S/N: ${serial} 삭제 완료)`
@@ -93,7 +92,7 @@ const formatLogMessage = (log: AuditLog) => {
 
     case 'LOGIN':
     case 'LOGOUT':
-      return `사용자 ${userName} 님이 ${action.toLowerCase()}했습니다.`;
+      return `관리자 ${userName} 님이 ${action.toLowerCase()}했습니다.`;
 
     default:
       const detailStr = details.text || JSON.stringify(details);
@@ -245,9 +244,9 @@ export default function AuditLogPage() {
             ) : (
               logs.map((log) => {
                 const style = getLogStyle(log.action);
-                
+
                 // 🚨 [FIX] DB 컬럼명 created_at을 사용
-                const logDate = safeParseDate(log.created_at); 
+                const logDate = safeParseDate(log.created_at);
 
                 return (
                   <tr key={log.id} style={{ backgroundColor: style.bg }}>

@@ -68,13 +68,12 @@ export default function WelcomePage() {
   if (userRole !== 'GUEST') return <LoadingSpinner />;
 
   // 5. 제출 핸들러
-  const handleSubmit = async (e: React.FormEvent) => {
+ const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
     try {
-      // API 호출
       const response = await fetch('/api/auth/profile-submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -86,13 +85,18 @@ export default function WelcomePage() {
         throw new Error(data.message || '프로필 업데이트에 실패했습니다.');
       }
 
-      // ⭐️ 세션 강제 갱신 (서버에서 바뀐 DB 정보를 가져옴)
-      await update();
+      // ⭐️ [핵심 수정] 
+      // 세션 갱신(update)을 시도하되, 완료 여부와 상관없이 무조건 이동시킵니다.
+      // 왜냐? DB는 이미 바꼈으니까요.
+      
+      update(); // (await 제거: 백그라운드에서 돌게 둠)
 
-      // ⭐️ 잠시 대기 후 강제 이동 (useEffect가 감지하겠지만 이중 안전장치)
-      setTimeout(() => {
-        window.location.href = '/pending';
-      }, 500);
+      alert('제출이 완료되었습니다. 승인 대기 화면으로 이동합니다.');
+      
+      // 🚀 [강제 이동] 
+      // replace를 쓰면 뒤로가기 했을 때 다시 이 폼으로 안 돌아옵니다.
+      window.location.replace('/pending'); 
+
     } catch (err: any) {
       setError(
         err.message || '저장에 실패했습니다. 잠시 후 다시 시도해주세요.'

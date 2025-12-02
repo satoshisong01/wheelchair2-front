@@ -56,7 +56,7 @@
 .adminSelector {
   padding: 0 1rem;
   font-size: 0.9rem;
-  color: #555;
+  /* color: #555; */
   flex-shrink: 0; /* ‼️ 크기가 줄어들지 않도록 고정 */
 
   display: flex;
@@ -392,7 +392,7 @@
 }
 .eventCard {
   flex: 1; /* ‼️ eventArea의 1/2 */
-  min-height: 150px;
+  min-height: 300px;
   /* ‼️ [신규] 자식 컨텐츠(스크롤)가 flex-item 내부에서 꽉 차도록 */
   display: flex;
   flex-direction: column;
@@ -402,7 +402,7 @@
 .scrollableContent {
   flex: 1;
   overflow-y: auto;
-  min-height: 100px; /* 최소 스크롤 영역 확보 */
+  min-height: 200px; /* 최소 스크롤 영역 확보 */
 }
 
 /*
@@ -719,8 +719,8 @@
     height: auto;
   }
   .eventCard {
-    height: 250px;
-    min-height: auto;
+    /* height: 250px; */
+    min-height: 300px;
   }
 
   .infoBar {

@@ -26,6 +26,7 @@
   display: flex;
   gap: 1.5rem;
   font-size: 0.9rem;
+  font-weight: 600;
   align-items: center;
 }
 .infoItem strong {
@@ -56,7 +57,7 @@
 .adminSelector {
   padding: 0 1rem;
   font-size: 0.9rem;
-  /* color: #555; */
+  color: #555;
   flex-shrink: 0; /* ‼️ 크기가 줄어들지 않도록 고정 */
 
   display: flex;
@@ -79,6 +80,7 @@
   border: 1px solid #ddd;
   border-radius: 0.3rem;
   margin-left: 0.5rem;
+  color: black;
 }
 
 /* --- [핵심 레이아웃 수정] --- */
@@ -781,7 +783,7 @@
     border-radius: 4px;
     padding: 6px 10px;
     font-size: 0.9rem;
-    color: #333;
+    color: black;
     flex: 1;
     margin-left: 10px;
     max-width: 200px; /* 너무 길어지지 않게 */

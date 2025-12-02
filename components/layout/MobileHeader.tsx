@@ -37,12 +37,17 @@ export default function MobileHeader() {
 
         {/* ⭐️ 로그아웃 버튼 */}
         <button
+          style={{
+            border: '2px solid black',
+            borderRadius: '5px',
+            fontWeight: 'bold',
+          }}
           className={`${styles.iconBtn} ${styles.logoutBtn}`}
           onClick={handleLogout}
           aria-label="로그아웃"
         >
           {/* 아이콘만 깔끔하게 표시하거나, 원하시면 '로그아웃🚪' 텍스트를 넣으셔도 됩니다. */}
-          🚪
+          logout🚪
         </button>
 
         {/* 햄버거 메뉴 (추후 메뉴 확장용) */}

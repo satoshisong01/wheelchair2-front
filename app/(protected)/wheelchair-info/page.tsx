@@ -104,6 +104,11 @@ function WheelchairInfoContent() {
               // 3. 알람 가져오기 (API 호출)
               const alarmRes = await fetch(`/api/alarms?t=${Date.now()}`, {
                 cache: 'no-store',
+                headers: {
+                  'Cache-Control': 'no-cache, no-store, must-revalidate',
+                  Pragma: 'no-cache',
+                  Expires: '0',
+                },
               });
               if (alarmRes.ok) {
                 const allAlarms = await alarmRes.json();
@@ -148,6 +153,11 @@ function WheelchairInfoContent() {
       try {
         const alarmRes = await fetch(`/api/alarms?t=${Date.now()}`, {
           cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            Pragma: 'no-cache',
+            Expires: '0',
+          },
         });
         if (alarmRes.ok) {
           const allAlarms = await alarmRes.json();

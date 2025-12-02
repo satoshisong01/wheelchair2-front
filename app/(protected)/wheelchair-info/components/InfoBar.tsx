@@ -37,6 +37,8 @@ export const InfoBar = ({
     currentWc?.device_serial || currentWc?.deviceSerial || 'N/A';
   const status = currentWc?.status || {};
 
+  console.log(status);
+
   return (
     <div className={styles.infoBar}>
       <div className={styles.infoBarLeft}>
@@ -87,7 +89,7 @@ export const InfoBar = ({
           습도: <strong>{status.humidity?.toFixed(1) || 0}%</strong>
         </span>
         <span className={styles.infoItem}>
-          기압: <strong>{status.pressure?.toFixed(1) || 1026}hPa</strong>
+          기압: <strong>{status.pressure?.toFixed(1) || 0}hPa</strong>
         </span>
       </div>
 

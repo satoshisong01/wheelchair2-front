@@ -218,6 +218,8 @@ function WheelchairInfoContent() {
               latitude: payload.latitude ?? prev.status.latitude,
               longitude: payload.longitude ?? prev.status.longitude,
               temperature: payload.temperature ?? prev.status.temperature,
+              humidity: payload.humidity ?? prev.status.humidity,
+              pressure: payload.pressure ?? prev.status.pressure,
               posture_time: payload.postureTime ?? prev.status.posture_time,
               operating_time:
                 payload.operatingTime ?? prev.status.operating_time,

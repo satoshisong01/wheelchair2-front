@@ -60,7 +60,14 @@ export const DrivingInfoPanel = ({
           전압: <strong>{voltage} V</strong>
         </p>
         <p>
-          주행 거리: <strong>{Number(distance).toFixed(1)} m</strong>
+          주행 거리:{' '}
+          <strong>
+            {Number(distance).toLocaleString(undefined, {
+              minimumFractionDigits: 1,
+              maximumFractionDigits: 1,
+            })}{' '}
+            m
+          </strong>
         </p>
         <p>
           전류: <strong>{current} A</strong>

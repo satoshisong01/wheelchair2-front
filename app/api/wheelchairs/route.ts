@@ -41,10 +41,17 @@ export async function GET() {
         -- 환경/자세 정보
         s.temperature,
         s.humidity,
+        s.pressure,
         s.angle_back,
         s.angle_seat,
         s.incline_angle,
-        s.foot_angle
+        s.foot_angle,
+        s.elevation_dist,  -- ⭐️ [추가] 높이 조절
+        s.slope_fr,        -- ⭐️ [추가] 전후방 경사
+        s.slope_side,      -- ⭐️ [추가] 측면 경사
+        
+        s.light,           -- ⭐️ [추가] 자세유지시간
+        s.operating_time   -- ⭐️ [추가] 휠체어 사용시간
 
       FROM wheelchairs w
       LEFT JOIN wheelchair_status s ON w.id = s.wheelchair_id
@@ -78,10 +85,18 @@ export async function GET() {
         // 기타 센서
         temperature: row.temperature,
         humidity: row.humidity,
+        pressure: row.pressure,
+
         angle_back: row.angle_back,
         angle_seat: row.angle_seat,
         incline_angle: row.incline_angle,
         foot_angle: row.foot_angle,
+        elevation_dist: row.elevation_dist, // ⭐️ 높이 추가
+        slope_fr: row.slope_fr, // ⭐️ 전후방 경사 추가
+        slope_side: row.slope_side, // ⭐️ 측면 경사 추가
+
+        light: row.light, // ⭐️ 자세유지시간 추가
+        operating_time: row.operating_time, // ⭐️ 사용시간 추가
       },
 
       registrant: null,

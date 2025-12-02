@@ -347,7 +347,7 @@
   flex-direction: column;
   border: 1px solid #ddd;
   border-radius: 0.5rem;
-  padding: 0.8rem;
+  padding: 0.3rem;
   text-align: center;
 }
 /* ( ... PostureItem 내부 스타일은 변경 없음 ... ) */

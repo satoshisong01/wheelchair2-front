@@ -54,7 +54,13 @@ export const TopRightPanel = ({ wc }: Props) => {
         />
         <p className={styles.drivingValue}>
           {/* 수정한 변수 사용 */}
-          <strong>{distance.toFixed(1)}</strong> m
+          <strong>
+            {Number(distance).toLocaleString(undefined, {
+              minimumFractionDigits: 1,
+              maximumFractionDigits: 1,
+            })}
+          </strong>{' '}
+          m
         </p>
       </div>
     </div>

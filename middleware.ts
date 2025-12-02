@@ -51,7 +51,8 @@ export async function middleware(req: NextRequest) {
     // GUEST가 다른 곳 가려고 할 때
     if (
       (role === 'GUEST' || role === 'NEW_USER') &&
-      !pathname.startsWith('/welcome')
+      !pathname.startsWith('/welcome') &&
+      !pathname.startsWith('/pending')
     ) {
       return NextResponse.redirect(new URL('/welcome', req.url));
     }

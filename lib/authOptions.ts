@@ -141,35 +141,40 @@ export const authOptions: NextAuthOptions = {
       }
 
       // ⭐️ [C] 세션 업데이트 요청 (update() 호출 시 실행) -> 이 부분이 누락되었음!
-     if (trigger === "update") {
+      if (trigger === 'update') {
         try {
           // 🚨 [핵심 수정] token.sub 대신 token.id 사용!
           // token.sub은 카카오 로그인 시 카카오 ID(숫자)일 수 있음 -> DB 에러 원인
           // token.id는 우리가 signIn 콜백에서 직접 넣은 UUID임 -> 안전함
-          const userId = token.id; 
+          const userId = token.id;
 
           if (!userId) {
-             console.error("❌ [NextAuth] 업데이트 실패: 사용자 ID(UUID)가 토큰에 없습니다.");
-             return token;
+            console.error(
+              '❌ [NextAuth] 업데이트 실패: 사용자 ID(UUID)가 토큰에 없습니다.'
+            );
+            return token;
           }
 
           // DB에서 최신 정보를 다시 조회 (phone_number -> phone 수정 포함)
-          const sql = `SELECT role, name, organization, phone_number FROM users WHERE id = $1`;
+          const sql = `SELECT role, name, organization, phone_number, rejection_reason FROM users WHERE id = $1`;
           const result = await query(sql, [userId]);
-          
+
           if (result.rows.length > 0) {
             const freshUser = result.rows[0];
-            
+
             // 토큰 정보 갱신
             token.role = freshUser.role;
             token.name = freshUser.name;
             token.organization = freshUser.organization;
             token.phoneNumber = freshUser.phone_number; // DB 컬럼(phone) 사용
-            
-            console.log(`✅ [NextAuth] 토큰 갱신 성공: ${token.role} (UUID: ${userId})`);
+            token.rejectionReason = freshUser.rejection_reason; // 거절 사유 추가
+
+            console.log(
+              `✅ [NextAuth] 토큰 갱신 성공: ${token.role} (UUID: ${userId})`
+            );
           }
         } catch (e) {
-          console.error("❌ [NextAuth] 토큰 갱신 중 DB 에러:", e);
+          console.error('❌ [NextAuth] 토큰 갱신 중 DB 에러:', e);
         }
       }
 
@@ -177,17 +182,18 @@ export const authOptions: NextAuthOptions = {
       // wheelchairId가 없다는 건 관리자/유저라는 뜻이므로 DB 조회
       if (
         (account?.provider === 'kakao' || token.email) &&
-        !token.wheelchairId && trigger !== "update"
+        !token.wheelchairId &&
+        trigger !== 'update'
       ) {
         let sql = '';
         let params: any[] = [];
 
         if (profile) {
           const kakaoId = String((profile as any).id);
-          sql = `SELECT id, role, organization, phone_number, name, email FROM users WHERE kakao_id = $1`;
+          sql = `SELECT id, role, organization, phone_number, name, email, rejection_reason FROM users WHERE kakao_id = $1`;
           params = [kakaoId];
         } else if (token.email) {
-          sql = `SELECT id, role, organization, phone_number, name, email FROM users WHERE email = $1`;
+          sql = `SELECT id, role, organization, phone_number, name, email, rejection_reason FROM users WHERE email = $1`;
           params = [token.email];
         }
 
@@ -203,6 +209,7 @@ export const authOptions: NextAuthOptions = {
               token.email = dbUser.email;
               token.organization = dbUser.organization;
               token.phoneNumber = dbUser.phone_number;
+              token.rejectionReason = dbUser.rejection_reason;
             }
           } catch (e) {
             console.error('JWT DB fetch error:', e);
@@ -221,7 +228,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).email = token.email as string;
         (session.user as any).organization = token.organization as string;
         (session.user as any).phoneNumber = token.phoneNumber as string;
-
+        (session.user as any).rejectionReason = token.rejectionReason as string;
         // 기기 정보 주입
         (session.user as any).wheelchairId = token.wheelchairId;
         (session.user as any).deviceId = token.deviceId;

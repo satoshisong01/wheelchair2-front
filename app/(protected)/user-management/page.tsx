@@ -16,6 +16,7 @@ interface User {
   created_at: string;
   location1?: string;
   rejectionReason?: string;
+  rejection_reason?: string;
 }
 
 export default function UserManagementPage() {
@@ -223,18 +224,20 @@ export default function UserManagementPage() {
                   가입: {new Date(user.created_at).toLocaleDateString()}
                 </p>
 
-                {user.rejectionReason && (
-                  <p
-                    style={{
-                      margin: '5px 0 0',
-                      color: '#dc3545',
-                      fontSize: '13px',
-                      fontWeight: 'bold',
-                    }}
-                  >
-                    ※ 거절 사유: {user.rejectionReason}
-                  </p>
-                )}
+                {user.role === 'REJECTED' &&
+                  (user.rejectionReason || user.rejection_reason) && (
+                    <p
+                      style={{
+                        margin: '5px 0 0',
+                        color: '#dc3545',
+                        fontSize: '13px',
+                        fontWeight: 'bold',
+                      }}
+                    >
+                      ※ 거절 사유:{' '}
+                      {user.rejectionReason || user.rejection_reason}
+                    </p>
+                  )}
               </div>
 
               <div style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>

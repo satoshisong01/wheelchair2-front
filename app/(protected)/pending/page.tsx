@@ -65,27 +65,28 @@ export default function PendingPage() {
       return;
     }
 
-    try {
-      // 재신청 API 호출 (서버에서 role을 GUEST로 변경)
-      const res = await fetch('/api/auth/re-apply', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      });
+    router.push('/welcome');
+    // try {
+    //   // 재신청 API 호출 (서버에서 role을 GUEST로 변경)
+    //   const res = await fetch('/api/auth/re-apply', {
+    //     method: 'POST',
+    //     headers: { 'Content-Type': 'application/json' },
+    //   });
 
-      if (res.ok) {
-        // 세션 강제 갱신 (GUEST로 변경됨을 인지)
-        await update();
-        alert('재신청을 위해 프로필 작성 페이지로 이동합니다.');
-        // 페이지 강제 이동 (Next.js 라우터보다 확실함)
-        window.location.href = '/welcome';
-      } else {
-        const data = await res.json();
-        alert(`재신청 실패: ${data.message || '오류가 발생했습니다.'}`);
-      }
-    } catch (error) {
-      console.error('Re-apply error:', error);
-      alert('서버 오류가 발생했습니다.');
-    }
+    //   if (res.ok) {
+    //     // 세션 강제 갱신 (GUEST로 변경됨을 인지)
+    //     await update();
+    //     alert('재신청을 위해 프로필 작성 페이지로 이동합니다.');
+    //     // 페이지 강제 이동 (Next.js 라우터보다 확실함)
+    //     window.location.href = '/welcome';
+    //   } else {
+    //     const data = await res.json();
+    //     alert(`재신청 실패: ${data.message || '오류가 발생했습니다.'}`);
+    //   }
+    // } catch (error) {
+    //   console.error('Re-apply error:', error);
+    //   alert('서버 오류가 발생했습니다.');
+    // }
   };
 
   // -------------------------------------------------------

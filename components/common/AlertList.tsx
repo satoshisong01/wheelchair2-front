@@ -68,8 +68,14 @@ const getAlarmMessage = (alarm: AlarmItem) => {
 const formatTime = (dateInput: Date | string | undefined) => {
   if (!dateInput) return '시간정보 없음';
   try {
-    const date = new Date(dateInput);
+    // 1. 문자열이면 Safari를 위해 공백을 T로 치환 (YYYY-MM-DD HH:mm:ss -> YYYY-MM-DDTHH:mm:ss)
+    const dateStr =
+      typeof dateInput === 'string' ? dateInput.replace(' ', 'T') : dateInput;
+
+    const date = new Date(dateStr);
     if (isNaN(date.getTime())) return '시간정보 없음';
+
+    // 2. 날짜 변환
     return formatInTimeZone(date, 'Asia/Seoul', 'aaa h:mm:ss', {
       locale: ko,
     });

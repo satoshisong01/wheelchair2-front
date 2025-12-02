@@ -2,6 +2,18 @@
 
 import styles from './EventModal.module.css';
 
+const safeDate = (dateStr: string | Date | undefined) => {
+  if (!dateStr) return '-';
+  try {
+    // Safari 호환성: "2025-12-01 12:00:00" -> "2025-12-01T12:00:00" 변환
+    const safeStr =
+      typeof dateStr === 'string' ? dateStr.replace(' ', 'T') : dateStr;
+    return new Date(safeStr).toLocaleString('ko-KR');
+  } catch (e) {
+    return String(dateStr); // 에러나면 원본 출력
+  }
+};
+
 // ⭐️ [FIX] 유연한 AlarmItem 타입 정의 (deviceSerial 포함)
 interface AlarmItem {
   id?: string | number;
@@ -88,9 +100,7 @@ export default function EventModal({
                       </td>
 
                       {/* 3. 시간 */}
-                      <td>
-                        {time ? new Date(time).toLocaleString('ko-KR') : '-'}
-                      </td>
+                      <td>{safeDate(time)}</td>
                     </tr>
                   );
                 })

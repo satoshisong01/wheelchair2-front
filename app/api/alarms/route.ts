@@ -38,7 +38,6 @@ export async function GET(request: NextRequest) {
                     w.device_serial as "deviceSerial"
                 FROM alarms a
                 JOIN wheelchairs w ON a.wheelchair_id = w.id
-                WHERE a.alarm_time > NOW() - INTERVAL '24 HOURS'
                 ORDER BY a.alarm_time DESC
             `;
     } else {
@@ -56,7 +55,6 @@ export async function GET(request: NextRequest) {
                 JOIN user_wheelchairs uw ON a.wheelchair_id = uw.wheelchair_id
                 JOIN wheelchairs w ON a.wheelchair_id = w.id
                 WHERE uw.user_id = $1 
-                  AND a.alarm_time > NOW() - INTERVAL '24 HOURS'
                 ORDER BY a.alarm_time DESC
             `;
       params = [userId];

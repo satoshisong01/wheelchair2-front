@@ -4,7 +4,6 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { query } from '@/lib/db';
 import { createAuditLog } from '@/lib/log';
 import bcrypt from 'bcrypt';
-
 export const authOptions: NextAuthOptions = {
   providers: [
     // ------------------------------------------------------
@@ -19,7 +18,6 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.deviceId || !credentials?.password) return null;
-
         try {
           // ⭐️ [FIX] DB 컬럼명 수정 (wheelchairId -> wheelchair_id, deviceId -> device_id)
           // PostgreSQL은 보통 snake_case를 사용합니다.
@@ -30,16 +28,13 @@ export const authOptions: NextAuthOptions = {
                     `;
           const result = await query(sql, [credentials.deviceId]);
           const device = result.rows[0];
-
           if (!device) throw new Error('등록되지 않은 기기입니다.');
-
           // 비밀번호 검증
           const isValid = await bcrypt.compare(
             credentials.password,
             device.password
           );
           if (!isValid) throw new Error('비밀번호가 일치하지 않습니다.');
-
           // 로그인 성공! 세션 객체 생성
           // ⭐️ DB의 snake_case 데이터를 camelCase로 변환해서 넘겨줍니다.
           return {
@@ -55,7 +50,6 @@ export const authOptions: NextAuthOptions = {
         }
       },
     }),
-
     // ------------------------------------------------------
     // 2. 관리자 로그인 (Kakao Provider)
     // ------------------------------------------------------
@@ -64,19 +58,16 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.KAKAO_CLIENT_SECRET || '',
     }),
   ],
-
   session: {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30일
   },
-
   events: {
     async signOut({ token }) {
       // @ts-ignore
       const role = token?.role;
       // @ts-ignore
       const userId = token?.id;
-
       if (role === 'ADMIN' || role === 'MASTER') {
         try {
           await createAuditLog({
@@ -99,7 +90,6 @@ export const authOptions: NextAuthOptions = {
         const kakaoId = String((profile as any).id);
         const email = (profile as any).kakao_account?.email || '';
         const name = (profile as any).kakao_account?.profile?.nickname || '';
-
         try {
           const userRes = await query(
             `
@@ -107,7 +97,6 @@ export const authOptions: NextAuthOptions = {
                     `,
             [kakaoId]
           );
-
           if (userRes.rowCount > 0) {
             // [기존] 로그인 시간 업데이트 (컬럼 존재 시)
             // await query(`UPDATE users SET last_login_at = NOW() WHERE kakao_id = $1`, [kakaoId]);
@@ -115,9 +104,9 @@ export const authOptions: NextAuthOptions = {
             // [신규] GUEST 가입
             await query(
               `
-                            INSERT INTO users (kakao_id, email, name, role, created_at)
-                            VALUES ($1, $2, $3, 'GUEST', NOW())
-                        `,
+                INSERT INTO users (kakao_id, email, name, role, created_at)
+                VALUES ($1, $2, $3, 'GUEST', NOW())
+            `,
               [kakaoId, email, name]
             );
           }
@@ -129,7 +118,6 @@ export const authOptions: NextAuthOptions = {
       }
       return true;
     },
-
     // 2. JWT 토큰 생성
     async jwt({ token, user, account, profile, trigger, session }) {
       // [A] 최초 로그인 (기기 로그인 포함)
@@ -139,7 +127,6 @@ export const authOptions: NextAuthOptions = {
         token.wheelchairId = (user as any).wheelchairId; // 기기 로그인 시 저장됨
         token.deviceId = (user as any).deviceId; // 기기 ID 저장
       }
-
       // ⭐️ [C] 세션 업데이트 요청 (update() 호출 시 실행) -> 이 부분이 누락되었음!
       if (trigger === 'update') {
         try {
@@ -147,28 +134,23 @@ export const authOptions: NextAuthOptions = {
           // token.sub은 카카오 로그인 시 카카오 ID(숫자)일 수 있음 -> DB 에러 원인
           // token.id는 우리가 signIn 콜백에서 직접 넣은 UUID임 -> 안전함
           const userId = token.id;
-
           if (!userId) {
             console.error(
               '❌ [NextAuth] 업데이트 실패: 사용자 ID(UUID)가 토큰에 없습니다.'
             );
             return token;
           }
-
           // DB에서 최신 정보를 다시 조회 (phone_number -> phone 수정 포함)
           const sql = `SELECT role, name, organization, phone_number, rejection_reason FROM users WHERE id = $1`;
           const result = await query(sql, [userId]);
-
           if (result.rows.length > 0) {
             const freshUser = result.rows[0];
-
             // 토큰 정보 갱신
             token.role = freshUser.role;
             token.name = freshUser.name;
             token.organization = freshUser.organization;
             token.phoneNumber = freshUser.phone_number; // DB 컬럼(phone) 사용
             token.rejectionReason = freshUser.rejection_reason; // 거절 사유 추가
-
             console.log(
               `✅ [NextAuth] 토큰 갱신 성공: ${token.role} (UUID: ${userId})`
             );
@@ -177,7 +159,6 @@ export const authOptions: NextAuthOptions = {
           console.error('❌ [NextAuth] 토큰 갱신 중 DB 에러:', e);
         }
       }
-
       // [B] 카카오 유저 DB 동기화 (기기 로그인은 pass)
       // wheelchairId가 없다는 건 관리자/유저라는 뜻이므로 DB 조회
       if (
@@ -187,7 +168,6 @@ export const authOptions: NextAuthOptions = {
       ) {
         let sql = '';
         let params: any[] = [];
-
         if (profile) {
           const kakaoId = String((profile as any).id);
           sql = `SELECT id, role, organization, phone_number, name, email, rejection_reason FROM users WHERE kakao_id = $1`;
@@ -196,12 +176,10 @@ export const authOptions: NextAuthOptions = {
           sql = `SELECT id, role, organization, phone_number, name, email, rejection_reason FROM users WHERE email = $1`;
           params = [token.email];
         }
-
         if (sql) {
           try {
             const dbUserRes = await query(sql, params);
             const dbUser = dbUserRes.rows[0];
-
             if (dbUser) {
               token.id = dbUser.id;
               token.role = dbUser.role;
@@ -218,7 +196,6 @@ export const authOptions: NextAuthOptions = {
       }
       return token;
     },
-
     // 3. 세션 생성
     async session({ session, token }) {
       if (session.user) {
@@ -236,7 +213,6 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
-
   pages: {
     signIn: '/',
     error: '/',

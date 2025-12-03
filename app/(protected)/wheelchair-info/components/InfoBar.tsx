@@ -37,8 +37,6 @@ export const InfoBar = ({
     currentWc?.device_serial || currentWc?.deviceSerial || 'N/A';
   const status = currentWc?.status || {};
 
-  console.log(status);
-
   return (
     <div className={styles.infoBar}>
       <div className={styles.infoBarLeft}>

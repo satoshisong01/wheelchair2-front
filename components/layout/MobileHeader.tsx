@@ -1,26 +1,24 @@
+// components/layout/MobileHeader.tsx
 'use client';
 
 import Link from 'next/link';
-import { signOut } from 'next-auth/react'; // ⭐️ [필수] Next-Auth 공식 로그아웃 함수 import
+import { signOut, useSession } from 'next-auth/react';
 import styles from './MobileHeader.module.css';
 
 export default function MobileHeader() {
+  const { data: session } = useSession();
+  const userRole = session?.user?.role;
+  const isDeviceUser = userRole === 'DEVICE_USER'; // 기기 사용자 여부 확인
+
   const handleLogout = async () => {
-    // 1. 확인 창
     if (!confirm('정말 로그아웃 하시겠습니까?')) return;
 
     try {
-      // 2. 클라이언트 스토리지 청소 (찌꺼기 데이터 제거)
       localStorage.clear();
       sessionStorage.clear();
-
-      // 3. ⭐️ [핵심 수정] Next-Auth 공식 로그아웃 사용
-      // - 이 함수가 서버 환경(HTTPS)에 맞는 보안 쿠키(__Secure-...)를 자동으로 찾아 삭제합니다.
-      // - 로그아웃 후 메인 페이지('/')로 리다이렉트합니다.
       await signOut({ callbackUrl: '/', redirect: true });
     } catch (error) {
       console.error('Logout failed', error);
-      // 만약 signOut이 실패하더라도 강제로 메인으로 이동
       window.location.href = '/';
     }
   };
@@ -28,30 +26,43 @@ export default function MobileHeader() {
   return (
     <header className={styles.header}>
       <div className={styles.logo}>
-        <Link href="/dashboard">FIRST C&D</Link>
+        {/* 기기 사용자는 '휠체어 정보', 관리자는 '대시보드'로 이동 */}
+        <Link href={isDeviceUser ? '/wheelchair-info' : '/dashboard'}>
+          FIRST C&D
+        </Link>
       </div>
-      <div className={styles.actions}>
-        {/* 기존 아이콘들 (기능 연결은 추후) */}
-        {/* <button className={styles.iconBtn}>🔍</button> */}
-        {/* <button className={styles.iconBtn}>🔔<span className={styles.badge}></span></button> */}
 
-        {/* ⭐️ 로그아웃 버튼 */}
+      <div className={styles.actions}>
+        {/* 로그아웃 버튼 */}
         <button
           style={{
             border: '2px solid black',
             borderRadius: '5px',
             fontWeight: 'bold',
+            marginRight: '10px',
           }}
           className={`${styles.iconBtn} ${styles.logoutBtn}`}
           onClick={handleLogout}
           aria-label="로그아웃"
         >
-          {/* 아이콘만 깔끔하게 표시하거나, 원하시면 '로그아웃🚪' 텍스트를 넣으셔도 됩니다. */}
           logout🚪
         </button>
 
-        {/* 햄버거 메뉴 (추후 메뉴 확장용) */}
-        <button className={styles.iconBtn}>☰</button>
+        {/* 권한에 따라 아이콘 변경 */}
+        {isDeviceUser ? (
+          // 🟢 [수정] SVG 삭제 -> 심플한 이모지 적용
+          <Link
+            href="/mypage"
+            className={styles.iconBtn}
+            aria-label="마이페이지"
+            style={{ textDecoration: 'none', fontSize: '24px' }} // 이모지 크기 조절
+          >
+            ⚙️
+          </Link>
+        ) : (
+          // 관리자: 햄버거 메뉴
+          <button className={styles.iconBtn}>☰</button>
+        )}
       </div>
     </header>
   );

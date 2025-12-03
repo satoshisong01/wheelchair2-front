@@ -1,8 +1,10 @@
+/*components/layout/BottomNavigation.module.css */
+
 .bottomNav {
   display: flex;
-  justify-content: space-around;
+  justify-content: space-between; /* space-around 대신 between 사용해서 꽉 채움 */
   align-items: center;
-  height: 70px;
+  height: 60px; /* 70px은 6개 넣기에 좀 높을 수 있어서 살짝 줄임 (취향껏 조절 가능) */
   background-color: white;
   border-top: 1px solid #eee;
   position: fixed;
@@ -10,18 +12,23 @@
   left: 0;
   right: 0;
   z-index: 50;
-  padding-bottom: env(safe-area-inset-bottom); /* 아이폰 하단 바 대응 */
+  padding-bottom: env(safe-area-inset-bottom); /* 아이폰 하단 바 대응 유지 */
+  padding-left: 10px; /* 좌우 여백 살짝 추가 */
+  padding-right: 10px;
 }
 
 .navItem {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   text-decoration: none;
   color: #999;
-  font-size: 0.7rem;
-  gap: 4px;
-  width: 100%;
+  font-size: 10px; /* 0.7rem -> 10px: 6개 들어갈 때 겹침 방지 */
+  gap: 2px;
+  flex: 1; /* 너비를 균등하게 가져감 */
+  min-width: 0; /* 플렉스 아이템이 내용물보다 작아질 수 있게 허용 */
+  padding: 5px 0;
 }
 
 .navItem.active {
@@ -30,5 +37,14 @@
 }
 
 .icon {
-  font-size: 1.4rem;
+  font-size: 1.2rem; /* 아이콘 크기 살짝 조정 */
+  margin-bottom: 2px;
+}
+
+.label {
+  white-space: nowrap; /* 글자가 줄바꿈되지 않도록 */
+  overflow: hidden;
+  text-overflow: ellipsis; /* 공간 부족하면 ... 처리 */
+  width: 100%;
+  text-align: center;
 }

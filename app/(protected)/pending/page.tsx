@@ -1,13 +1,13 @@
 // 📍 경로: app/pending/page.tsx
-// 📝 설명: 승인 대기 및 거절 상태 처리, 자동 이동 로직 보강
+// 📝 설명: 승인 대기 페이지 (세션 강제 갱신 로직 추가 완료)
 
 'use client';
 
 import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react'; // useState 추가
 
-// 로딩 스피너
+// 로딩 스피너 컴포넌트
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center min-h-screen">
     <div className="text-center">
@@ -18,10 +18,13 @@ const LoadingSpinner = () => (
 );
 
 export default function PendingPage() {
-  const { data: session, status, update } = useSession();
+  const { data: session, status, update } = useSession(); // update 함수 가져오기
   const router = useRouter();
 
-  // TS Fix 및 데이터 구조 확보
+  // 🟢 [추가] 새로고침 로딩 상태 관리
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // 사용자 정보 타입 단언
   const user = session?.user as unknown as
     | {
         role: string;
@@ -32,25 +35,41 @@ export default function PendingPage() {
       }
     | undefined;
 
-  // 1. [로직 개선] 역할 변경 감지 및 자동 이동
+  // 1. 역할 변경 감지 및 자동 이동
   useEffect(() => {
     if (status === 'authenticated' && user) {
       const currentRole = user.role;
 
-      // 이미 승인된 경우 -> 대시보드
+      // 이미 승인된 경우 -> 대시보드 등으로 이동
       if (['USER', 'ADMIN', 'MASTER'].includes(currentRole)) {
         console.log(`[PENDING-PAGE] 승인됨 (${currentRole}). 대시보드로 이동.`);
         router.replace('/dashboard');
       }
-      // 아직 GUEST인 경우 (정보 제출 직후 등) -> 잠시 대기
-      else if (currentRole === 'GUEST') {
-        // 보통 welcome 페이지에서 세션 갱신 후 오지만, 만약 갱신 안 됐다면 여기서 재시도
-        // (무한 루프 방지를 위해 별도 처리 없음, 화면에서 '로딩' 보여줌)
-      }
+      // GUEST 상태일 때는 대기
     }
   }, [status, user, router]);
 
-  // 2. [로딩/권한 체크]
+  // 🟢 [추가] 상태 새로고침 핸들러 (핵심 로직)
+  const handleRefreshStatus = async () => {
+    setIsRefreshing(true);
+    try {
+      // 1. NextAuth 세션 강제 업데이트 (백엔드 다시 조회)
+      await update();
+
+      // 2. 잠시 대기 후 페이지 리로드 (업데이트 반영 확실히 하기 위함)
+      // (update()가 완료되면 위 useEffect가 감지해서 자동으로 이동시킬 확률이 높음)
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    } catch (error) {
+      console.error('Session update failed', error);
+      alert('세션 갱신에 실패했습니다. 로그아웃 후 다시 로그인해주세요.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // 2. 로딩/권한 체크
   if (status === 'loading' || !user) {
     return <LoadingSpinner />;
   }
@@ -64,29 +83,7 @@ export default function PendingPage() {
     ) {
       return;
     }
-
     router.push('/welcome');
-    // try {
-    //   // 재신청 API 호출 (서버에서 role을 GUEST로 변경)
-    //   const res = await fetch('/api/auth/re-apply', {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //   });
-
-    //   if (res.ok) {
-    //     // 세션 강제 갱신 (GUEST로 변경됨을 인지)
-    //     await update();
-    //     alert('재신청을 위해 프로필 작성 페이지로 이동합니다.');
-    //     // 페이지 강제 이동 (Next.js 라우터보다 확실함)
-    //     window.location.href = '/welcome';
-    //   } else {
-    //     const data = await res.json();
-    //     alert(`재신청 실패: ${data.message || '오류가 발생했습니다.'}`);
-    //   }
-    // } catch (error) {
-    //   console.error('Re-apply error:', error);
-    //   alert('서버 오류가 발생했습니다.');
-    // }
   };
 
   // -------------------------------------------------------
@@ -137,8 +134,6 @@ export default function PendingPage() {
   // -------------------------------------------------------
   // 5. 대기 중 (PENDING) 또는 GUEST 상태 렌더링
   // -------------------------------------------------------
-  // (GUEST 상태여도 여기서 보여주면 사용자가 혼란스럽지 않음)
-
   const userName = user.name || '정보 없음';
   const userOrganization = user.organization || '정보 없음';
   const userPhoneNumber = user.phoneNumber || '정보 없음';
@@ -167,12 +162,20 @@ export default function PendingPage() {
         </div>
 
         <div className="flex flex-col gap-2">
+          {/* 🟢 [수정] 새로고침 버튼에 핸들러 연결 및 로딩 UI 적용 */}
           <button
-            onClick={() => window.location.reload()}
-            className="w-full py-2 bg-gray-200 text-gray-700 rounded-lg font-bold hover:bg-gray-300 transition"
+            onClick={handleRefreshStatus}
+            disabled={isRefreshing}
+            className="w-full py-2 bg-gray-200 text-gray-700 rounded-lg font-bold hover:bg-gray-300 transition flex justify-center items-center"
           >
-            상태 새로고침
+            {isRefreshing ? (
+              // 로딩 중일 때 스피너 표시
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-600"></div>
+            ) : (
+              '상태 새로고침'
+            )}
           </button>
+
           <button
             onClick={() => signOut({ callbackUrl: '/' })}
             className="w-full py-2 text-gray-400 hover:text-gray-600 text-sm transition"

@@ -32,7 +32,6 @@ ChartJS.register(
   Filler
 );
 
-// 헬퍼 함수: 날짜 포맷
 const formatDateString = (date: Date): string => {
   const yyyy = date.getFullYear();
   const mm = String(date.getMonth() + 1).padStart(2, '0');
@@ -40,37 +39,33 @@ const formatDateString = (date: Date): string => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
-// 🟢 데이터 타입 정의 (배터리, 속도, 거리)
 type MetricType = 'BATTERY' | 'SPEED' | 'DISTANCE';
-
-// 메트릭별 설정 (색상, 라벨, 단위)
 const METRIC_CONFIG = {
   BATTERY: {
     label: '평균 배터리 잔량',
     unit: '%',
-    color: '#27b4e9', // 파랑
+    color: '#27b4e9',
     bgColor: 'rgba(39, 180, 233, 0.2)',
-    yMax: 100, // 배터리는 최대 100
+    yMax: 100,
   },
   SPEED: {
     label: '평균 속도',
     unit: 'm/s',
-    color: '#ff9f40', // 주황
+    color: '#ff9f40',
     bgColor: 'rgba(255, 159, 64, 0.2)',
-    yMax: undefined, // 속도는 자동 스케일
+    yMax: undefined,
   },
   DISTANCE: {
     label: '주행 거리',
     unit: 'm',
-    color: '#4bc0c0', // 초록
+    color: '#4bc0c0',
     bgColor: 'rgba(75, 192, 192, 0.2)',
-    yMax: undefined, // 거리는 자동 스케일
+    yMax: undefined,
   },
 };
 
 export default function StatsPage() {
-  // --- 1. 필터 및 세션 상태 ---
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const userRole = session?.user?.role;
   const isManager = userRole === 'ADMIN' || userRole === 'MASTER';
 
@@ -86,27 +81,42 @@ export default function StatsPage() {
 
   const [selectedDevice, setSelectedDevice] = useState('ALL');
   const [selectedRegion, setSelectedRegion] = useState('ALL');
-
-  // 차트 형태 (막대/선)
   const [chartType, setChartType] = useState<'BAR' | 'LINE'>('BAR');
-
-  // 🟢 [추가] 현재 보고 있는 데이터 종류 (기본값: 배터리)
   const [selectedMetric, setSelectedMetric] = useState<MetricType>('BATTERY');
 
-  // --- 2. 데이터 상태 ---
-  // API에서 받아온 원본 데이터를 저장해둠 (버튼 누를 때마다 API 재호출 방지)
   const [apiRawData, setApiRawData] = useState<any[]>([]);
   const [chartData, setChartData] = useState<any>(null);
   const [tableData, setTableData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // 기기 목록
   const [devices, setDevices] = useState<{ id: string; name: string }[]>([
     { id: 'ALL', name: '전체 기기' },
   ]);
   const regions = ['전체 지역', '경기도', '서울시', '인천시'];
 
-  // 관리자용 기기 목록 로드
+  // 🟢 [추가] 내 시리얼 번호 저장용 상태
+  const [mySerial, setMySerial] = useState<string>('');
+
+  // 1. 세션 로드 후 기기 사용자 설정 (ID 설정 및 시리얼 조회)
+  useEffect(() => {
+    if (status === 'authenticated' && !isManager) {
+      const myId = (session?.user as any)?.wheelchairId;
+      if (myId) {
+        setSelectedDevice(myId);
+
+        // 🟢 [추가] 내 시리얼 번호 조회 (api/device-info 사용)
+        // (마이페이지에서 썼던 그 API를 재활용합니다)
+        fetch('/api/device-info')
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.serial) setMySerial(data.serial);
+          })
+          .catch((err) => console.error('시리얼 조회 실패:', err));
+      }
+    }
+  }, [status, isManager, session]);
+
+  // 2. 관리자용 기기 목록 로딩
   useEffect(() => {
     const fetchDevices = async () => {
       if (!isManager) return;
@@ -129,7 +139,7 @@ export default function StatsPage() {
     fetchDevices();
   }, [isManager]);
 
-  // 기간 자동 계산 로직
+  // 기간 설정 로직 (기존 동일)
   useEffect(() => {
     const now = new Date();
     let newStart = new Date();
@@ -164,15 +174,15 @@ export default function StatsPage() {
     setPeriodType('CUSTOM');
   };
 
-  // --- 3. API 데이터 가져오기 ---
+  // 3. 데이터 검색 및 테이블 매핑
   const handleSearch = useCallback(async () => {
-    setIsLoading(true);
+    if (!isManager && selectedDevice === 'ALL') return;
 
+    setIsLoading(true);
     const startStr = formatDateString(startDate);
     const endStr = formatDateString(endDate);
 
     try {
-      // API 호출 (배터리, 속도, 거리 모두 가져옴)
       const res = await fetch(
         `/api/stats?startDate=${startStr}&endDate=${endStr}&deviceId=${selectedDevice}`
       );
@@ -187,26 +197,34 @@ export default function StatsPage() {
       const apiData = await res.json();
 
       if (!Array.isArray(apiData) || apiData.length === 0) {
-        setApiRawData([]); // 데이터 없음
+        setApiRawData([]);
         setChartData(null);
         setTableData([]);
         return;
       }
 
-      // 원본 데이터 저장 (이후 useEffect에서 차트 그림)
       setApiRawData(apiData);
 
-      // 테이블용 데이터는 한 번에 매핑해둠 (상세 로그는 다 보여주는 게 좋음)
+      // 선택된 기기 이름 찾기
       const currentDeviceObj = devices.find((d) => d.id === selectedDevice);
-      const displayDeviceName = currentDeviceObj
-        ? currentDeviceObj.name
-        : selectedDevice;
+
+      // 🟢 [수정] 기기명 표시 로직 강화
+      let displayDeviceName = '전체 평균';
+      if (selectedDevice !== 'ALL') {
+        if (isManager) {
+          displayDeviceName = currentDeviceObj
+            ? currentDeviceObj.name
+            : selectedDevice;
+        } else {
+          // 기기 사용자는 '내 기기 (시리얼)' 형태로 표시
+          displayDeviceName = mySerial ? `내 기기 (${mySerial})` : '내 기기';
+        }
+      }
 
       setTableData(
         apiData.map((d: any) => ({
           date: d.date,
-          deviceName:
-            selectedDevice === 'ALL' ? '전체 평균' : displayDeviceName,
+          deviceName: displayDeviceName,
           serial: '-',
           battery: d.avgBattery,
           speed: d.avgSpeed,
@@ -221,15 +239,23 @@ export default function StatsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [startDate, endDate, periodType, selectedDevice, devices]);
+  }, [
+    startDate,
+    endDate,
+    periodType,
+    selectedDevice,
+    devices,
+    isManager,
+    mySerial,
+  ]); // mySerial 의존성 추가
 
-  // 초기 로딩
+  // 초기 로딩 (selectedDevice 또는 mySerial 변경 시 실행)
   useEffect(() => {
     handleSearch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [selectedDevice, mySerial]);
 
-  // --- 4. 차트 렌더링 (데이터나 메트릭이 바뀌면 실행) ---
+  // 차트 렌더링 (기존 동일)
   useEffect(() => {
     if (apiRawData.length === 0) {
       setChartData(null);
@@ -237,9 +263,8 @@ export default function StatsPage() {
     }
 
     const labels = apiRawData.map((d) => d.date);
-    const config = METRIC_CONFIG[selectedMetric]; // 현재 선택된 메트릭 설정
+    const config = METRIC_CONFIG[selectedMetric];
 
-    // 선택된 메트릭에 맞는 데이터만 추출
     const dataValues = apiRawData.map((d) => {
       if (selectedMetric === 'BATTERY') return d.avgBattery;
       if (selectedMetric === 'SPEED') return d.avgSpeed;
@@ -256,14 +281,13 @@ export default function StatsPage() {
           backgroundColor: chartType === 'BAR' ? config.color : config.bgColor,
           borderColor: config.color,
           borderWidth: 2,
-          fill: chartType === 'LINE', // 라인 차트일 때 채우기 효과
-          tension: 0.3, // 곡선 부드럽게
+          fill: chartType === 'LINE',
+          tension: 0.3,
         },
       ],
     });
-  }, [apiRawData, selectedMetric, chartType]); // 버튼 누르면 여기서 차트 갱신됨
+  }, [apiRawData, selectedMetric, chartType]);
 
-  // --- 5. 차트 옵션 ---
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
@@ -282,12 +306,11 @@ export default function StatsPage() {
     scales: {
       y: {
         beginAtZero: true,
-        // 배터리는 100 고정, 나머지는 자동 스케일
         max: METRIC_CONFIG[selectedMetric].yMax,
         grid: { color: '#e0e0e0', borderDash: [5, 5] },
         title: {
           display: true,
-          text: METRIC_CONFIG[selectedMetric].unit, // 단위 표시 (%, m, m/s)
+          text: METRIC_CONFIG[selectedMetric].unit,
         },
       },
       x: {
@@ -300,7 +323,6 @@ export default function StatsPage() {
     <div className={styles.container}>
       <h1 className={styles.pageTitle}>통계 정보</h1>
 
-      {/* 1. 필터 영역 */}
       <div className={styles.filterBox}>
         <div className={styles.filterGroup}>
           <label>기간별</label>
@@ -365,13 +387,12 @@ export default function StatsPage() {
         </button>
       </div>
 
-      {/* 2. 차트 영역 */}
       <div className={styles.chartContainer}>
+        {/* ... 차트 헤더 및 캔버스 (기존 동일) ... */}
         <div className={styles.chartHeader}>
           <h3>📊 데이터 시각화</h3>
 
           <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-            {/* 🟢 [새로운 기능] 데이터 종류 선택 버튼 그룹 */}
             <div className={styles.chartToggle}>
               <button
                 style={{
@@ -405,7 +426,6 @@ export default function StatsPage() {
               </button>
             </div>
 
-            {/* 기존 차트 타입 토글 (구분선 추가) */}
             <div
               style={{ width: '1px', height: '24px', background: '#ccc' }}
             ></div>
@@ -442,7 +462,6 @@ export default function StatsPage() {
         </div>
       </div>
 
-      {/* 3. 하단 테이블 영역 (상세 로그는 전체 다 보여줌) */}
       <div className={styles.tableContainer}>
         <h3 className={styles.tableTitle}>상세 데이터 로그</h3>
         <table className={styles.table}>
@@ -468,7 +487,6 @@ export default function StatsPage() {
                   <td>{row.date}</td>
                   <td>{row.deviceName}</td>
                   <td>
-                    {/* 배터리 볼 때는 배터리 강조 */}
                     <strong
                       style={{
                         color:
@@ -479,7 +497,6 @@ export default function StatsPage() {
                     </strong>
                   </td>
                   <td>
-                    {/* 속도 볼 때는 속도 강조 */}
                     <span
                       style={{
                         fontWeight:
@@ -492,7 +509,6 @@ export default function StatsPage() {
                     </span>
                   </td>
                   <td>
-                    {/* 거리 볼 때는 거리 강조 */}
                     <span
                       style={{
                         fontWeight:

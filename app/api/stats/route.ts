@@ -1,5 +1,5 @@
 // 📍 경로: app/api/stats/route.ts
-// 📝 설명: DB에 실제 저장된 이름(battery_percent 등)으로 조회하도록 수정
+// 📝 설명: 주행거리는 '최대값'이 아니라 '그 날의 마지막 값(MAX_BY)'을 사용하도록 수정
 
 import { NextResponse, NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
@@ -9,7 +9,6 @@ import {
   QueryCommand,
 } from '@aws-sdk/client-timestream-query';
 
-// 1. Timestream 클라이언트 설정
 const queryClient = new TimestreamQueryClient({
   region: process.env.AWS_REGION || 'ap-northeast-1',
   credentials: {
@@ -23,13 +22,11 @@ const TABLE_NAME = 'WheelchairMetricsTable';
 
 export async function GET(request: NextRequest) {
   try {
-    // 1. 세션 확인
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    // 2. 쿼리 파라미터 파싱
     const url = new URL(request.url);
     const startDate = url.searchParams.get('startDate');
     const endDate = url.searchParams.get('endDate');
@@ -42,7 +39,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 3. 권한 및 대상 기기 설정
     const userRole = session.user.role;
 
     if (userRole === 'DEVICE_USER') {
@@ -61,26 +57,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
     }
 
-    // 4. Timestream 쿼리 조건 생성
     const startTs = `${startDate}T00:00:00Z`;
     const endTs = `${endDate}T23:59:59Z`;
 
-    // [중요] DB에 wheelchair_id 컬럼(UUID)이 있으므로 이 조건을 사용합니다.
     let whereClause = `time BETWEEN from_iso8601_timestamp('${startTs}') AND from_iso8601_timestamp('${endTs}')`;
 
     if (deviceId !== 'ALL') {
       whereClause += ` AND (wheelchair_id = '${deviceId}' OR device_serial = '${deviceId}')`;
     }
 
-    // 5. 쿼리 작성 (⭐️수정됨: 실제 DB에 있는 이름들로 조회)
-    // battery_percent: 확인됨
-    // current_speed, speed: 추측 (둘 다 넣어둠)
-    // distance, driving_dist: 추측 (둘 다 넣어둠)
+    // 🟢 [수정] 이상치 필터링( < 20000 ) 제거함 -> 로직으로 해결
+    // whereClause += ` AND measure_value::double < 20000`;
+
+    // 5. 쿼리 작성 (⭐️핵심 수정: MAX_BY 사용)
+    // MAX_BY(x, y): y(시간)가 가장 클 때의 x(값)를 가져옴 = '마지막 값'
     const query = `
     SELECT 
       BIN(time, 1d) as date_bin,
       measure_name,
-      AVG(measure_value::double) as avg_val
+      AVG(measure_value::double) as avg_val, 
+      MAX_BY(measure_value::double, time) as last_val 
     FROM "${DATABASE_NAME}"."${TABLE_NAME}"
     WHERE ${whereClause}
       AND measure_name IN (
@@ -92,13 +88,9 @@ export async function GET(request: NextRequest) {
     ORDER BY date_bin ASC
    `;
 
-    // console.log('[API /stats] Query:', query);
-
-    // 6. 쿼리 실행
     const command = new QueryCommand({ QueryString: query });
     const response = await queryClient.send(command);
 
-    // 7. 데이터 가공
     const rows = response.Rows || [];
     const dataMap: Record<string, any> = {};
 
@@ -106,9 +98,12 @@ export async function GET(request: NextRequest) {
       const data = row.Data;
       if (!data) return;
 
-      const timeStr = data[0].ScalarValue?.split(' ')[0]; // YYYY-MM-DD
+      const timeStr = data[0].ScalarValue?.split(' ')[0];
       const measureName = data[1].ScalarValue;
+
       const avgVal = parseFloat(data[2].ScalarValue || '0');
+      // 🟢 last_val (마지막 값) 추출
+      const lastVal = parseFloat(data[3].ScalarValue || '0');
 
       if (timeStr && measureName) {
         if (!dataMap[timeStr]) {
@@ -120,17 +115,19 @@ export async function GET(request: NextRequest) {
           };
         }
 
-        // ⭐️ [매핑 수정] DB 이름 -> 프론트 변수 연결
+        // 🟢 [로직 적용]
+
+        // 1. 배터리 (평균)
         if (measureName === 'battery_percent') {
           dataMap[timeStr].avgBattery = parseFloat(avgVal.toFixed(1));
         }
-        // 속도 (이름이 불확실하여 여러 케이스 처리)
+        // 2. 속도 (평균)
         else if (measureName === 'speed' || measureName === 'current_speed') {
           dataMap[timeStr].avgSpeed = parseFloat(avgVal.toFixed(1));
         }
-        // 거리
+        // 3. 주행거리 -> ⭐️ 그 날의 마지막 값(lastVal) 사용!
         else if (measureName === 'distance' || measureName === 'driving_dist') {
-          dataMap[timeStr].avgDistance = parseFloat(avgVal.toFixed(1));
+          dataMap[timeStr].avgDistance = parseFloat(lastVal.toFixed(1));
         }
       }
     });

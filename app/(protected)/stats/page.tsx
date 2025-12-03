@@ -32,7 +32,7 @@ ChartJS.register(
   Filler
 );
 
-// 헬퍼 함수: 날짜를 YYYY-MM-DD 문자열로 변환
+// 헬퍼 함수: 날짜 포맷
 const formatDateString = (date: Date): string => {
   const yyyy = date.getFullYear();
   const mm = String(date.getMonth() + 1).padStart(2, '0');
@@ -40,11 +40,40 @@ const formatDateString = (date: Date): string => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
+// 🟢 데이터 타입 정의 (배터리, 속도, 거리)
+type MetricType = 'BATTERY' | 'SPEED' | 'DISTANCE';
+
+// 메트릭별 설정 (색상, 라벨, 단위)
+const METRIC_CONFIG = {
+  BATTERY: {
+    label: '평균 배터리 잔량',
+    unit: '%',
+    color: '#27b4e9', // 파랑
+    bgColor: 'rgba(39, 180, 233, 0.2)',
+    yMax: 100, // 배터리는 최대 100
+  },
+  SPEED: {
+    label: '평균 속도',
+    unit: 'm/s',
+    color: '#ff9f40', // 주황
+    bgColor: 'rgba(255, 159, 64, 0.2)',
+    yMax: undefined, // 속도는 자동 스케일
+  },
+  DISTANCE: {
+    label: '주행 거리',
+    unit: 'm',
+    color: '#4bc0c0', // 초록
+    bgColor: 'rgba(75, 192, 192, 0.2)',
+    yMax: undefined, // 거리는 자동 스케일
+  },
+};
+
 export default function StatsPage() {
-  // --- 1. 필터 상태 관리 ---
+  // --- 1. 필터 및 세션 상태 ---
   const { data: session } = useSession();
   const userRole = session?.user?.role;
   const isManager = userRole === 'ADMIN' || userRole === 'MASTER';
+
   const [periodType, setPeriodType] = useState<
     'WEEKLY' | 'MONTHLY' | 'YEARLY' | 'CUSTOM'
   >('MONTHLY');
@@ -52,36 +81,44 @@ export default function StatsPage() {
   const today = new Date();
   const [startDate, setStartDate] = useState<Date>(
     new Date(today.getFullYear(), today.getMonth(), 1)
-  ); // 이달 1일
-  const [endDate, setEndDate] = useState<Date>(today); // 오늘
+  );
+  const [endDate, setEndDate] = useState<Date>(today);
 
   const [selectedDevice, setSelectedDevice] = useState('ALL');
   const [selectedRegion, setSelectedRegion] = useState('ALL');
+
+  // 차트 형태 (막대/선)
   const [chartType, setChartType] = useState<'BAR' | 'LINE'>('BAR');
 
+  // 🟢 [추가] 현재 보고 있는 데이터 종류 (기본값: 배터리)
+  const [selectedMetric, setSelectedMetric] = useState<MetricType>('BATTERY');
+
   // --- 2. 데이터 상태 ---
+  // API에서 받아온 원본 데이터를 저장해둠 (버튼 누를 때마다 API 재호출 방지)
+  const [apiRawData, setApiRawData] = useState<any[]>([]);
   const [chartData, setChartData] = useState<any>(null);
   const [tableData, setTableData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // (추후 API로 대체 가능) 임시 기기 목록
+  // 기기 목록
   const [devices, setDevices] = useState<{ id: string; name: string }[]>([
     { id: 'ALL', name: '전체 기기' },
   ]);
   const regions = ['전체 지역', '경기도', '서울시', '인천시'];
 
-  // 🟢 [추가] 실제 기기 목록 불러오기 (관리자일 경우만)
+  // 관리자용 기기 목록 로드
   useEffect(() => {
     const fetchDevices = async () => {
       if (!isManager) return;
-
       try {
         const res = await fetch('/api/wheelchairs');
         if (res.ok) {
           const data = await res.json();
           const realDevices = data.map((d: any) => ({
-            id: d.device_serial || String(d.id),
-            name: d.device_serial || `기기 ${d.id}`,
+            id: d.id,
+            name: d.device_serial
+              ? `${d.device_serial} ${d.model_name ? `(${d.model_name})` : ''}`
+              : `기기 ${d.id}`,
           }));
           setDevices([{ id: 'ALL', name: '전체 기기' }, ...realDevices]);
         }
@@ -89,11 +126,10 @@ export default function StatsPage() {
         console.error('기기 목록 로딩 실패:', error);
       }
     };
-
     fetchDevices();
   }, [isManager]);
 
-  // 🟢 [로직 1] 기간 타입 변경 시 날짜 자동 계산
+  // 기간 자동 계산 로직
   useEffect(() => {
     const now = new Date();
     let newStart = new Date();
@@ -115,12 +151,10 @@ export default function StatsPage() {
       case 'CUSTOM':
         return;
     }
-
     setStartDate(newStart);
     setEndDate(newEnd);
   }, [periodType]);
 
-  // 핸들러: 달력 직접 변경 시 CUSTOM 모드로 전환
   const handleDateChangeStart = (date: Date) => {
     setStartDate(date);
     setPeriodType('CUSTOM');
@@ -130,23 +164,15 @@ export default function StatsPage() {
     setPeriodType('CUSTOM');
   };
 
-  // --- 3. 데이터 검색 핸들러 (실제 API 연동) ---
+  // --- 3. API 데이터 가져오기 ---
   const handleSearch = useCallback(async () => {
     setIsLoading(true);
 
     const startStr = formatDateString(startDate);
     const endStr = formatDateString(endDate);
 
-    console.log('검색 조건:', {
-      periodType,
-      startStr,
-      endStr,
-      selectedDevice,
-      selectedRegion,
-    });
-
     try {
-      // 🟢 [수정됨] 실제 API 호출
+      // API 호출 (배터리, 속도, 거리 모두 가져옴)
       const res = await fetch(
         `/api/stats?startDate=${startStr}&endDate=${endStr}&deviceId=${selectedDevice}`
       );
@@ -158,79 +184,96 @@ export default function StatsPage() {
         );
       }
 
-      const apiData = await res.json(); // [{ date: '...', avgBattery: 80, count: 10 }, ...]
+      const apiData = await res.json();
 
-      // 데이터가 없을 경우 처리
       if (!Array.isArray(apiData) || apiData.length === 0) {
+        setApiRawData([]); // 데이터 없음
         setChartData(null);
         setTableData([]);
-        return; // finally 블록으로 이동
+        return;
       }
 
-      // API 데이터를 차트용 배열로 변환
-      const labels = apiData.map((d: any) => d.date);
-      const values = apiData.map((d: any) => d.avgBattery);
+      // 원본 데이터 저장 (이후 useEffect에서 차트 그림)
+      setApiRawData(apiData);
 
-      setChartData({
-        labels: labels,
-        datasets: [
-          {
-            label: '평균 배터리 잔량 (%)',
-            data: values,
-            backgroundColor:
-              chartType === 'BAR' ? '#27b4e9' : 'rgba(39, 180, 233, 0.2)',
-            borderColor: '#27b4e9',
-            borderWidth: 1,
-            fill: chartType === 'LINE',
-            tension: 0.4,
-          },
-        ],
-      });
+      // 테이블용 데이터는 한 번에 매핑해둠 (상세 로그는 다 보여주는 게 좋음)
+      const currentDeviceObj = devices.find((d) => d.id === selectedDevice);
+      const displayDeviceName = currentDeviceObj
+        ? currentDeviceObj.name
+        : selectedDevice;
 
-      // 테이블 데이터 매핑
       setTableData(
         apiData.map((d: any) => ({
           date: d.date,
           deviceName:
-            selectedDevice === 'ALL' ? '전체 평균' : `기기 ${selectedDevice}`,
-          serial: '-', // (통계 쿼리 특성상 개별 시리얼은 알기 어려움)
-          usage: 100 - d.avgBattery, // 예시: 100 - 잔량 = 사용량
-          remain: d.avgBattery,
+            selectedDevice === 'ALL' ? '전체 평균' : displayDeviceName,
+          serial: '-',
+          battery: d.avgBattery,
+          speed: d.avgSpeed,
+          distance: d.avgDistance,
         }))
       );
     } catch (error) {
       console.error('데이터 로딩 실패:', error);
+      setApiRawData([]);
       setChartData(null);
       setTableData([]);
     } finally {
       setIsLoading(false);
     }
-  }, [
-    startDate,
-    endDate,
-    periodType,
-    selectedDevice,
-    selectedRegion,
-    chartType,
-  ]);
+  }, [startDate, endDate, periodType, selectedDevice, devices]);
 
-  // 🟢 [로직 2] 초기 로딩 시 한 번만 실행
+  // 초기 로딩
   useEffect(() => {
     handleSearch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // --- 4. 차트 옵션 ---
+  // --- 4. 차트 렌더링 (데이터나 메트릭이 바뀌면 실행) ---
+  useEffect(() => {
+    if (apiRawData.length === 0) {
+      setChartData(null);
+      return;
+    }
+
+    const labels = apiRawData.map((d) => d.date);
+    const config = METRIC_CONFIG[selectedMetric]; // 현재 선택된 메트릭 설정
+
+    // 선택된 메트릭에 맞는 데이터만 추출
+    const dataValues = apiRawData.map((d) => {
+      if (selectedMetric === 'BATTERY') return d.avgBattery;
+      if (selectedMetric === 'SPEED') return d.avgSpeed;
+      if (selectedMetric === 'DISTANCE') return d.avgDistance;
+      return 0;
+    });
+
+    setChartData({
+      labels: labels,
+      datasets: [
+        {
+          label: `${config.label} (${config.unit})`,
+          data: dataValues,
+          backgroundColor: chartType === 'BAR' ? config.color : config.bgColor,
+          borderColor: config.color,
+          borderWidth: 2,
+          fill: chartType === 'LINE', // 라인 차트일 때 채우기 효과
+          tension: 0.3, // 곡선 부드럽게
+        },
+      ],
+    });
+  }, [apiRawData, selectedMetric, chartType]); // 버튼 누르면 여기서 차트 갱신됨
+
+  // --- 5. 차트 옵션 ---
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
       legend: { position: 'top' as const },
-      title: { display: true, text: '배터리/주행 통계' },
+      title: {
+        display: true,
+        text: `${METRIC_CONFIG[selectedMetric].label} 변화 추이`,
+      },
       tooltip: {
-        enabled: true,
-        mode: 'index' as const,
-        intersect: false,
         backgroundColor: 'rgba(0,0,0,0.8)',
         padding: 10,
         cornerRadius: 4,
@@ -239,8 +282,13 @@ export default function StatsPage() {
     scales: {
       y: {
         beginAtZero: true,
-        max: 100, // 배터리는 100%가 최대이므로 고정하면 보기 좋음
+        // 배터리는 100 고정, 나머지는 자동 스케일
+        max: METRIC_CONFIG[selectedMetric].yMax,
         grid: { color: '#e0e0e0', borderDash: [5, 5] },
+        title: {
+          display: true,
+          text: METRIC_CONFIG[selectedMetric].unit, // 단위 표시 (%, m, m/s)
+        },
       },
       x: {
         grid: { display: false },
@@ -252,7 +300,7 @@ export default function StatsPage() {
     <div className={styles.container}>
       <h1 className={styles.pageTitle}>통계 정보</h1>
 
-      {/* 1. 필터 컨트롤 영역 */}
+      {/* 1. 필터 영역 */}
       <div className={styles.filterBox}>
         <div className={styles.filterGroup}>
           <label>기간별</label>
@@ -280,7 +328,6 @@ export default function StatsPage() {
           </div>
         </div>
 
-        {/* 관리자일 때만 기기 선택 가능 */}
         {isManager && (
           <div className={styles.filterGroup}>
             <label>차량명(Serial)</label>
@@ -322,19 +369,61 @@ export default function StatsPage() {
       <div className={styles.chartContainer}>
         <div className={styles.chartHeader}>
           <h3>📊 데이터 시각화</h3>
-          <div className={styles.chartToggle}>
-            <button
-              className={chartType === 'BAR' ? styles.activeType : ''}
-              onClick={() => setChartType('BAR')}
-            >
-              막대그래프
-            </button>
-            <button
-              className={chartType === 'LINE' ? styles.activeType : ''}
-              onClick={() => setChartType('LINE')}
-            >
-              꺾은선그래프
-            </button>
+
+          <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+            {/* 🟢 [새로운 기능] 데이터 종류 선택 버튼 그룹 */}
+            <div className={styles.chartToggle}>
+              <button
+                style={{
+                  backgroundColor:
+                    selectedMetric === 'BATTERY' ? '#27b4e9' : '#f0f0f0',
+                  color: selectedMetric === 'BATTERY' ? 'white' : '#333',
+                }}
+                onClick={() => setSelectedMetric('BATTERY')}
+              >
+                배터리
+              </button>
+              <button
+                style={{
+                  backgroundColor:
+                    selectedMetric === 'SPEED' ? '#ff9f40' : '#f0f0f0',
+                  color: selectedMetric === 'SPEED' ? 'white' : '#333',
+                }}
+                onClick={() => setSelectedMetric('SPEED')}
+              >
+                속도
+              </button>
+              <button
+                style={{
+                  backgroundColor:
+                    selectedMetric === 'DISTANCE' ? '#4bc0c0' : '#f0f0f0',
+                  color: selectedMetric === 'DISTANCE' ? 'white' : '#333',
+                }}
+                onClick={() => setSelectedMetric('DISTANCE')}
+              >
+                주행거리
+              </button>
+            </div>
+
+            {/* 기존 차트 타입 토글 (구분선 추가) */}
+            <div
+              style={{ width: '1px', height: '24px', background: '#ccc' }}
+            ></div>
+
+            <div className={styles.chartToggle}>
+              <button
+                className={chartType === 'BAR' ? styles.activeType : ''}
+                onClick={() => setChartType('BAR')}
+              >
+                막대
+              </button>
+              <button
+                className={chartType === 'LINE' ? styles.activeType : ''}
+                onClick={() => setChartType('LINE')}
+              >
+                선
+              </button>
+            </div>
           </div>
         </div>
 
@@ -353,7 +442,7 @@ export default function StatsPage() {
         </div>
       </div>
 
-      {/* 3. 하단 테이블 영역 */}
+      {/* 3. 하단 테이블 영역 (상세 로그는 전체 다 보여줌) */}
       <div className={styles.tableContainer}>
         <h3 className={styles.tableTitle}>상세 데이터 로그</h3>
         <table className={styles.table}>
@@ -361,9 +450,9 @@ export default function StatsPage() {
             <tr>
               <th>날짜</th>
               <th>차량명</th>
-              <th>시리얼 번호</th>
-              <th>사용량 / 주행거리</th>
-              <th>상태 / 잔량</th>
+              <th>배터리 잔량</th>
+              <th>평균 속도</th>
+              <th>주행 거리</th>
             </tr>
           </thead>
           <tbody>
@@ -378,9 +467,43 @@ export default function StatsPage() {
                 <tr key={idx}>
                   <td>{row.date}</td>
                   <td>{row.deviceName}</td>
-                  <td>{row.serial}</td>
-                  <td>{row.usage} %</td>
-                  <td>{row.remain} %</td>
+                  <td>
+                    {/* 배터리 볼 때는 배터리 강조 */}
+                    <strong
+                      style={{
+                        color:
+                          selectedMetric === 'BATTERY' ? '#27b4e9' : 'inherit',
+                      }}
+                    >
+                      {row.battery}%
+                    </strong>
+                  </td>
+                  <td>
+                    {/* 속도 볼 때는 속도 강조 */}
+                    <span
+                      style={{
+                        fontWeight:
+                          selectedMetric === 'SPEED' ? 'bold' : 'normal',
+                        color:
+                          selectedMetric === 'SPEED' ? '#ff9f40' : 'inherit',
+                      }}
+                    >
+                      {row.speed} m/s
+                    </span>
+                  </td>
+                  <td>
+                    {/* 거리 볼 때는 거리 강조 */}
+                    <span
+                      style={{
+                        fontWeight:
+                          selectedMetric === 'DISTANCE' ? 'bold' : 'normal',
+                        color:
+                          selectedMetric === 'DISTANCE' ? '#4bc0c0' : 'inherit',
+                      }}
+                    >
+                      {row.distance} m
+                    </span>
+                  </td>
                 </tr>
               ))
             ) : (

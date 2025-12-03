@@ -23,6 +23,12 @@ export const TopRightPanel = ({ wc }: Props) => {
     ? new Date(wc.status.last_seen).toLocaleString()
     : new Date().toLocaleString();
 
+  const formatBattery = (val: any) => {
+    const num = Number(val);
+    if (isNaN(num)) return '0.0';
+    return num.toFixed(1);
+  };
+
   return (
     <div className={styles.topRightPanel}>
       {/* 배터리 상태 */}
@@ -37,7 +43,7 @@ export const TopRightPanel = ({ wc }: Props) => {
         />
         <p className={styles.batteryValue}>
           {/* 수정한 변수 사용 */}
-          <strong>{battery}%</strong>
+          <strong>{formatBattery(battery)}%</strong>
         </p>
         <p className={styles.batteryTimestamp}>{lastUpdate}</p>
       </div>

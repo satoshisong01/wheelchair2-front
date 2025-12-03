@@ -80,8 +80,8 @@ export default function StatsPage() {
         if (res.ok) {
           const data = await res.json();
           const realDevices = data.map((d: any) => ({
-            id: d.deviceSerial || String(d.id),
-            name: d.deviceSerial || `기기 ${d.id}`,
+            id: d.device_serial || String(d.id),
+            name: d.device_serial || `기기 ${d.id}`,
           }));
           setDevices([{ id: 'ALL', name: '전체 기기' }, ...realDevices]);
         }

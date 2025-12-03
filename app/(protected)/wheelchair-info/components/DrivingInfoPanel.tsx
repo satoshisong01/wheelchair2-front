@@ -39,6 +39,12 @@ export const DrivingInfoPanel = ({
     return `${m} min`;
   };
 
+  const formatDecimal = (value: any) => {
+    const num = Number(value);
+    if (isNaN(num)) return '0.0';
+    return num.toFixed(1); // 항상 문자열 "x.x" 형태 반환
+  };
+
   return (
     <div className={styles.card}>
       <h3 className={styles.sectionTitle}>운행 정보</h3>
@@ -57,7 +63,7 @@ export const DrivingInfoPanel = ({
           </strong>
         </p>
         <p>
-          전압: <strong>{voltage} V</strong>
+          전압: <strong>{formatDecimal(voltage)} V</strong>
         </p>
         <p>
           주행 거리:{' '}
@@ -70,10 +76,10 @@ export const DrivingInfoPanel = ({
           </strong>
         </p>
         <p>
-          전류: <strong>{current} A</strong>
+          전류: <strong>{formatDecimal(current)} A</strong>
         </p>
         <p>
-          속도: <strong>{speed} m/s</strong>
+          속도: <strong>{formatDecimal(speed)} m/s</strong>
         </p>
         {/* 아래 두 항목은 DB에 컬럼이 없으면 하드코딩 유지하거나 0 처리 */}
         <p>

@@ -1,3 +1,4 @@
+// app/(protected)/device-management/page.tsx
 'use client';
 
 import {
@@ -71,7 +72,9 @@ export default function DeviceManagementPage() {
       const res = await fetch('/api/admin/devices');
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.message || '기기 목록을 불러오는 데 실패했습니다.');
+        throw new Error(
+          errData.message || '기기 목록을 불러오는 데 실패했습니다.'
+        );
       }
       const data = await res.json();
       setDevices(data);
@@ -90,7 +93,7 @@ export default function DeviceManagementPage() {
   };
 
   const checkCapsLock = (
-    e: KeyboardEvent<HTMLInputElement> | MouseEvent<HTMLInputElement>,
+    e: KeyboardEvent<HTMLInputElement> | MouseEvent<HTMLInputElement>
   ) => {
     if (e.getModifierState) setIsCapsLockOn(e.getModifierState('CapsLock'));
   };
@@ -286,14 +289,22 @@ export default function DeviceManagementPage() {
                   required
                   disabled={isSubmitting}
                   placeholder="비밀번호 재입력"
-                  className={isPasswordMismatch ? styles.inputError : styles.input}
+                  className={
+                    isPasswordMismatch ? styles.inputError : styles.input
+                  }
                 />
                 {isPasswordMismatch && (
-                  <span className={styles.errorText}>비밀번호가 일치하지 않습니다.</span>
+                  <span className={styles.errorText}>
+                    비밀번호가 일치하지 않습니다.
+                  </span>
                 )}
               </div>
             </div>
-            {isCapsLockOn && <div className={styles.capsLock}>⚠️ Caps Lock이 켜져 있습니다.</div>}
+            {isCapsLockOn && (
+              <div className={styles.capsLock}>
+                ⚠️ Caps Lock이 켜져 있습니다.
+              </div>
+            )}
             {formError && <p className={styles.formError}>{formError}</p>}
             <div className={styles.formActions}>
               <button
@@ -337,10 +348,14 @@ export default function DeviceManagementPage() {
                       <td>{device.device_serial}</td>
                       <td>{device.model_name}</td>
                       <td>{device.registered_by_name || '-'}</td>
-                      <td>{new Date(device.created_at).toLocaleDateString()}</td>
+                      <td>
+                        {new Date(device.created_at).toLocaleDateString()}
+                      </td>
                       <td>
                         <button
-                          onClick={() => openDeleteModal(device.id, device.device_serial)}
+                          onClick={() =>
+                            openDeleteModal(device.id, device.device_serial)
+                          }
                           className={styles.deleteButton}
                         >
                           ❌ 삭제
@@ -356,11 +371,15 @@ export default function DeviceManagementPage() {
       </div>
 
       {deleteModal.isOpen && (
-        <div 
-          className={styles.modalOverlay} 
+        <div
+          className={styles.modalOverlay}
           onClick={(e) => {
             if (e.target === e.currentTarget) {
-              setDeleteModal({ isOpen: false, targetId: null, targetSerial: '' });
+              setDeleteModal({
+                isOpen: false,
+                targetId: null,
+                targetSerial: '',
+              });
             }
           }}
         >
@@ -373,7 +392,13 @@ export default function DeviceManagementPage() {
             </p>
             <div className={styles.modalActions}>
               <button
-                onClick={() => setDeleteModal({ isOpen: false, targetId: null, targetSerial: '' })}
+                onClick={() =>
+                  setDeleteModal({
+                    isOpen: false,
+                    targetId: null,
+                    targetSerial: '',
+                  })
+                }
                 className={styles.cancelButton}
               >
                 취소

@@ -24,6 +24,7 @@ export default function Sidebar() {
   const isManager =
     session?.user?.role === 'ADMIN' || session?.user?.role === 'MASTER';
   const isMaster = session?.user?.role === 'MASTER';
+  const isDeviceUser = session?.user?.role === 'DEVICE_USER';
 
   const user = session?.user as any;
   let displayName = '사용자';
@@ -121,6 +122,24 @@ export default function Sidebar() {
       </ul>
 
       {/* 3. 하단 (프로필 + 로그아웃) */}
+
+      {isDeviceUser && (
+        <Link
+          href="/mypage"
+          className={styles.mypageLink}
+          style={{
+            display: 'block',
+            textAlign: 'center',
+            margin: '10px 0',
+            color: '#666',
+            fontSize: '13px',
+            textDecoration: 'none',
+          }}
+        >
+          ⚙️ 마이페이지
+        </Link>
+      )}
+
       <div className={styles.footer}>
         <div className={styles.profile}>
           <div className={styles.profileIcon}>👤</div>

@@ -131,7 +131,7 @@ export default function Sidebar() {
             display: 'block',
             textAlign: 'center',
             margin: '10px 0',
-            color: '#666',
+            color: '#111',
             fontSize: '13px',
             textDecoration: 'none',
           }}

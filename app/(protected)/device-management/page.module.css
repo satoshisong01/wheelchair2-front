@@ -16,7 +16,7 @@
 }
 
 .header p {
-  color: #666;
+  color: #111;
   margin: 0;
 }
 
@@ -85,9 +85,15 @@
 }
 
 .formGroup label {
-  display: block;
-  font-weight: bold;
   margin-bottom: 5px;
+  display: block;
+  font-weight: 700; /* 더 두껍게 */
+  color: #111; /* 진하게 */
+  margin-bottom: 8px;
+}
+
+.input::placeholder {
+  color: #888; /* 너무 연한 회색 말고 적당한 회색 */
 }
 
 .formGroup input {
@@ -154,7 +160,7 @@
 .loadingSpinner {
   padding: 20px;
   text-align: center;
-  color: #666;
+  color: #111;
 }
 
 .errorBox {
@@ -185,7 +191,7 @@
 
 .emptyState {
   text-align: center !important;
-  color: #666;
+  color: #111;
 }
 
 .deleteButton {
@@ -325,6 +331,9 @@
   border-radius: 4px;
   width: 100%;
   box-sizing: border-box;
+  color: #111; /* 진한 검정 */
+  font-weight: 500; /* 약간 두껍게 */
+  font-size: 16px; /* 모바일 가독성 표준 */
 }
 
 .input:disabled {

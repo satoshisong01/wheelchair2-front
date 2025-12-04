@@ -23,7 +23,7 @@
 /* "잠시만 기다려주세요" 같은 텍스트 (선택사항) */
 .text {
   margin-top: 15px;
-  color: #666;
+  color: #111;
   font-size: 0.9rem;
   font-weight: 500;
 }

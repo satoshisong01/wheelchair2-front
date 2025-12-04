@@ -34,7 +34,8 @@
 .filterGroup label {
   font-size: 14px;
   font-weight: 600;
-  color: #666;
+  color: #111;
+  font-weight: 700;
 }
 
 .select,
@@ -44,6 +45,12 @@
   border-radius: 4px;
   font-size: 14px;
   min-width: 120px;
+}
+
+.select,
+.searchButton {
+  color: #222; /* 입력창 내부 글씨도 진하게 */
+  font-weight: 500;
 }
 
 .dateInputs {
@@ -184,12 +191,20 @@
   /* 2. 필터 박스 세로 배치 */
   .filterBox {
     flex-direction: column;
-    align-items: stretch; /* 가로 꽉 채우기 */
-    gap: 15px;
+    /* align-items: stretch; 가로 꽉 채우기 */
+    padding: 15px;
+    gap: 20px;
   }
 
   .filterGroup {
     width: 100%;
+    margin-bottom: 10px;
+  }
+
+  .filterGroup label {
+    font-size: 14px; /* 라벨 크기 적당히 */
+    margin-bottom: 8px;
+    display: block;
   }
 
   .select,
@@ -231,5 +246,44 @@
   .table td {
     padding: 10px 8px;
     font-size: 13px;
+  }
+
+  .datePickerWrapper {
+    display: flex;
+    flex-direction: column; /* 가로 -> 세로 변경 */
+    gap: 10px;
+    width: 100%;
+  }
+
+  /* 날짜 입력창(input type="date") 스타일 강제 조정 */
+  .datePickerWrapper input[type='date'] {
+    width: 100%; /* 화면 꽉 차게 */
+    padding: 12px; /* 터치 영역 확보 */
+    font-size: 16px; /* 모바일에서 16px 미만이면 입력 시 확대되는 현상 방지 */
+    color: #111; /* 글씨 진하게 */
+    border: 1px solid #ccc;
+    border-radius: 6px;
+  }
+
+  /* 물결표(~) 숨기거나 가운데 정렬 */
+  .datePickerWrapper span {
+    /* 만약 ~ 가 span으로 되어있다면 */
+    display: none; /* 세로 배치니까 ~ 는 없애는 게 깔끔함 */
+  }
+
+  /* 셀렉트 박스도 꽉 차게 */
+  .select {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    color: #111;
+  }
+
+  /* 검색 버튼 꽉 차게 */
+  .searchButton {
+    width: 100%;
+    padding: 15px;
+    font-size: 16px;
+    margin-top: 10px;
   }
 }

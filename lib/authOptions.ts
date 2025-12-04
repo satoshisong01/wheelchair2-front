@@ -133,17 +133,22 @@ export const authOptions: NextAuthOptions = {
         if (token.role !== 'DEVICE_USER') {
           try {
             // DB에 해당 ID가 존재하는지 가볍게 확인 (SELECT 1)
-            const exists = await query(`SELECT 1 FROM users WHERE id = $1`, [token.id]);
-            
+            const exists = await query(`SELECT 1 FROM users WHERE id = $1`, [
+              token.id,
+            ]);
+
             // 🚨 DB에 없으면? -> 토큰을 파기(null 반환)하여 로그아웃 처리
             if (exists.rowCount === 0) {
-              console.log(`💀 [Zombie Session Detected] User ${token.id} not found in DB. Invalidating token.`);
+              console.log(
+                `💀 [Zombie Session Detected] User ${token.id} not found in DB. Invalidating token.`
+              );
               return null; // 여기서 null을 리턴하면 세션이 사라집니다.
             }
           } catch (e) {
             console.error('Session validation error:', e);
           }
         }
+      }
 
       // ⭐️ [C] 세션 업데이트 요청 (update() 호출 시 실행) -> 이 부분이 누락되었음!
       if (trigger === 'update') {

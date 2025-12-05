@@ -46,7 +46,7 @@
 .table th {
   background-color: #f8f9fa;
   font-weight: 600;
-  color: #555;
+  color: black;
 }
 
 .table tbody tr:hover {
@@ -55,7 +55,7 @@
 
 .emptyCell {
   text-align: center;
-  color: #999;
+  color: black;
   padding: 3rem;
   font-size: 1rem;
 }

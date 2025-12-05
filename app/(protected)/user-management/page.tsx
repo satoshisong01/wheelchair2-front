@@ -212,15 +212,15 @@ export default function UserManagementPage() {
                   style={{
                     margin: '5px 0 0 0',
                     fontSize: '14px',
-                    color: '#555',
+                    color: 'black',
                   }}
                 >
                   소속: {user.organization || user.location1 || '-'}
                 </p>
-                <p style={{ margin: '0', fontSize: '14px', color: '#555' }}>
+                <p style={{ margin: '0', fontSize: '14px', color: 'black' }}>
                   연락처: {user.phone_number || '-'}
                 </p>
-                <p style={{ margin: '0', fontSize: '12px', color: '#999' }}>
+                <p style={{ margin: '0', fontSize: '12px', color: 'black' }}>
                   가입: {new Date(user.created_at).toLocaleDateString()}
                 </p>
 

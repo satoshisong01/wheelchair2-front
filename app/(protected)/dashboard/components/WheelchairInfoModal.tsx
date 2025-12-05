@@ -41,7 +41,7 @@ export function WheelchairInfoModal({
               'Unknown Device'}
           </h3>
           {/* ‼️ 디버깅용 ID 노출 (요청에 따라 숨김) */}
-          <span style={{ fontSize: '10px', color: '#999' }}>
+          <span style={{ fontSize: '10px', color: 'black' }}>
             (ID: {wheelchair.id.substring(0, 8)}...)
           </span>
 

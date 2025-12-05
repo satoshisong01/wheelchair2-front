@@ -93,7 +93,7 @@
 }
 
 .input::placeholder {
-  color: #888; /* 너무 연한 회색 말고 적당한 회색 */
+  color: black; /* 너무 연한 회색 말고 적당한 회색 */
 }
 
 .formGroup input {

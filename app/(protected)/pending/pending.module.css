@@ -10,7 +10,7 @@
 
 .loadingText {
   font-size: 1.2rem;
-  color: #555;
+  color: black;
 }
 
 /* --- 2. 메인 박스 (공통 스타일) --- */
@@ -50,7 +50,7 @@
 
 .contact {
   font-size: 0.9rem;
-  color: #888;
+  color: black;
   margin-top: 2rem;
 }
 
@@ -63,7 +63,7 @@
   text-align: left;
   font-size: 0.95rem;
   line-height: 1.7;
-  color: #444;
+  color: black;
   margin-bottom: 1rem;
 }
 

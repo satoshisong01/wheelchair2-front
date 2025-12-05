@@ -134,7 +134,7 @@ export default function MyPage() {
               >
                 <strong>기기 시리얼 (S/N): {deviceSerial}</strong>
               </p>
-              {/* <p style={{ color: '#999', fontSize: '0.9em' }}>
+              {/* <p style={{ color: 'black', fontSize: '0.9em' }}>
                 <strong>시스템 ID (UUID):</strong> {wheelchairId}
               </p> */}
             </>

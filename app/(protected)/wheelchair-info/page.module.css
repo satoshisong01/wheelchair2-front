@@ -57,7 +57,7 @@
 .adminSelector {
   padding: 0 1rem;
   font-size: 0.9rem;
-  color: #555;
+  color: black;
   flex-shrink: 0; /* ‼️ 크기가 줄어들지 않도록 고정 */
 
   display: flex;
@@ -354,7 +354,7 @@
 .postureTitle {
   font-size: 0.85rem;
   font-weight: 500;
-  color: #555;
+  color: black;
 }
 
 .postureBox {
@@ -378,7 +378,7 @@
 }
 .maxValue {
   font-size: 0.8rem;
-  color: #888;
+  color: black;
 }
 .postureTimestamp {
   font-size: 0.75rem;
@@ -548,12 +548,12 @@
 /* 전체보기 링크 */
 .viewAllLink {
   font-size: 0.8rem;
-  color: #999;
+  color: black;
   cursor: pointer;
   transition: color 0.2s;
 }
 .viewAllLink:hover {
-  color: #555;
+  color: black;
   text-decoration: underline;
 }
 
@@ -569,7 +569,7 @@
 /* 빈 데이터 메시지 */
 .emptyMessage {
   text-align: center;
-  color: #999;
+  color: black;
   margin-top: 20px;
   font-size: 0.9rem;
 }
@@ -725,8 +725,8 @@
     white-space: nowrap; /* 타이틀 줄바꿈 방지 */
   }
   .postureImageWrapper {
-    width: 90px; /* 아이콘 크기 키움 */
-    height: 90px;
+    width: 100px; /* 아이콘 크기 키움 */
+    height: 100px;
     margin-right: 15px; /* 텍스트와 간격 */
   }
 
@@ -739,7 +739,6 @@
   }
 
   .currentValue {
-    font-size: 1.4rem !important; /* ⭐️ 숫자 아주 크게 */
     font-weight: 800;
     color: #007bff;
   }
@@ -747,14 +746,14 @@
   /* 최대값 (보조 정보) */
   .maxValue {
     font-size: 0.9rem !important; /* 글씨 키움 */
-    color: #555;
+    color: black;
     margin-top: 2px;
   }
 
   /* 타임스탬프 (맨 아래) */
   .postureTimestamp {
     font-size: 0.8rem !important; /* 글씨 키움 */
-    color: #777;
+    color: black;
     margin-top: 4px;
   }
 
@@ -766,7 +765,7 @@
   }
 
   .currentValue {
-    font-size: 1.5rem; /* ⭐️ 숫자 시원하게 */
+    font-size: 1.8rem; /* ⭐️ 숫자 시원하게 */
     font-weight: 800;
     color: #007bff;
     line-height: 1.1;
@@ -894,7 +893,7 @@
 
   /* 🔧 [추가] 휠체어 상태 / 경고 / 알림 텍스트도 진하게 */
   .stateLabel {
-    color: #222 !important;
+    color: black !important;
     font-weight: 600;
   }
 

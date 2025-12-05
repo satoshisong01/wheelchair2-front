@@ -37,7 +37,7 @@
   cursor: pointer;
   position: relative;
   padding: 5px; /* 터치 영역 확보 */
-  color: #555;
+  color: black;
   display: flex;
   align-items: center;
   justify-content: center;

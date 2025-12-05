@@ -23,7 +23,7 @@
   align-items: center;
   justify-content: center;
   text-decoration: none;
-  color: #999;
+  color: black;
   font-size: 10px; /* 0.7rem -> 10px: 6개 들어갈 때 겹침 방지 */
   gap: 2px;
   flex: 1; /* 너비를 균등하게 가져감 */

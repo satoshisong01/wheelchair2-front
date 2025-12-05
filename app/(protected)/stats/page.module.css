@@ -49,7 +49,7 @@
 
 .select,
 .searchButton {
-  color: #222; /* 입력창 내부 글씨도 진하게 */
+  color: black; /* 입력창 내부 글씨도 진하게 */
   font-weight: 500;
 }
 
@@ -125,7 +125,7 @@
 .noData {
   text-align: center;
   margin-top: 100px;
-  color: #999;
+  color: black;
 }
 
 /* --- 테이블 --- */
@@ -161,13 +161,13 @@
   padding: 12px;
   text-align: center;
   border-bottom: 1px solid #eee;
-  color: #555;
+  color: black;
 }
 
 .loadingCell,
 .emptyCell {
   padding: 30px;
-  color: #999;
+  color: black;
 }
 
 .datePickerWrapper {

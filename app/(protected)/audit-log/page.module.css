@@ -90,7 +90,7 @@
 .table th {
   background-color: #f8f9fa;
   font-weight: 600;
-  color: #555;
+  color: black;
   white-space: nowrap; /* 제목 줄바꿈 방지 */
 }
 
@@ -117,7 +117,7 @@
 
 .emptyCell {
   text-align: center;
-  color: #999;
+  color: black;
   padding: 40px;
 }
 

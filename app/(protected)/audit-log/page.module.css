@@ -9,7 +9,7 @@
 .pageTitle {
   font-size: 24px;
   font-weight: bold;
-  border-bottom: 2px solid #333;
+  border-bottom: 2px solid black;
   padding-bottom: 10px;
   margin-bottom: 20px;
 }
@@ -31,7 +31,7 @@
 
 .filterLabel {
   font-weight: 600;
-  color: #333;
+  color: black;
   white-space: nowrap;
 }
 

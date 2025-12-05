@@ -257,7 +257,7 @@
   margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
-  color: #333;
+  color: black;
 }
 
 .modalCloseButton {
@@ -271,7 +271,7 @@
   padding: 0;
 }
 .modalCloseButton:hover {
-  color: #333;
+  color: black;
 }
 
 .modalBody {
@@ -285,7 +285,7 @@
   margin: 0 0 0.75rem 0;
 }
 .modalBody p strong {
-  color: #333;
+  color: black;
   min-width: 60px;
   display: inline-block;
 }

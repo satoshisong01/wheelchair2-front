@@ -398,7 +398,7 @@ export default function StatsPage() {
                 style={{
                   backgroundColor:
                     selectedMetric === 'BATTERY' ? '#27b4e9' : '#f0f0f0',
-                  color: selectedMetric === 'BATTERY' ? 'white' : '#333',
+                  color: selectedMetric === 'BATTERY' ? 'white' : 'black',
                 }}
                 onClick={() => setSelectedMetric('BATTERY')}
               >
@@ -408,7 +408,7 @@ export default function StatsPage() {
                 style={{
                   backgroundColor:
                     selectedMetric === 'SPEED' ? '#ff9f40' : '#f0f0f0',
-                  color: selectedMetric === 'SPEED' ? 'white' : '#333',
+                  color: selectedMetric === 'SPEED' ? 'white' : 'black',
                 }}
                 onClick={() => setSelectedMetric('SPEED')}
               >
@@ -418,7 +418,7 @@ export default function StatsPage() {
                 style={{
                   backgroundColor:
                     selectedMetric === 'DISTANCE' ? '#4bc0c0' : '#f0f0f0',
-                  color: selectedMetric === 'DISTANCE' ? 'white' : '#333',
+                  color: selectedMetric === 'DISTANCE' ? 'white' : 'black',
                 }}
                 onClick={() => setSelectedMetric('DISTANCE')}
               >

@@ -774,7 +774,7 @@
   }
   .maxValue {
     font-size: 0.85rem;
-    color: #666;
+    color: black;
     margin-bottom: 2px;
   }
   /* ‼️ 날짜/시간 폰트 대폭 축소 및 줄바꿈 허용 */

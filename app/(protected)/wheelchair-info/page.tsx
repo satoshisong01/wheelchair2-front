@@ -1,3 +1,5 @@
+// 경로: app/(protected)/wheelchair-info/page.tsx
+
 'use client';
 
 import { useState, useEffect, useRef, Suspense } from 'react';
@@ -27,12 +29,12 @@ const CRITICAL_KEYWORDS = [
   'COLLISION',
 ];
 
-// 타입 정의 (기존 유지)
+// 타입 정의
 type WheelchairDetailData = DashboardWheelchair & {
   alarms: Alarm[];
   maintenanceLogs: any[];
   status: {
-    // ... (기존 status 필드들 유지)
+    // ... (기존 status 필드들)
     current_battery: number;
     current_speed: number;
     voltage: number;
@@ -46,10 +48,16 @@ type WheelchairDetailData = DashboardWheelchair & {
     slope_fr?: number;
     slope_side?: number;
     temperature?: number;
+    humidity?: number;
+    pressure?: number;
     is_connected: boolean;
     last_seen?: string;
+    // 🟢 [수정] Worker에서 'light'로 오므로 light 필드 중요
+    light?: number;
     posture_time?: number;
     operating_time?: number;
+    runtime?: number;
+    distance?: number;
     [key: string]: any;
   };
 };
@@ -93,7 +101,7 @@ function WheelchairInfoContent() {
         }
 
         if (targetId) {
-          currentIdRef.current = String(targetId); // 문자열로 통일
+          currentIdRef.current = String(targetId);
           const selectedWc = list.find(
             (wc: any) => String(wc.id) === String(targetId)
           ) as WheelchairDetailData;
@@ -101,7 +109,7 @@ function WheelchairInfoContent() {
           if (selectedWc) {
             let fetchedAlarms: any[] = [];
             try {
-              // 3. 알람 가져오기 (API 호출)
+              // 3. 알람 가져오기
               const alarmRes = await fetch(`/api/alarms?t=${Date.now()}`, {
                 cache: 'no-store',
                 headers: {
@@ -112,10 +120,6 @@ function WheelchairInfoContent() {
               });
               if (alarmRes.ok) {
                 const allAlarms = await alarmRes.json();
-
-                // ⭐️ [핵심 수정] 알람 필터링 로직 강화
-                // API가 'wheelchairId' (camelCase)로 보내주는지, 'wheelchair_id'로 보내주는지 모두 체크
-                // 그리고 targetId와 문자열(String)로 비교
                 fetchedAlarms = allAlarms.filter(
                   (a: any) =>
                     String(a.wheelchairId || a.wheelchair_id) ===
@@ -128,7 +132,7 @@ function WheelchairInfoContent() {
 
             setDetailData({
               ...selectedWc,
-              alarms: fetchedAlarms, // 필터링된 알람 넣기
+              alarms: fetchedAlarms,
               maintenanceLogs: [],
             });
           }
@@ -148,7 +152,6 @@ function WheelchairInfoContent() {
     if (selected) {
       currentIdRef.current = String(id);
 
-      // ⭐️ 알람 다시 가져오기 (선택 변경 시 최신 알람 반영)
       let fetchedAlarms: any[] = [];
       try {
         const alarmRes = await fetch(`/api/alarms?t=${Date.now()}`, {
@@ -169,13 +172,13 @@ function WheelchairInfoContent() {
 
       setDetailData({
         ...selected,
-        alarms: fetchedAlarms, // ⭐️ 업데이트된 알람 설정
+        alarms: fetchedAlarms,
         maintenanceLogs: [],
       } as WheelchairDetailData);
     }
   };
 
-  // 3. 소켓 연결
+  // 3. 소켓 연결 및 데이터 수신
   useEffect(() => {
     if (socketRef.current || status !== 'authenticated') return;
 
@@ -187,10 +190,11 @@ function WheelchairInfoContent() {
 
     socketRef.current = socket;
 
-    // 상태 업데이트 수신
+    // 상태 업데이트 수신 (핵심 수정 부분)
     socket.on('wheelchair_status_update', (payload: any) => {
       const currentTargetId = currentIdRef.current;
-      // ID 비교 (문자열 변환 후 비교)
+      
+      // ID 비교
       if (
         currentTargetId &&
         String(payload.wheelchairId || payload.wheelchair_id) ===
@@ -198,31 +202,48 @@ function WheelchairInfoContent() {
       ) {
         setDetailData((prev) => {
           if (!prev) return null;
+
           return {
             ...prev,
             status: {
+              // 🟢 [핵심] 기존 데이터(prev.status)를 먼저 깔아서 사라짐 방지
               ...prev.status,
-              // ... (기존 매핑 로직 유지)
-              current_battery:
-                payload.batteryPercent ?? prev.status.current_battery,
+
+              // 🟢 [매핑] payload에 값이 있을 때만 업데이트 (null check)
+              
+              // 1. 배터리/속도/전압/전류
+              current_battery: payload.batteryPercent ?? prev.status.current_battery,
               current_speed: payload.speed ?? prev.status.current_speed,
               voltage: payload.voltage ?? prev.status.voltage,
               current: payload.current ?? prev.status.current,
-              angle_back: payload.angleBack ?? prev.status.angle_back,
-              angle_seat: payload.angleSeat ?? prev.status.angle_seat,
-              foot_angle: payload.footAngle ?? prev.status.foot_angle,
-              elevation_dist:
-                payload.elevationDist ?? prev.status.elevation_dist,
-              slope_fr: payload.slopeFr ?? prev.status.slope_fr,
-              slope_side: payload.slopeSide ?? prev.status.slope_side,
+
+              // 2. 주행 데이터 (CW/st)
+              runtime: payload.runtime ?? prev.status.runtime, // 주행 시간
+              distance: payload.distance ?? prev.status.distance, // 주행 거리
+
+              // 3. 장기 데이터 (CW/lt)
+              // ⭐️ Worker는 'light'로 보내므로 payload.light를 받아서 status.light에 저장
+              light: payload.light ?? prev.status.light, 
+              // DrivingInfoPanel 등에서 posture_time을 쓴다면 light 값으로 동기화
+              posture_time: payload.light ?? prev.status.posture_time,
+              operating_time: payload.operatingTime ?? prev.status.operating_time,
+
+              // 4. GPS 및 환경
               latitude: payload.latitude ?? prev.status.latitude,
               longitude: payload.longitude ?? prev.status.longitude,
               temperature: payload.temperature ?? prev.status.temperature,
               humidity: payload.humidity ?? prev.status.humidity,
               pressure: payload.pressure ?? prev.status.pressure,
-              posture_time: payload.postureTime ?? prev.status.posture_time,
-              operating_time:
-                payload.operatingTime ?? prev.status.operating_time,
+
+              // 5. 자세/각도
+              angle_back: payload.angleBack ?? prev.status.angle_back,
+              angle_seat: payload.angleSeat ?? prev.status.angle_seat,
+              foot_angle: payload.footAngle ?? prev.status.foot_angle,
+              elevation_dist: payload.elevationDist ?? prev.status.elevation_dist,
+              slope_fr: payload.slopeFr ?? prev.status.slope_fr,
+              slope_side: payload.slopeSide ?? prev.status.slope_side,
+
+              // 6. 메타 데이터
               is_connected: true,
               last_seen: new Date().toISOString(),
             },
@@ -231,10 +252,9 @@ function WheelchairInfoContent() {
       }
     });
 
-    // ⭐️ [신규 알람] 실시간 수신 처리
+    // 실시간 알람 수신
     socket.on('new_alarm', (newAlarm: any) => {
       const currentTargetId = currentIdRef.current;
-      // 현재 보고 있는 휠체어의 알람이면 리스트에 추가
       if (
         currentTargetId &&
         String(newAlarm.wheelchairId || newAlarm.wheelchair_id) ===
@@ -260,7 +280,6 @@ function WheelchairInfoContent() {
       <div className={styles.loadingContainer}>등록된 휠체어가 없습니다.</div>
     );
 
-  // ⭐️ [필터링] 알람 타입 체크 (대소문자 무시 등 안전하게)
   const isCritical = (alarm: any) => {
     const type = (alarm.alarmType || alarm.type || '').toUpperCase();
     return CRITICAL_KEYWORDS.some((k) => type.includes(k));
@@ -278,7 +297,6 @@ function WheelchairInfoContent() {
         disableDropdown={!isManager}
       />
       <div className={styles.mainContent}>
-        {/* ... (이하 JSX 레이아웃은 기존과 100% 동일) ... */}
         <div className={styles.leftColumn}>
           <div className={styles.mapArea}>
             <MapView
@@ -305,7 +323,6 @@ function WheelchairInfoContent() {
                 </h2>
               </div>
               <div className={styles.scrollableContent}>
-                {/* ⭐️ 필터링된 경고 목록 전달 */}
                 <AlertList title="" alarms={warningEvents} />
               </div>
             </div>
@@ -316,7 +333,6 @@ function WheelchairInfoContent() {
                 </h2>
               </div>
               <div className={styles.scrollableContent}>
-                {/* ⭐️ 필터링된 알림 목록 전달 */}
                 <AlertList title="" alarms={infoEvents} />
               </div>
             </div>

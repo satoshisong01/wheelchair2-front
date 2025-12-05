@@ -57,9 +57,9 @@ export const DrivingInfoPanel = ({
         </p>
         <p>
           {/* 주행 시간은 분 단위로 온다고 가정하고 시간/분 변환 */}
-          주행 시간:{' '}
+          주행 시간:
           <strong>
-            주행 시간: <strong>{formatTime(runtime)}</strong>
+            <strong>{formatTime(runtime)}</strong>
           </strong>
         </p>
         <p>

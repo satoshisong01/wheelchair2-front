@@ -269,9 +269,15 @@ export default function StatsPage() {
     mySerial,
   ]); // 초기 로딩 (selectedDevice, mySerial, selectedMetric, timeUnit 변경 시 실행)
 
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
+
   useEffect(() => {
-    handleSearch(); // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDevice, mySerial, selectedMetric, timeUnit]); // ⭐️ [수정] timeUnit 의존성 추가 // 차트 렌더링 (기존 동일)
+    if (isInitialLoad && status === 'authenticated') {
+      handleSearch();
+      setIsInitialLoad(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]); // 세션 인증 상태가 확인되면 한 번 실행
 
   useEffect(() => {
     if (apiRawData.length === 0) {
@@ -488,7 +494,17 @@ export default function StatsPage() {
         </div>
         <div className={styles.canvasWrapper}>
           {isLoading ? (
-            <LoadingSpinner />
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center', // ⭐️ [추가] 수평 중앙 정렬 (로딩 스피너는 주로 중앙에 배치됨)
+                marginTop: '-200px', // ⭐️ [수정] 음수 margin-top을 사용하여 위로 100px 이동
+                height: '100%', // ⭐️ [추가] 부모 높이를 채우도록 설정 (필요시)
+              }}
+            >
+              <LoadingSpinner />
+            </div>
           ) : chartData ? (
             chartType === 'BAR' ? (
               <Bar key="bar-chart" options={chartOptions} data={chartData} />

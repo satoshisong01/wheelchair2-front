@@ -125,7 +125,7 @@ export default function StatsPage() {
         if (res.ok) {
           const data = await res.json();
           const realDevices = data.map((d: any) => ({
-            id: d.id,
+            id: d.device_serial,
             name: d.device_serial
               ? `${d.device_serial} ${d.model_name ? `(${d.model_name})` : ''}`
               : `기기 ${d.id}`,

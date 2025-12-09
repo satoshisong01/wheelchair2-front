@@ -1,3 +1,5 @@
+// app/stats/page.tsx (기간별 필터 제거 및 단위 필터 유지)
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -40,6 +42,8 @@ const formatDateString = (date: Date): string => {
 };
 
 type MetricType = 'BATTERY' | 'SPEED' | 'DISTANCE';
+type TimeUnitType = 'daily' | 'hourly';
+
 const METRIC_CONFIG = {
   BATTERY: {
     label: '평균 배터리 잔량',
@@ -67,11 +71,12 @@ const METRIC_CONFIG = {
 export default function StatsPage() {
   const { data: session, status } = useSession();
   const userRole = session?.user?.role;
-  const isManager = userRole === 'ADMIN' || userRole === 'MASTER';
+  const isManager = userRole === 'ADMIN' || userRole === 'MASTER'; // ⭐️ [수정] periodType 대신 Time Range Preset 설정 용도로 사용
 
   const [periodType, setPeriodType] = useState<
     'WEEKLY' | 'MONTHLY' | 'YEARLY' | 'CUSTOM'
-  >('MONTHLY');
+  >('MONTHLY'); // ⭐️ [유지] 시간 단위 상태
+  const [timeUnit, setTimeUnit] = useState<TimeUnitType>('daily');
 
   const today = new Date();
   const [startDate, setStartDate] = useState<Date>(
@@ -88,24 +93,23 @@ export default function StatsPage() {
   const [chartData, setChartData] = useState<any>(null);
   const [tableData, setTableData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [aiAnalysisComment, setAiAnalysisComment] = useState<string | null>(
+    null
+  );
 
   const [devices, setDevices] = useState<{ id: string; name: string }[]>([
     { id: 'ALL', name: '전체 기기' },
   ]);
   const regions = ['전체 지역', '경기도', '서울시', '인천시'];
 
-  // 🟢 [추가] 내 시리얼 번호 저장용 상태
-  const [mySerial, setMySerial] = useState<string>('');
+  const [mySerial, setMySerial] = useState<string>(''); // 1. 세션 로드 후 기기 사용자 설정 (ID 설정 및 시리얼 조회)
 
-  // 1. 세션 로드 후 기기 사용자 설정 (ID 설정 및 시리얼 조회)
   useEffect(() => {
     if (status === 'authenticated' && !isManager) {
       const myId = (session?.user as any)?.wheelchairId;
       if (myId) {
         setSelectedDevice(myId);
 
-        // 🟢 [추가] 내 시리얼 번호 조회 (api/device-info 사용)
-        // (마이페이지에서 썼던 그 API를 재활용합니다)
         fetch('/api/device-info')
           .then((res) => res.json())
           .then((data) => {
@@ -114,9 +118,8 @@ export default function StatsPage() {
           .catch((err) => console.error('시리얼 조회 실패:', err));
       }
     }
-  }, [status, isManager, session]);
+  }, [status, isManager, session]); // 2. 관리자용 기기 목록 로딩
 
-  // 2. 관리자용 기기 목록 로딩
   useEffect(() => {
     const fetchDevices = async () => {
       if (!isManager) return;
@@ -137,26 +140,30 @@ export default function StatsPage() {
       }
     };
     fetchDevices();
-  }, [isManager]);
+  }, [isManager]); // 기간 설정 로직 (PeriodType 변경 시 Start/End Date 자동 설정)
 
-  // 기간 설정 로직 (기존 동일)
   useEffect(() => {
     const now = new Date();
     let newStart = new Date();
     let newEnd = new Date();
 
+    const setUnit = (unit: TimeUnitType) => setTimeUnit(unit);
+
     switch (periodType) {
       case 'WEEKLY':
         newStart.setDate(now.getDate() - 7);
         newEnd = now;
+        setUnit('daily');
         break;
       case 'MONTHLY':
         newStart = new Date(now.getFullYear(), now.getMonth(), 1);
         newEnd = now;
+        setUnit('daily');
         break;
       case 'YEARLY':
         newStart = new Date(now.getFullYear(), 0, 1);
         newEnd = now;
+        setUnit('daily');
         break;
       case 'CUSTOM':
         return;
@@ -172,43 +179,55 @@ export default function StatsPage() {
   const handleDateChangeEnd = (date: Date) => {
     setEndDate(date);
     setPeriodType('CUSTOM');
-  };
+  }; // 3. 데이터 검색 및 테이블 매핑 (POST 요청)
 
-  // 3. 데이터 검색 및 테이블 매핑
   const handleSearch = useCallback(async () => {
     if (!isManager && selectedDevice === 'ALL') return;
 
     setIsLoading(true);
+    setAiAnalysisComment(null);
     const startStr = formatDateString(startDate);
     const endStr = formatDateString(endDate);
 
     try {
-      const res = await fetch(
-        `/api/stats?startDate=${startStr}&endDate=${endStr}&deviceId=${selectedDevice}`
-      );
+      const res = await fetch(`/api/stats`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          startDate: startStr,
+          endDate: endStr,
+          deviceId: selectedDevice,
+          metric: selectedMetric,
+          unit: timeUnit,
+        }),
+      });
+
+      const responseBody = await res.json();
 
       if (!res.ok) {
-        const errorBody = await res.json();
         throw new Error(
-          errorBody.message || '통계 데이터를 불러오지 못했습니다.'
+          responseBody.message || '통계 데이터를 불러오지 못했습니다.'
         );
       }
 
-      const apiData = await res.json();
+      const apiData = responseBody.data;
+      const aiComment = responseBody.comment;
+      const queryResult = responseBody.query;
+      console.log('🤖 [Gemini Query]:', queryResult);
 
       if (!Array.isArray(apiData) || apiData.length === 0) {
         setApiRawData([]);
         setChartData(null);
         setTableData([]);
+        setAiAnalysisComment(aiComment || '데이터가 없습니다.');
         return;
       }
 
       setApiRawData(apiData);
+      setAiAnalysisComment(aiComment); // 선택된 기기 이름 찾기
 
-      // 선택된 기기 이름 찾기
       const currentDeviceObj = devices.find((d) => d.id === selectedDevice);
 
-      // 🟢 [수정] 기기명 표시 로직 강화
       let displayDeviceName = '전체 평균';
       if (selectedDevice !== 'ALL') {
         if (isManager) {
@@ -216,14 +235,13 @@ export default function StatsPage() {
             ? currentDeviceObj.name
             : selectedDevice;
         } else {
-          // 기기 사용자는 '내 기기 (시리얼)' 형태로 표시
           displayDeviceName = mySerial ? `내 기기 (${mySerial})` : '내 기기';
         }
       }
 
       setTableData(
         apiData.map((d: any) => ({
-          date: d.date,
+          date: timeUnit === 'hourly' ? d.date.substring(5, 16) : d.date, // ⭐️ [수정] 테이블 날짜 포맷
           deviceName: displayDeviceName,
           serial: '-',
           battery: d.avgBattery,
@@ -236,33 +254,39 @@ export default function StatsPage() {
       setApiRawData([]);
       setChartData(null);
       setTableData([]);
+      setAiAnalysisComment(`데이터 로딩 실패: ${(error as Error).message}`);
     } finally {
       setIsLoading(false);
     }
   }, [
     startDate,
     endDate,
-    periodType,
     selectedDevice,
+    selectedMetric,
+    timeUnit,
     devices,
     isManager,
     mySerial,
-  ]); // mySerial 의존성 추가
+  ]); // 초기 로딩 (selectedDevice, mySerial, selectedMetric, timeUnit 변경 시 실행)
 
-  // 초기 로딩 (selectedDevice 또는 mySerial 변경 시 실행)
   useEffect(() => {
-    handleSearch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDevice, mySerial]);
+    handleSearch(); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDevice, mySerial, selectedMetric, timeUnit]); // ⭐️ [수정] timeUnit 의존성 추가 // 차트 렌더링 (기존 동일)
 
-  // 차트 렌더링 (기존 동일)
   useEffect(() => {
     if (apiRawData.length === 0) {
       setChartData(null);
       return;
     }
 
-    const labels = apiRawData.map((d) => d.date);
+    const labels = apiRawData.map((d) => {
+      if (timeUnit === 'hourly') {
+        const datePart = d.date.substring(5, 10);
+        const timePart = d.date.substring(11, 13);
+        return `${datePart} ${timePart}시`;
+      }
+      return d.date.substring(5, 10); // ⭐️ [수정] 일별은 월-일만 표시
+    });
     const config = METRIC_CONFIG[selectedMetric];
 
     const dataValues = apiRawData.map((d) => {
@@ -286,7 +310,7 @@ export default function StatsPage() {
         },
       ],
     });
-  }, [apiRawData, selectedMetric, chartType]);
+  }, [apiRawData, selectedMetric, chartType, timeUnit]);
 
   const chartOptions = {
     responsive: true,
@@ -295,7 +319,9 @@ export default function StatsPage() {
       legend: { position: 'top' as const },
       title: {
         display: true,
-        text: `${METRIC_CONFIG[selectedMetric].label} 변화 추이`,
+        text: `${METRIC_CONFIG[selectedMetric].label} 변화 추이 (${
+          timeUnit === 'hourly' ? '시간별' : '일별'
+        })`,
       },
       tooltip: {
         backgroundColor: 'rgba(0,0,0,0.8)',
@@ -322,22 +348,33 @@ export default function StatsPage() {
   return (
     <div className={styles.container}>
       <h1 className={styles.pageTitle}>통계 정보</h1>
-
       <div className={styles.filterBox}>
+        {/* ⭐️ [수정] 기간별 필터 제거 (UI에서 요청하신 대로) */}
         <div className={styles.filterGroup}>
-          <label>기간별</label>
+          <label>단위 선택</label>
           <select
             value={periodType}
             onChange={(e) => setPeriodType(e.target.value as any)}
             className={styles.select}
           >
-            <option value="WEEKLY">주간 (최근 7일)</option>
-            <option value="MONTHLY">월간 (이번 달)</option>
-            <option value="YEARLY">연간 (올해)</option>
+            <option value="WEEKLY">최근 7일</option>
+            <option value="MONTHLY">이번 달</option>
+            <option value="YEARLY">올해</option>
             <option value="CUSTOM">직접 선택</option>
           </select>
         </div>
-
+        {/* ⭐️ [수정] 단위 필터 재배치 및 라벨 변경 */}
+        <div className={styles.filterGroup}>
+          <label>집계 단위</label>
+          <select
+            value={timeUnit}
+            onChange={(e) => setTimeUnit(e.target.value as TimeUnitType)}
+            className={styles.select}
+          >
+            <option value="daily">일별</option>
+            <option value="hourly">시간별</option>
+          </select>
+        </div>
         <div className={styles.filterGroup}>
           <label>기간 선택</label>
           <div className={styles.datePickerWrapper}>
@@ -349,7 +386,6 @@ export default function StatsPage() {
             />
           </div>
         </div>
-
         {isManager && (
           <div className={styles.filterGroup}>
             <label>차량명(Serial)</label>
@@ -366,7 +402,6 @@ export default function StatsPage() {
             </select>
           </div>
         )}
-
         <div className={styles.filterGroup}>
           <label>주소 정보</label>
           <select
@@ -381,17 +416,24 @@ export default function StatsPage() {
             ))}
           </select>
         </div>
-
         <button onClick={handleSearch} className={styles.searchButton}>
           검색
         </button>
       </div>
-
+      {/* 🟢 [유지] AI 분석 멘트 표시 영역 */}
+      {aiAnalysisComment && (
+        <div className={styles.aiAnalysisBox}>
+          <h4>✨ AI 분석 리포트</h4>
+          <div
+            dangerouslySetInnerHTML={{
+              __html: aiAnalysisComment.replace(/\n/g, '<br />'),
+            }}
+          />
+        </div>
+      )}
       <div className={styles.chartContainer}>
-        {/* ... 차트 헤더 및 캔버스 (기존 동일) ... */}
         <div className={styles.chartHeader}>
           <h3>📊 데이터 시각화</h3>
-
           <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
             <div className={styles.chartToggle}>
               <button
@@ -425,11 +467,9 @@ export default function StatsPage() {
                 주행거리
               </button>
             </div>
-
             <div
               style={{ width: '1px', height: '24px', background: '#ccc' }}
             ></div>
-
             <div className={styles.chartToggle}>
               <button
                 className={chartType === 'BAR' ? styles.activeType : ''}
@@ -446,7 +486,6 @@ export default function StatsPage() {
             </div>
           </div>
         </div>
-
         <div className={styles.canvasWrapper}>
           {isLoading ? (
             <LoadingSpinner />
@@ -461,16 +500,13 @@ export default function StatsPage() {
           )}
         </div>
       </div>
-
       <div className={styles.tableContainer}>
         <h3 className={styles.tableTitle}>상세 데이터 로그</h3>
         <table className={styles.table}>
           <thead>
             <tr>
-              <th>날짜</th>
-              <th>차량명</th>
-              <th>배터리 잔량</th>
-              <th>평균 속도</th>
+              <th>날짜</th> <th>차량명</th>
+              <th>배터리 잔량</th> <th>평균 속도</th>
               <th>주행 거리</th>
             </tr>
           </thead>
@@ -484,8 +520,7 @@ export default function StatsPage() {
             ) : tableData.length > 0 ? (
               tableData.map((row, idx) => (
                 <tr key={idx}>
-                  <td>{row.date}</td>
-                  <td>{row.deviceName}</td>
+                  <td>{row.date}</td> <td>{row.deviceName}</td>
                   <td>
                     <strong
                       style={{

@@ -180,6 +180,26 @@
   align-items: center;
 }
 
+.aiAnalysisBox {
+  margin-bottom: 20px;
+  padding: 15px;
+  border: 1px solid #e0f7fa; /* 연한 청록색 테두리 */
+  border-radius: 8px;
+  background-color: #f0faff; /* 연한 파란색 배경 */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  font-size: 14px;
+  line-height: 1.6;
+  color: #004d40;
+}
+
+.aiAnalysisBox h4 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-size: 16px;
+  color: #00796b;
+  font-weight: bold;
+}
+
 /* 🔥🔥🔥 [반응형 추가] 모바일 스타일 (768px 미만) 🔥🔥🔥 */
 @media (max-width: 768px) {
   /* 1. 전체 컨테이너 여백 축소 */

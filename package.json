@@ -31,7 +31,8 @@
     "react-dom": "^19.2.1",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
-    "wheelchair2-front": "file:"
+    "wheelchair2-front": "file:",
+    "zod": "^4.1.13"
   },
   "devDependencies": {
     "@aws-sdk/types": "^3.914.0",

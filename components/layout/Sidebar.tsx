@@ -88,7 +88,7 @@ export default function Sidebar() {
 
         <li className={pathname.startsWith('/stats') ? styles.active : ''}>
           <Link href="/stats">
-            <span>📈</span> 통계 그래프
+            <span>📈</span> AI 분석
           </Link>
         </li>
 
@@ -115,7 +115,7 @@ export default function Sidebar() {
         {isMaster && (
           <li className={pathname === '/audit-log' ? styles.active : ''}>
             <Link href="/audit-log">
-              <span>📑</span> 감사 로그
+              <span>📑</span> AI 관리
             </Link>
           </li>
         )}

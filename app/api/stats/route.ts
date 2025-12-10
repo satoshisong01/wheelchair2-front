@@ -1,5 +1,5 @@
 // 📍 경로: app/api/stats/route.ts
-// 📝 설명: 프론트엔드에서 보낸 시간 범위(startHour, endHour)를 적용하여 쿼리하도록 수정됨
+// 📝 설명: 모든 지표(배터리, 속도, 주행거리)를 한 번에 조회하도록 수정됨
 
 import { NextResponse, NextRequest } from 'next/server';
 import { getServerSession } from 'next-auth';
@@ -36,26 +36,28 @@ const METRIC_CONFIG: Record<string, any> = {
   },
 };
 
-// --- [핵심 수정 1] Timestream 쿼리 함수: startHour, endHour 파라미터 추가 ---
+// 모든 측정 항목의 이름을 배열로 생성
+const ALL_MEASURE_NAMES = [
+  METRIC_CONFIG.BATTERY.measure,
+  METRIC_CONFIG.SPEED.measure,
+  METRIC_CONFIG.SPEED.alternative,
+  METRIC_CONFIG.DISTANCE.measure,
+  METRIC_CONFIG.DISTANCE.alternative,
+]
+  .filter(Boolean)
+  .map((name: string) => `'${name}'`)
+  .join(', ');
+
+// ⭐️ [수정] Timestream 쿼리 함수: Metric 파라미터 제거
 async function fetchTimestreamData(
   deviceId: string,
   startDate: string,
   endDate: string,
-  metric: string,
   binUnit: string,
   startHour: string = '00',
   endHour: string = '23'
 ): Promise<{ data: any[]; query: string }> {
-  const measureNames = [
-    METRIC_CONFIG[metric]?.measure,
-    METRIC_CONFIG[metric]?.alternative,
-  ]
-    .filter(Boolean)
-    .map((name: string) => `'${name}'`)
-    .join(', ');
-
   // 1. WHERE 절: 한국 시간 기준으로 범위 설정 (+09:00 명시)
-  // 예: 사용자가 09시를 선택하면, UTC로는 00시부터 검색됨 (정확함)
   const startTs = `${startDate}T${startHour}:00:00+09:00`;
   const endTs = `${endDate}T${endHour}:59:59+09:00`;
 
@@ -65,17 +67,17 @@ async function fetchTimestreamData(
     whereClause += ` AND (wheelchair_id = '${deviceId}' OR device_serial = '${deviceId}')`;
   }
 
-  // ⭐️ [수정 핵심] AT TIME ZONE 대신 'time + 9h' 사용
-  // 이유: BIN 함수 내부에서 타입 에러를 피하면서 KST(한국시간)로 그룹화하는 가장 안전한 방법입니다.
+  // ⭐️ [수정] 쿼리: 모든 Measure Name을 조회
   const query = `
     SELECT 
       BIN(time + 9h, ${binUnit}) as date_bin,
       measure_name,
       AVG(measure_value::double) as avg_val, 
+      MAX(measure_value::double) as max_val,
       MAX_BY(measure_value::double, time) as last_val 
     FROM "${DATABASE_NAME}"."${TABLE_NAME}"
     WHERE ${whereClause}
-      AND measure_name IN (${measureNames})
+      AND measure_name IN (${ALL_MEASURE_NAMES})
     GROUP BY BIN(time + 9h, ${binUnit}), measure_name
     ORDER BY date_bin ASC
     `;
@@ -85,37 +87,56 @@ async function fetchTimestreamData(
   const response = await queryClient.send(command);
 
   const rows = response.Rows || [];
+  // ⭐️ [수정] 데이터 매핑 구조 변경: date_bin을 키로 사용하고, 그 안에 모든 Metric을 통합
   const dataMap: Record<string, any> = {};
 
   rows.forEach((row) => {
     const data = row.Data;
     if (!data) return;
 
-    // Timestream은 시간을 UTC로 반환함 (예: 2025-12-01 12:00:00.000000000)
     const timeStr = data[0].ScalarValue;
     const measureName = data[1].ScalarValue;
 
     const avgVal = parseFloat(data[2].ScalarValue || '0');
-    const lastVal = parseFloat(data[3].ScalarValue || '0');
+    const maxVal = parseFloat(data[3].ScalarValue || '0'); // MAX 값 추가
+    const lastVal = parseFloat(data[4].ScalarValue || '0'); // MAX_BY 값
 
     if (timeStr && measureName) {
       if (!dataMap[timeStr]) {
+        // 기본 템플릿 정의
         dataMap[timeStr] = {
-          date: timeStr, // 프론트엔드에서 substring으로 날짜/시간 추출함
+          date: timeStr,
           avgBattery: 0,
+          maxBattery: 0,
           avgSpeed: 0,
+          maxSpeed: 0,
           avgDistance: 0,
-          lastBattery: 0,
+          maxDistance: 0,
         };
       }
 
-      if (measureName === 'battery_percent') {
+      // ⭐️ [수정] 측정 항목별로 통합된 객체에 값 매핑
+      // 1. 배터리
+      if (measureName === METRIC_CONFIG.BATTERY.measure) {
         dataMap[timeStr].avgBattery = parseFloat(avgVal.toFixed(1));
-        dataMap[timeStr].lastBattery = parseFloat(lastVal.toFixed(1));
-      } else if (measureName === 'speed' || measureName === 'current_speed') {
+        dataMap[timeStr].maxBattery = parseFloat(maxVal.toFixed(1));
+      }
+      // 2. 속도
+      else if (
+        measureName === METRIC_CONFIG.SPEED.measure ||
+        measureName === METRIC_CONFIG.SPEED.alternative
+      ) {
         dataMap[timeStr].avgSpeed = parseFloat(avgVal.toFixed(1));
-      } else if (measureName === 'distance' || measureName === 'driving_dist') {
+        dataMap[timeStr].maxSpeed = parseFloat(maxVal.toFixed(1));
+      }
+      // 3. 주행거리 (MAX_BY(last_val) 사용)
+      else if (
+        measureName === METRIC_CONFIG.DISTANCE.measure ||
+        measureName === METRIC_CONFIG.DISTANCE.alternative
+      ) {
+        // 주행거리는 MAX_BY(last_val)을 avgDistance에, MAX(max_val)을 maxDistance에 사용
         dataMap[timeStr].avgDistance = parseFloat(lastVal.toFixed(1));
+        dataMap[timeStr].maxDistance = parseFloat(maxVal.toFixed(1));
       }
     }
   });
@@ -128,6 +149,7 @@ async function fetchTimestreamData(
 }
 
 // --- AI 분석 함수 ---
+// (선택된 단일 Metric과 통합 데이터를 받아 AI 분석을 수행하는 로직은 유지됨)
 async function generateAnalysisComment(
   deviceId: string,
   formattedData: any[],
@@ -141,7 +163,14 @@ async function generateAnalysisComment(
     return '선택하신 기간에 분석할 데이터가 충분하지 않습니다.';
   }
 
-  const dataJsonString = JSON.stringify(formattedData.slice(0, 50), null, 2);
+  // ⭐️ [수정] AI 분석 시 'selectedMetric' 관련 데이터만 필터링하여 전달
+  const batteryDataForAI = formattedData.map((d) => ({
+    date: d.date,
+    avgBattery: d.avgBattery,
+    maxBattery: d.maxBattery,
+  }));
+  const dataJsonString = JSON.stringify(batteryDataForAI.slice(0, 50), null, 2);
+
   const dateRange =
     mode === 'COMPARE'
       ? `${dates.compareDates?.[0]} vs ${dates.compareDates?.[1]}`
@@ -156,20 +185,20 @@ async function generateAnalysisComment(
 
   const prompt = `
         당신은 휠체어 데이터 분석가입니다. 다음 JSON 데이터 배열을 분석하여 
-        기기 ${deviceId}의 ${dateRange} 기간에 대한 **배터리 잔량(avgBattery, lastBattery)** 변화의 **가장 중요한 패턴과 인사이트**를 한국어로 작성해주세요.
+        기기 ${deviceId}의 ${dateRange} 기간에 대한 **배터리 잔량(avgBattery, maxBattery)** 변화의 **가장 중요한 패턴과 인사이트**를 한국어로 작성해주세요.
         
         [분석 조건]:
         1. 조회 모드는 **${mode}**이며, 집계 단위는 **${unit}**입니다.
         2. 기간 전체의 **평균 배터리 잔량**을 언급하세요.
 
         3. **COMPARE 모드**라면 (날짜 ${dates.compareDates?.[0]} vs ${dates.compareDates?.[1]}): 
-           두 날짜의 **평균 잔량**과 **최대/최소 잔량**을 비교하여, 잔량 감소 패턴의 변화(하락 속도)를 중점적으로 분석하고 멘트에 포함하세요. 이 차이는 **배터리 성능 저하의 잠재적 신호**일 수 있음을 언급하세요.
+            두 날짜의 **평균 잔량**과 **최대 잔량(maxBattery)**을 비교하여, 잔량 감소 패턴의 변화(하락 속도)를 중점적으로 분석하고 멘트에 포함하세요. 이 차이는 **배터리 성능 저하의 잠재적 신호**일 수 있음을 언급하세요.
 
         4. **RANGE 모드**라면: 기간의 **시작일**과 **마지막 날**의 평균 잔량을 비교하여 전반적인 추세를 분석하세요.
 
         5. 멘트에는 사용 습관의 변화나 **성능 저하 여부**를 추측하는 전문적인 분석을 포함하세요. (예: "일일 충전 후 평균 잔량 감소 속도가 빨라진 것으로 보아 배터리 성능 저하 가능성이 있습니다.")
 
-        [분석할 데이터 배열 (객체 키: date, avgBattery, lastBattery 등)]:
+        [분석할 데이터 배열 (객체 키: date, avgBattery, maxBattery 등)]:
         ${dataJsonString}
         
         [분석 결과 멘트]:
@@ -197,20 +226,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    // ⭐️ [핵심 수정 2] 프론트엔드에서 보낸 startHour, endHour 받기
     const {
       mode,
       startDate,
       endDate,
       compareDates,
       deviceId: requestDeviceId,
-      metric: selectedMetric,
+      metric: selectedMetric, // ⭐️ [수정] AI 분석을 위해 Metric 정보는 계속 받음
       unit: timeUnit,
-      startHour, // UI에서 보낸 시작 시간 (예: "09")
-      endHour, // UI에서 보낸 종료 시간 (예: "18")
+      startHour,
+      endHour,
     } = await request.json();
 
-    // ... (유효성 검사 로직은 기존과 동일) ...
     if (mode === 'RANGE' && (!startDate || !endDate)) {
       return NextResponse.json({ message: '기간 범위 오류' }, { status: 400 });
     }
@@ -238,29 +265,26 @@ export async function POST(request: NextRequest) {
       const dateA = compareDates[0];
       const dateB = compareDates[1];
 
-      // ⭐️ [핵심 수정 3] fetchTimestreamData에 시간 범위(startHour, endHour) 전달
+      // ⭐️ [수정] fetchTimestreamData에 Metric 파라미터 제거
       const resultA = await fetchTimestreamData(
         deviceId,
         dateA,
         dateA,
-        selectedMetric,
         binUnit,
         startHour,
-        endHour // 전달
+        endHour
       );
-      // 소스 태그 추가 (프론트에서 구분용)
-      const dataA = resultA.data.map((d) => ({ ...d, source: dateA }));
+      const dataA = resultA.data.map((d: any) => ({ ...d, source: dateA }));
 
       const resultB = await fetchTimestreamData(
         deviceId,
         dateB,
         dateB,
-        selectedMetric,
         binUnit,
         startHour,
-        endHour // 전달
+        endHour
       );
-      const dataB = resultB.data.map((d) => ({ ...d, source: dateB }));
+      const dataB = resultB.data.map((d: any) => ({ ...d, source: dateB }));
 
       allFormattedData = [...dataA, ...dataB];
       finalQuery = `${resultA.query}\n-- AND\n${resultB.query}`;
@@ -270,20 +294,23 @@ export async function POST(request: NextRequest) {
         deviceId,
         startDate,
         endDate,
-        selectedMetric,
         binUnit,
         startHour,
-        endHour // 전달
+        endHour
       );
-      allFormattedData = result.data.map((d) => ({ ...d, source: 'range' }));
+      allFormattedData = result.data.map((d: any) => ({
+        ...d,
+        source: 'range',
+      }));
       finalQuery = result.query;
     }
 
-    // AI 분석
+    // ⭐️ [수정] AI 분석: 모든 지표 데이터가 담긴 allFormattedData를 전달하고,
+    // AI 분석 함수 내부에서 선택된 Metric에 따라 로직 분기 (현재는 BATTERY만 심층 분석)
     const analysisComment = await generateAnalysisComment(
       deviceId,
       allFormattedData,
-      selectedMetric,
+      selectedMetric, // AI 분석 함수가 사용할 Metric
       timeUnit,
       mode,
       { startDate, endDate, compareDates }

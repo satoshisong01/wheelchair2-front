@@ -200,6 +200,262 @@
   font-weight: bold;
 }
 
+/* @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ */
+
+.filterBox {
+  /* 기존 filterBox 스타일 유지 (display: flex, gap 등) */
+  display: flex;
+  gap: 15px;
+  padding: 20px;
+  background-color: #f8f8f8;
+  border-radius: 8px;
+  margin-bottom: 25px;
+  flex-wrap: wrap;
+  align-items: flex-end; /* 검색 버튼과 필터가 하단에 정렬되도록 */
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  min-width: 120px;
+}
+
+.filterGroup label {
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+.select,
+.datePickerInput {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+  cursor: pointer;
+  min-width: 100%;
+}
+
+/* Date Range Picker 스타일 (DateRangePicker 컴포넌트 내부 CSS와 충돌하지 않도록) */
+.datePickerWrapper {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ⭐️ [추가] 특정일 비교 모드용 날짜 그룹 */
+.compareDateGroup {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* ⭐️ [추가] DatePicker 인라인 input 스타일 */
+.datePickerInput {
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  text-align: center;
+  width: 100px;
+}
+
+/* --- 검색 버튼 --- */
+.searchButton {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  height: 40px; /* 필터 높이와 맞춤 */
+}
+
+.searchButton:hover {
+  background-color: #0056b3;
+}
+
+/* --- AI 분석 박스 --- */
+.aiAnalysisBox {
+  margin-bottom: 20px;
+  padding: 15px;
+  border: 1px solid #e0f7fa;
+  border-radius: 8px;
+  background-color: #f0faff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.aiAnalysisBox h4 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-size: 16px;
+  color: #00796b;
+  font-weight: bold;
+}
+
+.aiAnalysisContent {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #004d40;
+}
+
+/* --- 차트 영역 --- */
+.chartContainer {
+  padding: 20px;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.chartHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.chartControls {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.metricToggle,
+.chartToggle {
+  display: flex;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.metricToggle button,
+.chartToggle button {
+  padding: 8px 12px;
+  border: none;
+  cursor: pointer;
+  background-color: #f0f0f0;
+  color: black;
+  transition: background-color 0.1s;
+}
+
+.metricToggle button:hover,
+.chartToggle button:hover {
+  filter: brightness(0.95);
+}
+
+/* ⭐️ [수정/추가] 메트릭 활성화 스타일 */
+.activeMetricBattery {
+  background-color: #27b4e9 !important;
+  color: white !important;
+}
+
+.activeMetricSpeed {
+  background-color: #ff9f40 !important;
+  color: white !important;
+}
+
+.activeMetricDistance {
+  background-color: #4bc0c0 !important;
+  color: white !important;
+}
+
+.activeType {
+  background-color: #007bff !important;
+  color: white !important;
+}
+
+.divider {
+  width: 1px;
+  height: 24px;
+  background: #ccc;
+}
+
+.canvasWrapper {
+  position: relative;
+  height: 400px; /* 차트 높이 고정 */
+}
+
+/* ⭐️ [수정/추가] 로딩 스피너 래퍼 */
+.loadingSpinnerWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* 이전 인라인 스타일을 옮겨옴 */
+  margin-top: -100px;
+  height: 100%;
+}
+
+.noData {
+  text-align: center;
+  padding: 50px;
+  color: #999;
+}
+
+/* --- 테이블 영역 --- */
+.tableContainer {
+  margin-top: 30px;
+  background-color: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.tableTitle {
+  font-size: 18px;
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th,
+.table td {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+}
+
+.table th {
+  background-color: #f9f9f9;
+  font-weight: 600;
+  color: #555;
+}
+
+/* ⭐️ [추가] 테이블 하이라이트 스타일 */
+.highlightHeader {
+  background-color: #e6f7ff !important;
+  color: #007bff !important;
+}
+
+.highlightBattery {
+  font-weight: bold;
+  color: #27b4e9;
+}
+
+.highlightSpeed {
+  font-weight: bold;
+  color: #ff9f40;
+}
+
+.highlightDistance {
+  font-weight: bold;
+  color: #4bc0c0;
+}
+
+.loadingCell,
+.emptyCell {
+  text-align: center;
+  padding: 20px !important;
+  color: #999;
+}
+
+/* @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@ */
+
 /* 🔥🔥🔥 [반응형 추가] 모바일 스타일 (768px 미만) 🔥🔥🔥 */
 @media (max-width: 768px) {
   /* 1. 전체 컨테이너 여백 축소 */
@@ -306,4 +562,142 @@
     font-size: 16px;
     margin-top: 10px;
   }
+}
+
+/* --- 공통 요소 (폰트, 컨테이너) --- */
+.pageTitle {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+/* --- 필터 박스 (가장 중요) --- */
+.filterBox {
+  display: flex;
+  gap: 15px;
+  padding: 20px;
+  background-color: #f8f8f8; /* 배경색 통일 */
+  border-radius: 8px;
+  margin-bottom: 25px;
+  flex-wrap: wrap;
+  align-items: flex-end; /* 모든 필터가 바닥선 기준으로 정렬되도록 */
+  border: 1px solid #e0e0e0;
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  /* 최소 너비를 확보하여 레이아웃이 급격히 변하는 것을 방지 */
+  min-width: 120px;
+}
+
+.filterGroup label {
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 5px;
+  font-weight: 500;
+  white-space: nowrap; /* 라벨이 줄바꿈 되지 않도록 */
+}
+
+/* --- Input, Select, DatePicker 통일 (높이/패딩 통일) --- */
+.select,
+.datePickerInput {
+  padding: 8px 12px;
+  border: 1px solid #ccc; /* 테두리 색상 통일 */
+  border-radius: 4px;
+  background-color: white;
+  cursor: pointer;
+  min-width: 100%;
+  height: 40px; /* ⭐️ 핵심: 높이 통일 */
+  box-sizing: border-box;
+  font-size: 14px; /* ⭐️ 폰트 크기 통일 */
+}
+
+/* DatePicker 내부 요소 강제 스타일링 */
+.datePickerWrapper {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.compareDateGroup {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* --- 검색 버튼 --- */
+.searchButton {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  height: 40px; /* 필터 높이와 통일 */
+  transition: background-color 0.2s;
+}
+
+.searchButton:hover {
+  background-color: #0056b3;
+}
+
+/* --- 로딩 스피너 위치 조정 --- */
+.canvasWrapper {
+  position: relative;
+  height: 400px;
+  /* 로딩 중 차트 내용이 보이지 않도록 배경을 흰색으로 유지 */
+  background-color: white;
+}
+
+.loadingSpinnerWrapper {
+  /* 로딩 스피너 래퍼를 캔버스 위에 띄웁니다. */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%); /* 정확히 중앙 정렬 */
+
+  /* 사용자 요청: 중앙에서 위로 200px 이동 */
+  margin-top: 0px;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+}
+
+/* --- 기존 메트릭/차트 버튼 스타일 (유지 및 정리) --- */
+
+.chartControls {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.metricToggle,
+.chartToggle {
+  display: flex;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.metricToggle button,
+.chartToggle button {
+  padding: 8px 12px;
+  border: none;
+  cursor: pointer;
+  background-color: #f0f0f0;
+  color: black;
+  transition: background-color 0.1s;
+}
+
+.divider {
+  width: 1px;
+  height: 24px;
+  background: #ccc;
 }

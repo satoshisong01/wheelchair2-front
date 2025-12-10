@@ -521,7 +521,7 @@
   .table th,
   .table td {
     padding: 10px 8px;
-    font-size: 13px;
+    font-size: 11px;
   }
 
   .datePickerWrapper {
@@ -566,6 +566,11 @@
   .datePickerWrapper :global(div[class*='DateRangePicker_dateContainer']) {
     padding: 0 !important;
   }
+
+  /* 반드시 앞에 .로컬클래스명이 있어야 합니다
+  .tableWrapper :global(table[class*='page_table']) th {
+    font-size: 11px;
+  } */
 }
 
 /* --- 공통 요소 (폰트, 컨테이너) --- */

@@ -740,7 +740,7 @@ export default function StatsPage() {
         <div className={styles.canvasWrapper}>
           {isLoading ? (
             <div className={styles.loadingSpinnerWrapper}>
-              <LoadingSpinner />
+              <LoadingSpinner text="AI가 데이터를 분석 중입니다." />
             </div>
           ) : chartData ? (
             chartType === 'BAR' ? (

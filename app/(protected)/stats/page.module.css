@@ -534,7 +534,7 @@
   /* 날짜 입력창(input type="date") 스타일 강제 조정 */
   .datePickerWrapper input[type='date'] {
     width: 100%; /* 화면 꽉 차게 */
-    padding: 12px; /* 터치 영역 확보 */
+    padding: 7px; /* 터치 영역 확보 */
     font-size: 16px; /* 모바일에서 16px 미만이면 입력 시 확대되는 현상 방지 */
     color: #111; /* 글씨 진하게 */
     border: 1px solid #ccc;
@@ -561,6 +561,10 @@
     padding: 15px;
     font-size: 16px;
     margin-top: 10px;
+  }
+
+  .datePickerWrapper :global(div[class*='DateRangePicker_dateContainer']) {
+    padding: 0 !important;
   }
 }
 
@@ -674,8 +678,9 @@
 
 .chartControls {
   display: flex;
-  gap: 20px;
+  gap: 17px;
   align-items: center;
+  font-size: 12px;
 }
 
 .metricToggle,

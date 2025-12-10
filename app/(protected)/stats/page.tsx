@@ -1,5 +1,3 @@
-// app/stats/page.tsx
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -20,8 +18,7 @@ import { Bar, Line } from 'react-chartjs-2';
 import styles from './page.module.css';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import DateRangePicker from '@/components/ui/DateRangePicker';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
+// 🗑️ [삭제] react-datepicker import 제거 (디자인 통일)
 
 // Chart.js 등록
 ChartJS.register(
@@ -98,7 +95,7 @@ export default function StatsPage() {
   const [compareDateA, setCompareDateA] = useState<Date>(
     new Date(today.getFullYear() - 1, today.getMonth(), today.getDate())
   );
-  const [compareDateB, setCompareDateB] = useState<Date>(today); // ⭐️ [추가] 시간 범위 상태 (기본값: 09시 ~ 18시)
+  const [compareDateB, setCompareDateB] = useState<Date>(today);
 
   const [startHour, setStartHour] = useState<string>('09');
   const [endHour, setEndHour] = useState<string>('18');
@@ -120,8 +117,9 @@ export default function StatsPage() {
   ]);
   const regions = ['전체 지역', '경기도', '서울시', '인천시'];
   const [mySerial, setMySerial] = useState<string>('');
-  const [isInitialLoad, setIsInitialLoad] = useState(true); // --- useEffect: 인증 및 기기 목록 로딩 (유지) ---
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
+  // --- useEffect: 인증 및 기기 목록 로딩 ---
   useEffect(() => {
     if (status === 'authenticated' && !isManager) {
       const myId = (session?.user as any)?.wheelchairId;
@@ -155,8 +153,9 @@ export default function StatsPage() {
       }
     };
     fetchDevices();
-  }, [status, isManager, session]); // --- useEffect: 기간 설정 및 초기 로딩 (유지) ---
+  }, [status, isManager, session]);
 
+  // --- useEffect: 기간 설정 및 초기 로딩 ---
   useEffect(() => {
     const now = new Date();
     let newStart = new Date();
@@ -186,9 +185,11 @@ export default function StatsPage() {
     if (isInitialLoad && status === 'authenticated') {
       handleSearch();
       setIsInitialLoad(false);
-    } // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status]); // --- 핸들러 함수 ---
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
 
+  // --- 핸들러 함수 ---
   const handleDateChangeStart = (date: Date) => {
     setStartDate(date);
     setPeriodType('CUSTOM');
@@ -196,15 +197,16 @@ export default function StatsPage() {
   const handleDateChangeEnd = (date: Date) => {
     setEndDate(date);
     setPeriodType('CUSTOM');
-  }; // 모드 변경 시 집계 단위 강제 설정
+  };
 
   const handleModeChange = (mode: ChartModeType) => {
     setChartMode(mode);
     if (mode === 'COMPARE') {
-      setTimeUnit('hourly'); // 특정일 비교 시 시간별로 강제
+      setTimeUnit('hourly');
     }
-  }; // 3. 데이터 검색 및 테이블 매핑 (POST 요청)
+  };
 
+  // --- 데이터 검색 및 테이블 매핑 (POST 요청) ---
   const handleSearch = useCallback(async () => {
     if (!isManager && selectedDevice === 'ALL') return;
 
@@ -213,7 +215,6 @@ export default function StatsPage() {
 
     let postBody: any;
 
-    // ⭐️ [추가] 시작 시간/종료 시간 유효성 검사 및 설정
     const isHourly = chartMode === 'COMPARE' || timeUnit === 'hourly';
     const startH = isHourly ? startHour : '00';
     const endH = isHourly ? endHour : '23';
@@ -230,12 +231,12 @@ export default function StatsPage() {
         compareDates: [
           formatDateString(compareDateA),
           formatDateString(compareDateB),
-        ], // 두 날짜 전송
+        ],
         deviceId: selectedDevice,
         metric: selectedMetric,
-        unit: 'hourly', // COMPARE 모드는 시간별로 강제
-        startHour: startH, // ⭐️ [추가] 시작 시간
-        endHour: endH, // ⭐️ [추가] 종료 시간
+        unit: 'hourly',
+        startHour: startH,
+        endHour: endH,
       };
     } else {
       postBody = {
@@ -245,8 +246,8 @@ export default function StatsPage() {
         deviceId: selectedDevice,
         metric: selectedMetric,
         unit: timeUnit,
-        startHour: startH, // ⭐️ [추가] 시작 시간
-        endHour: endH, // ⭐️ [추가] 종료 시간
+        startHour: startH,
+        endHour: endH,
       };
     }
     try {
@@ -279,7 +280,7 @@ export default function StatsPage() {
       }
 
       setApiRawData(apiData);
-      setAiAnalysisComment(aiComment); // 선택된 기기 이름 찾기
+      setAiAnalysisComment(aiComment);
 
       const currentDeviceObj = devices.find((d) => d.id === selectedDevice);
       let displayDeviceName = '전체 평균';
@@ -291,11 +292,10 @@ export default function StatsPage() {
         } else {
           displayDeviceName = mySerial ? `내 기기 (${mySerial})` : '내 기기';
         }
-      } // 테이블 데이터 포맷팅
+      }
 
       setTableData(
         apiData.map((d: any) => ({
-          // 비교 모드일 경우: 날짜 + 시리얼을 보여주어 어떤 데이터인지 구분
           date: isHourly ? d.date.substring(5, 16) : d.date.substring(5, 10),
           deviceName: displayDeviceName,
           serial: '-',
@@ -322,23 +322,21 @@ export default function StatsPage() {
     selectedDevice,
     selectedMetric,
     timeUnit,
-    startHour, // ⭐️ [추가] 시작 시간 의존성
-    endHour, // ⭐️ [추가] 종료 시간 의존성
+    startHour,
+    endHour,
     devices,
     isManager,
     mySerial,
-  ]); // --- Chart 렌더링 로직 (유지) ---
+  ]);
 
+  // --- Chart 렌더링 로직 (고정 시간축 적용) ---
   useEffect(() => {
-    if (apiRawData.length === 0) {
-      setChartData(null);
-      return;
-    }
-
     const config = METRIC_CONFIG[selectedMetric];
     let labels: string[] = [];
     let datasets: any[] = [];
-    const dataValues = (d: any) => {
+
+    const getDataValue = (d: any) => {
+      if (!d) return 0;
       if (selectedMetric === 'BATTERY') return d.avgBattery;
       if (selectedMetric === 'SPEED') return d.avgSpeed;
       if (selectedMetric === 'DISTANCE') return d.avgDistance;
@@ -347,54 +345,88 @@ export default function StatsPage() {
 
     const isHourly = chartMode === 'COMPARE' || timeUnit === 'hourly';
 
+    // X축 라벨 생성 (고정 시간축)
+    if (isHourly) {
+      const start = parseInt(startHour);
+      const end = parseInt(endHour);
+      labels = Array.from({ length: end - start + 1 }, (_, i) => {
+        const hour = String(start + i).padStart(2, '0');
+        return `${hour}시`;
+      });
+    }
+
     if (chartMode === 'COMPARE') {
       const dateAStr = formatDateString(compareDateA);
       const dateBStr = formatDateString(compareDateB);
 
-      const dataA = apiRawData.filter((d) => d.source === dateAStr);
-      const dataB = apiRawData.filter((d) => d.source === dateBStr); // 라벨: 시간(00시, 01시...)을 라벨로 사용 (시간 필터링 반영) // dataA의 date 필드에서 시간 부분만 추출 (예: 2025-12-03T09:00:00Z -> 09시)
-      labels = dataA.map((d) => d.date.substring(11, 13) + '시');
+      const rawDataA = apiRawData.filter((d) => d.source === dateAStr);
+      const rawDataB = apiRawData.filter((d) => d.source === dateBStr);
+
+      const mappedDataA = labels.map((label) => {
+        const hour = label.replace('시', '');
+        const found = rawDataA.find((d) => d.date.substring(11, 13) === hour);
+        return getDataValue(found);
+      });
+
+      const mappedDataB = labels.map((label) => {
+        const hour = label.replace('시', '');
+        const found = rawDataB.find((d) => d.date.substring(11, 13) === hour);
+        return getDataValue(found);
+      });
 
       datasets.push({
         label: `${config.label} (${dateAStr})`,
-        data: dataA.map(dataValues),
+        data: mappedDataA,
         backgroundColor: chartType === 'BAR' ? config.color : config.bgColor,
         borderColor: config.color,
         borderWidth: 2,
         fill: chartType === 'LINE',
         tension: 0.3,
       });
+
       datasets.push({
         label: `${config.label} (${dateBStr})`,
-        data: dataB.map(dataValues),
-        backgroundColor:
-          chartType === 'BAR' ? config.colorCompare : config.colorCompare,
+        data: mappedDataB,
+        backgroundColor: config.colorCompare,
         borderColor: config.colorCompare,
         borderWidth: 2,
         fill: chartType === 'LINE',
         tension: 0.3,
       });
     } else {
-      // 범위 모드 (기존 로직 유지)
-      labels = apiRawData.map((d) => {
-        if (isHourly) {
+      // RANGE 모드
+      if (isHourly) {
+        labels = apiRawData.map((d) => {
           const datePart = d.date.substring(5, 10);
           const timePart = d.date.substring(11, 13);
           return `${datePart} ${timePart}시`;
-        }
-        return d.date.substring(5, 10);
-      });
-      const data = apiRawData.map(dataValues);
+        });
+        const data = apiRawData.map(getDataValue);
 
-      datasets.push({
-        label: `${config.label} (${config.unit})`,
-        data: data,
-        backgroundColor: chartType === 'BAR' ? config.color : config.bgColor,
-        borderColor: config.color,
-        borderWidth: 2,
-        fill: chartType === 'LINE',
-        tension: 0.3,
-      });
+        datasets.push({
+          label: `${config.label} (${config.unit})`,
+          data: data,
+          backgroundColor: chartType === 'BAR' ? config.color : config.bgColor,
+          borderColor: config.color,
+          borderWidth: 2,
+          fill: chartType === 'LINE',
+          tension: 0.3,
+        });
+      } else {
+        // 일별 보기
+        labels = apiRawData.map((d) => d.date.substring(5, 10));
+        const data = apiRawData.map(getDataValue);
+
+        datasets.push({
+          label: `${config.label} (${config.unit})`,
+          data: data,
+          backgroundColor: chartType === 'BAR' ? config.color : config.bgColor,
+          borderColor: config.color,
+          borderWidth: 2,
+          fill: chartType === 'LINE',
+          tension: 0.3,
+        });
+      }
     }
 
     setChartData({
@@ -409,6 +441,8 @@ export default function StatsPage() {
     chartMode,
     compareDateA,
     compareDateB,
+    startHour,
+    endHour,
   ]);
 
   const chartOptions = {
@@ -471,7 +505,7 @@ export default function StatsPage() {
             value={periodType}
             onChange={(e) => setPeriodType(e.target.value as any)}
             className={styles.select}
-            disabled={chartMode === 'COMPARE'} // 비교 모드에서는 기간 preset 비활성화
+            disabled={chartMode === 'COMPARE'}
           >
             <option value="WEEKLY">최근 7일</option>
             <option value="MONTHLY">이번 달</option>
@@ -486,13 +520,14 @@ export default function StatsPage() {
             value={timeUnit}
             onChange={(e) => setTimeUnit(e.target.value as TimeUnitType)}
             className={styles.select}
-            disabled={chartMode === 'COMPARE'} // 비교 모드에서는 집계 단위 비활성화
+            disabled={chartMode === 'COMPARE'}
           >
             <option value="daily">일별</option>
             <option value="hourly">시간별</option>
           </select>
         </div>
-        {/* ⭐️ [수정] 시간 선택 필터 (시간별/비교 모드일 때만 표시) */}
+
+        {/* 시간 선택 필터 (시간별/비교 모드일 때만 표시) */}
         {(chartMode === 'COMPARE' || timeUnit === 'hourly') && (
           <div className={styles.filterGroup}>
             <label>시간 범위</label>
@@ -528,6 +563,7 @@ export default function StatsPage() {
           <label>{chartMode === 'COMPARE' ? '비교 일자' : '기간 선택'}</label>
 
           <div className={styles.datePickerWrapper}>
+            {/* ⭐️ [핵심 수정] COMPARE 모드에서도 DateRangePicker 디자인 재사용 */}
             {chartMode === 'RANGE' ? (
               <DateRangePicker
                 startDate={startDate}
@@ -536,23 +572,12 @@ export default function StatsPage() {
                 onChangeEnd={handleDateChangeEnd}
               />
             ) : (
-              // 비교 모드용 단일 날짜 선택기
-              <div className={styles.compareDateGroup}>
-                <DatePicker
-                  selected={compareDateA}
-                  onChange={(date: Date) => setCompareDateA(date)}
-                  dateFormat="yyyy-MM-dd"
-                  className={styles.datePickerInput}
-                />
-                <span>~</span>
-
-                <DatePicker
-                  selected={compareDateB}
-                  onChange={(date: Date) => setCompareDateB(date)}
-                  dateFormat="yyyy-MM-dd"
-                  className={styles.datePickerInput}
-                />
-              </div>
+              <DateRangePicker
+                startDate={compareDateA}
+                endDate={compareDateB}
+                onChangeStart={(date) => setCompareDateA(date)}
+                onChangeEnd={(date) => setCompareDateB(date)}
+              />
             )}
           </div>
         </div>
@@ -593,13 +618,12 @@ export default function StatsPage() {
           검색
         </button>
       </div>
-      {/* 🟢 [유지] AI 분석 멘트 표시 영역 */}
+
       {aiAnalysisComment && (
         <div className={styles.aiAnalysisBox}>
           <h4>✨ AI 분석 리포트</h4>
-
           <div
-            className={styles.aiAnalysisContent} // 클래스 적용
+            className={styles.aiAnalysisContent}
             dangerouslySetInnerHTML={{
               __html: aiAnalysisComment.replace(/\n/g, '<br />'),
             }}
@@ -620,7 +644,6 @@ export default function StatsPage() {
               >
                 배터리
               </button>
-
               <button
                 className={
                   selectedMetric === 'SPEED' ? styles.activeMetricSpeed : ''
@@ -629,7 +652,6 @@ export default function StatsPage() {
               >
                 속도
               </button>
-
               <button
                 className={
                   selectedMetric === 'DISTANCE'
@@ -679,7 +701,6 @@ export default function StatsPage() {
       <div className={styles.tableContainer}>
         <h3 className={styles.tableTitle}>상세 데이터 로그</h3>
         <table className={styles.table}>
-          {/* ⭐️ [수정] <table> 태그 바로 다음에 <thead>가 오도록 불필요한 공백 제거 */}
           <thead>
             <tr>
               <th>날짜</th>

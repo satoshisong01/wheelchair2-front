@@ -1,4 +1,4 @@
-// 📍 경로: app/api/auth/change-password/route.ts (수정된 전체 코드)
+// 📍 경로: app/api/auth/change-password/route.ts
 
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
@@ -18,10 +18,7 @@ export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
 
     if (!session || !session.user) {
-      return NextResponse.json(
-        { message: '로그인이 필요합니다.' },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: '로그인이 필요합니다.' }, { status: 401 });
     }
 
     const userId = (session.user as any).id;
@@ -32,32 +29,25 @@ export async function POST(req: Request) {
     if (userRole !== 'DEVICE_USER') {
       return NextResponse.json(
         { message: '비밀번호 변경 권한이 없는 계정입니다.' },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
     const { currentPassword, newPassword } = await req.json();
 
     if (!currentPassword || !newPassword) {
-      return NextResponse.json(
-        { message: '입력 값이 부족합니다.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: '입력 값이 부족합니다.' }, { status: 400 });
     }
 
     const client = await pool.connect();
     try {
       // 2. device_auths 테이블에서 비밀번호 조회
-      const userRes = await client.query(
-        'SELECT id, password FROM device_auths WHERE id = $1',
-        [userId]
-      );
+      const userRes = await client.query('SELECT id, password FROM device_auths WHERE id = $1', [
+        userId,
+      ]);
 
       if (userRes.rows.length === 0) {
-        return NextResponse.json(
-          { message: '계정 정보를 찾을 수 없습니다.' },
-          { status: 404 }
-        );
+        return NextResponse.json({ message: '계정 정보를 찾을 수 없습니다.' }, { status: 404 });
       }
 
       const user = userRes.rows[0];
@@ -67,17 +57,17 @@ export async function POST(req: Request) {
       if (!isValid) {
         return NextResponse.json(
           { message: '현재 비밀번호가 일치하지 않습니다.' },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
       // 4. 새 비밀번호 업데이트
       const hashedNewPassword = await bcrypt.hash(newPassword, 10);
 
-      await client.query(
-        'UPDATE device_auths SET password = $1 WHERE id = $2',
-        [hashedNewPassword, userId]
-      );
+      await client.query('UPDATE device_auths SET password = $1 WHERE id = $2', [
+        hashedNewPassword,
+        userId,
+      ]);
 
       // ⭐️ [핵심 추가] 비밀번호 변경 성공 로그 기록
       await createAuditLog({
@@ -90,6 +80,7 @@ export async function POST(req: Request) {
           targetUserId: userId,
           deviceId: deviceId, // 로그 추적을 위해 기기 ID 포함
         },
+        deviceSerial: deviceId, // AuditLog 테이블의 device_serial 필드에도 기록
       });
 
       return NextResponse.json({ message: '비밀번호가 변경되었습니다.' });
@@ -98,10 +89,13 @@ export async function POST(req: Request) {
     }
   } catch (error) {
     console.error('[API/change-password] Error:', error);
-    // ⭐️ [추가] 실패 시 로그 기록 (선택 사항)
+
+    // ⭐️ [추가] 실패 시 로그 기록
     const session = await getServerSession(authOptions);
     const userId = (session?.user as any)?.id;
     const userRole = (session?.user as any)?.role;
+    const deviceId = (session?.user as any)?.deviceId;
+
     if (userId && userRole) {
       await createAuditLog({
         userId: userId,
@@ -112,12 +106,10 @@ export async function POST(req: Request) {
           status: 'Failed',
           error: (error as Error).message.substring(0, 50),
         },
+        deviceSerial: deviceId, // AuditLog 테이블의 device_serial 필드에도 기록
       });
     }
 
-    return NextResponse.json(
-      { message: '서버 에러가 발생했습니다.' },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: '서버 에러가 발생했습니다.' }, { status: 500 });
   }
 }

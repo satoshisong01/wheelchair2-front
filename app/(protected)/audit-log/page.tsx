@@ -55,16 +55,13 @@ const getLogStyle = (action: string) => {
 };
 
 // ⭐️ [신규 컴포넌트] 이름을 강조하는 컴포넌트 (JSX 반환용)
-const Name = ({ name }: { name: string }) => (
-  <strong style={{ fontWeight: 'bold' }}>{name}</strong>
-);
+const Name = ({ name }: { name: string }) => <strong style={{ fontWeight: 'bold' }}>{name}</strong>;
 
-// ⭐️ [핵심 수정 2] 로그 메시지 포맷팅 로직을 JSX를 반환하도록 변경 (안전성 확보)
+// ⭐️ [핵심 수정] 로그 메시지 포맷팅 로직을 JSX를 반환하도록 변경 (기기 사용자 로그 강화)
 const formatLogContent = (log: AuditLog) => {
   let details: any;
   try {
-    details =
-      typeof log.details === 'string' ? JSON.parse(log.details) : log.details;
+    details = typeof log.details === 'string' ? JSON.parse(log.details) : log.details;
   } catch (e) {
     details = { text: log.details || '상세 정보 없음' };
   }
@@ -76,58 +73,69 @@ const formatLogContent = (log: AuditLog) => {
   const model = details?.model || 'N/A';
   const wcId = details?.wheelchairId || 'N/A';
   const targetUserId = details?.targetUserId || 'N/A';
-  const targetUserName =
-    details.targetUserName || details.targetUserEmail || targetUserId;
+  const targetUserName = details.targetUserName || details.targetUserEmail || targetUserId;
   const reason = details?.reason || '없음';
+
+  // 🎯 기기 사용자일 경우, 사용자 이름 대신 시리얼 넘버를 사용
+  const isDeviceUserLog = log.user_role === 'DEVICE_USER';
+  const displayActorName = isDeviceUserLog ? serial || '알 수 없는 기기' : userName;
 
   switch (action) {
     case 'DEVICE_REGISTER':
       return (
         <>
-          <Name name={userName} /> 님이 기기 등록 (S/N: {serial}, 모델: {model},
-          ID: {wcId.substring(0, 8)})
+          <Name name={userName} /> 님이 기기 등록 (S/N: {serial}, 모델: {model}, ID:{' '}
+          {wcId.substring(0, 8)})
         </>
       );
     case 'DEVICE_DELETE':
       return (
         <>
-          <Name name={userName} /> 님이 기기 삭제 (S/N: {serial}, 모델: {model},
-          ID: {wcId.substring(0, 8)})
+          <Name name={userName} /> 님이 기기 삭제 (S/N: {serial}, 모델: {model}, ID:{' '}
+          {wcId.substring(0, 8)})
         </>
       );
     case 'LOGIN':
     case 'LOGOUT':
+      if (isDeviceUserLog) {
+        // ⭐️ [수정] 기기 사용자 로그인/로그아웃 메시지
+        return (
+          <>
+            기기 ({displayActorName})에서 {action.toLowerCase()}했습니다.
+          </>
+        );
+      }
+      // ⭐️ [수정] 관리자 로그인/로그아웃 메시지
       return (
         <>
-          {log.user_role} <Name name={userName} /> 님이 {action.toLowerCase()}
-          했습니다.
+          {log.user_role} <Name name={displayActorName} /> 님이 {action.toLowerCase()}했습니다.
         </>
       );
     case 'USER_UPDATE':
+      if (isDeviceUserLog) {
+        // ⭐️ [수정] 기기 사용자 비밀번호 변경 메시지
+        return <>기기 사용자 ({displayActorName})의 비밀번호가 변경되었습니다.</>;
+      }
       return <>기기 사용자({details.deviceId || 'N/A'}) 비밀번호 변경 완료.</>;
     case 'USER_APPROVE':
       return (
         <>
-          <Name name={userName} /> 님이 회원({targetUserName.substring(0, 20)})
-          관리자(ADMIN) 역할로 승인.
+          <Name name={userName} /> 님이 회원({targetUserName.substring(0, 20)}) 관리자(ADMIN) 역할로
+          승인.
         </>
       );
     case 'USER_REJECT':
       return (
         <>
-          <Name name={userName} /> 님이 회원({targetUserName.substring(0, 20)})
-          가입 거절. (사유: {reason.substring(0, 50)})
+          <Name name={userName} /> 님이 회원({targetUserName.substring(0, 20)}) 가입 거절. (사유:{' '}
+          {reason.substring(0, 50)})
         </>
       );
     default:
       // 기타 활동은 안전한 문자열 반환 (JSX 사용 안함)
       const detailStr = details.text || JSON.stringify(details);
       return (
-        <span>
-          {detailStr.length > 100
-            ? `${detailStr.substring(0, 100)}...`
-            : detailStr}
-        </span>
+        <span>{detailStr.length > 100 ? `${detailStr.substring(0, 100)}...` : detailStr}</span>
       );
   }
 };
@@ -143,9 +151,7 @@ export default function AuditLogPage() {
   const initialStartDate = new Date();
   initialStartDate.setDate(initialStartDate.getDate() - 30);
 
-  const [startDate, setStartDate] = useState(
-    initialStartDate.toISOString().split('T')[0]
-  );
+  const [startDate, setStartDate] = useState(initialStartDate.toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(today);
 
   const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -154,17 +160,11 @@ export default function AuditLogPage() {
   const fetchLogs = useCallback(async (start: string, end: string) => {
     setLoading(true);
     try {
-      const res = await fetch(
-        `/api/admin/audit-log?startDate=${start}&endDate=${end}`
-      );
+      const res = await fetch(`/api/admin/audit-log?startDate=${start}&endDate=${end}`);
       if (!res.ok) {
         const errorBody = await res.json();
         console.error('Failed to fetch logs:', errorBody);
-        alert(
-          `로그를 불러오는 데 실패했습니다: ${
-            errorBody.message || res.statusText
-          }`
-        );
+        alert(`로그를 불러오는 데 실패했습니다: ${errorBody.message || res.statusText}`);
         setLogs([]);
         return;
       }
@@ -198,9 +198,7 @@ export default function AuditLogPage() {
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.pageTitle}>
-        관리자({session.user.role}) 활동 감사 로그
-      </h1>
+      <h1 className={styles.pageTitle}>관리자({session.user.role}) 활동 감사 로그</h1>
 
       {/* 🟢 [수정] 날짜 필터 영역 */}
       <div className={styles.dateFilterSection}>
@@ -229,9 +227,7 @@ export default function AuditLogPage() {
         </div>
       </div>
 
-      {loading && (
-        <div className={styles.loadingText}>로그를 불러오는 중...</div>
-      )}
+      {loading && <div className={styles.loadingText}>로그를 불러오는 중...</div>}
 
       {!loading && (
         // 🟢 [수정] 테이블 가로 스크롤을 위한 컨테이너 적용
@@ -265,10 +261,7 @@ export default function AuditLogPage() {
                             })
                           : 'N/A'}
                       </td>
-                      <td
-                        className={styles.tdAction}
-                        style={{ color: style.color }}
-                      >
+                      <td className={styles.tdAction} style={{ color: style.color }}>
                         {style.label}
                       </td>
                       <td className={styles.tdDetails}>

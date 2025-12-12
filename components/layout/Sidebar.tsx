@@ -1,3 +1,4 @@
+// app/(protected)/_components/Sidebar/Sidebar.tsx
 'use client';
 
 import Link from 'next/link';
@@ -30,11 +31,27 @@ export default function Sidebar() {
   let displayName = '사용자';
 
   if (user) {
-    if (user.role === 'DEVICE' || user.role === 'DEVICE_USER') {
-      displayName = user.deviceId || user.username || user.id || '기기';
-    } else {
+    if (isManager) {
+      // ⭐️ [핵심 수정 1] 관리자(ADMIN/MASTER)인 경우
+      const name = user.name || user.nickname || user.email || '관리자';
+      let roleName = '관리자';
+      if (user.role === 'MASTER') {
+        roleName = '마스터 관리자';
+      } else if (user.role === 'ADMIN') {
+        roleName = '관리자';
+      } else {
+        // 혹시 모를 경우를 대비해 role 값을 그대로 표시
+        roleName = user.role;
+      }
+
+      displayName = `[${name}] ${roleName}`;
+    } else if (isDeviceUser || user.role === 'DEVICE') {
+      // ⭐️ [핵심 수정 2] 기기 사용자인 경우
       displayName =
-        user.nickname || user.name || user.username || user.email || '관리자';
+        user.device_id || user.deviceId || user.username || user.id || '기기';
+    } else {
+      // 기타 역할 (예: GUEST)
+      displayName = user.nickname || user.name || user.email || '일반 사용자';
     }
   }
 

@@ -47,6 +47,8 @@ const LOG_CONFIG = {
   USER_UPDATE: { color: '#ffc107', label: '정보 수정', bg: '#fff3cd' },
   USER_APPROVE: { color: '#79aa1d', label: '관리자 승인', bg: '#e6ffed' },
   USER_REJECT: { color: '#dc3545', label: '관리자 거절', bg: '#f8d7da' },
+  // ⭐️ [추가] 서버 알림 스타일 추가
+  SERVER_ALERT: { color: '#ff0000', label: '🚨 서버 경고', bg: '#ffebe9' },
   DEFAULT: { color: '#000', label: '기타 활동', bg: '#fff' },
 };
 
@@ -57,7 +59,7 @@ const getLogStyle = (action: string) => {
 // ⭐️ [신규 컴포넌트] 이름을 강조하는 컴포넌트 (JSX 반환용)
 const Name = ({ name }: { name: string }) => <strong style={{ fontWeight: 'bold' }}>{name}</strong>;
 
-// ⭐️ [핵심 수정] 로그 메시지 포맷팅 로직을 JSX를 반환하도록 변경 (기기 사용자 로그 강화)
+// ⭐️ [핵심 수정] 로그 메시지 포맷팅 로직 (SERVER_ALERT 케이스 추가)
 const formatLogContent = (log: AuditLog) => {
   let details: any;
   try {
@@ -101,7 +103,9 @@ const formatLogContent = (log: AuditLog) => {
         // ⭐️ [수정] 기기 사용자 로그인/로그아웃 메시지
         return (
           <>
-            기기 ({displayActorName})에서 {action.toLowerCase()}했습니다.
+            기기 (<Name name={displayActorName} />
+            )에서 {action.toLowerCase()}
+            했습니다.
           </>
         );
       }
@@ -114,7 +118,12 @@ const formatLogContent = (log: AuditLog) => {
     case 'USER_UPDATE':
       if (isDeviceUserLog) {
         // ⭐️ [수정] 기기 사용자 비밀번호 변경 메시지
-        return <>기기 사용자 ({displayActorName})의 비밀번호가 변경되었습니다.</>;
+        return (
+          <>
+            기기 사용자 (<Name name={displayActorName} />
+            )의 비밀번호가 변경되었습니다.
+          </>
+        );
       }
       return <>기기 사용자({details.deviceId || 'N/A'}) 비밀번호 변경 완료.</>;
     case 'USER_APPROVE':
@@ -129,6 +138,21 @@ const formatLogContent = (log: AuditLog) => {
         <>
           <Name name={userName} /> 님이 회원({targetUserName.substring(0, 20)}) 가입 거절. (사유:{' '}
           {reason.substring(0, 50)})
+        </>
+      );
+    // ⭐️ [추가] 서버 경고 처리 로직
+    case 'SERVER_ALERT':
+      const reasonText = details.reason || '시스템 부하 경고';
+      const cpu = details.cpu_usage || 'N/A';
+      const memory = details.memory_free || 'N/A';
+      const serverId = log.device_serial || 'N/A';
+      return (
+        <>
+          서버 (<Name name={serverId} />
+          )에서 **{reasonText}** 감지. (CPU: {cpu}%, RAM Free: {memory} GB)
+          <span style={{ color: '#aaa', fontSize: '0.9em', display: 'block' }}>
+            프로세스 스냅샷: {details.process_snapshot.substring(0, 100)}...
+          </span>
         </>
       );
     default:

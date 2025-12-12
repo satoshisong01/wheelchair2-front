@@ -1,4 +1,4 @@
-// 📍 경로: lib/log.ts (최종 확인 및 오류 처리 강화)
+// 📍 경로: lib/log.ts (최종 수정 전체 코드)
 
 import { query } from '@/lib/db';
 
@@ -8,6 +8,7 @@ interface LogData {
   action: 'LOGIN' | 'LOGOUT' | 'DEVICE_REGISTER' | 'DEVICE_DELETE' | 'USER_UPDATE' | string;
   details: Record<string, any>;
   deviceSerial?: string;
+  userName?: string; // ⭐️ [추가] user_name 필드 추가
 }
 
 export const createAuditLog = async ({
@@ -16,19 +17,22 @@ export const createAuditLog = async ({
   action,
   details,
   deviceSerial,
+  userName, // ⭐️ [추가] userName 매개변수 받기
 }: LogData) => {
   try {
-    if (!['ADMIN', 'MASTER', 'DEVICE_USER'].includes(userRole)) {
+    // ⭐️ [핵심 수정 1] SYSTEM 역할을 허용합니다.
+    if (!['ADMIN', 'MASTER', 'DEVICE_USER', 'SYSTEM'].includes(userRole)) {
       return;
     }
 
-    // ⭐️ [개선] deviceSerial이 null이면 빈 문자열로 변환 (DB 제약조건 회피)
     const finalDeviceSerial = deviceSerial || null;
+    const finalUserName = userName || null; // ⭐️ [추가] userName이 없으면 null
 
     // Raw SQL: admin_audit_logs 테이블에 로그 INSERT
+    // ⭐️ [핵심 수정 2] user_name 컬럼 추가
     const sql = `
-            INSERT INTO admin_audit_logs (user_id, user_role, action, details, device_serial, created_at)
-            VALUES ($1, $2, $3, $4, $5, NOW());
+            INSERT INTO admin_audit_logs (user_id, user_role, action, details, device_serial, user_name, created_at)
+            VALUES ($1, $2, $3, $4, $5, $6, NOW());
         `;
 
     // details 객체를 JSON 문자열로 변환하여 저장
@@ -37,14 +41,14 @@ export const createAuditLog = async ({
       userRole,
       action,
       JSON.stringify(details),
-      finalDeviceSerial, // ⭐️ NULL 가능하도록 처리
+      finalDeviceSerial,
+      finalUserName, // ⭐️ [추가] user_name 값 전달
     ]);
 
     console.log(
       `✅ [Audit Log Success] ${userRole} ${action} recorded (User: ${userId}, Device: ${finalDeviceSerial})`,
     );
   } catch (error) {
-    // ⭐️ [강화된 에러 출력] DB 오류 코드를 포함하여 출력
     console.error(`❌ Audit Log Creation Failed (${userRole} - ${action}):`, {
       message: (error as Error).message,
       code: (error as any).code || 'N/A',

@@ -1,10 +1,11 @@
+// app/(protected)/audit-log/page.tsx
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 // ⚠️ npm install date-fns 필요
-import { format } from 'date-fns';
+import { format, toDate, addHours } from 'date-fns';
 import { ko } from 'date-fns/locale/ko';
 import styles from './page.module.css';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -14,15 +15,12 @@ import LoadingSpinner from '@/components/ui/LoadingSpinner';
 // ------------------------------------------------
 interface AuditLog {
   id: string;
-  admin_user_id: string;
   user_id: string;
-  userRole: string;
+  user_role: string;
   action: string;
   details: string | any;
   user_name?: string;
-  userName?: string;
-  createdAt: string;
-  created_at: string;
+  created_at: string; // UTC 시간 (예: 2025-12-12 00:00:00.000)
   device_serial?: string;
   [key: string]: any;
 }
@@ -30,11 +28,15 @@ interface AuditLog {
 // ------------------------------------------------
 // 2. 헬퍼 함수들
 // ------------------------------------------------
+// KST (+9시간)로 변환
 const safeParseDate = (dateString: string) => {
   if (!dateString) return null;
-  const cleanString = dateString.replace(' ', 'T').split('.')[0];
-  const date = new Date(cleanString);
-  return isNaN(date.getTime()) ? null : date;
+  let date = new Date(dateString.replace(' ', 'T') + 'Z');
+  if (isNaN(date.getTime())) {
+    date = toDate(dateString);
+  }
+  if (isNaN(date.getTime())) return null;
+  return addHours(date, 9);
 };
 
 const LOG_CONFIG = {
@@ -42,9 +44,9 @@ const LOG_CONFIG = {
   LOGOUT: { color: '#6c757d', label: '로그아웃', bg: '#f8f9fa' },
   DEVICE_REGISTER: { color: '#28a745', label: '기기 등록', bg: '#e6ffed' },
   DEVICE_DELETE: { color: '#dc3545', label: '기기 삭제', bg: '#f8d7da' },
-  USER_UPDATE: { color: '#ffc107', label: '사용자 수정', bg: '#fff3cd' },
-  ADMIN_APPROVE: { color: '#28a745', label: '관리자 승인', bg: '#e6ffed' },
-  ADMIN_REJECT: { color: '#dc3545', label: '관리자 거절', bg: '#f8d7da' },
+  USER_UPDATE: { color: '#ffc107', label: '정보 수정', bg: '#fff3cd' },
+  USER_APPROVE: { color: '#79aa1d', label: '관리자 승인', bg: '#e6ffed' },
+  USER_REJECT: { color: '#dc3545', label: '관리자 거절', bg: '#f8d7da' },
   DEFAULT: { color: '#000', label: '기타 활동', bg: '#fff' },
 };
 
@@ -52,36 +54,81 @@ const getLogStyle = (action: string) => {
   return LOG_CONFIG[action as keyof typeof LOG_CONFIG] || LOG_CONFIG.DEFAULT;
 };
 
-const formatLogMessage = (log: AuditLog) => {
+// ⭐️ [신규 컴포넌트] 이름을 강조하는 컴포넌트 (JSX 반환용)
+const Name = ({ name }: { name: string }) => (
+  <strong style={{ fontWeight: 'bold' }}>{name}</strong>
+);
+
+// ⭐️ [핵심 수정 2] 로그 메시지 포맷팅 로직을 JSX를 반환하도록 변경 (안전성 확보)
+const formatLogContent = (log: AuditLog) => {
   let details: any;
   try {
-    details = JSON.parse(log.details) || {};
+    details =
+      typeof log.details === 'string' ? JSON.parse(log.details) : log.details;
   } catch (e) {
     details = { text: log.details || '상세 정보 없음' };
   }
+  details = details || {};
 
-  const action = log.action || log.action_type;
-  const serial = details?.serial || details?.deviceSerial;
-  const userName = log.userName || log.user_name || 'N/A';
+  const userName = log.user_name || 'N/A';
+  const action = log.action;
+  const serial = details?.serial || details?.deviceSerial || log.device_serial;
   const model = details?.model || 'N/A';
+  const wcId = details?.wheelchairId || 'N/A';
+  const targetUserId = details?.targetUserId || 'N/A';
+  const targetUserName =
+    details.targetUserName || details.targetUserEmail || targetUserId;
+  const reason = details?.reason || '없음';
 
   switch (action) {
     case 'DEVICE_REGISTER':
-      return serial
-        ? `기기 등록 (S/N: ${serial}, 모델: ${model})`
-        : `기기 등록 (시리얼 정보 없음)`;
+      return (
+        <>
+          <Name name={userName} /> 님이 기기 등록 (S/N: {serial}, 모델: {model},
+          ID: {wcId.substring(0, 8)})
+        </>
+      );
     case 'DEVICE_DELETE':
-      return serial
-        ? `기기 삭제 (S/N: ${serial} 삭제 완료)`
-        : `기기 삭제 (시리얼 정보 없음)`;
+      return (
+        <>
+          <Name name={userName} /> 님이 기기 삭제 (S/N: {serial}, 모델: {model},
+          ID: {wcId.substring(0, 8)})
+        </>
+      );
     case 'LOGIN':
     case 'LOGOUT':
-      return `관리자 ${userName} 님이 ${action.toLowerCase()}했습니다.`;
+      return (
+        <>
+          {log.user_role} <Name name={userName} /> 님이 {action.toLowerCase()}
+          했습니다.
+        </>
+      );
+    case 'USER_UPDATE':
+      return <>기기 사용자({details.deviceId || 'N/A'}) 비밀번호 변경 완료.</>;
+    case 'USER_APPROVE':
+      return (
+        <>
+          <Name name={userName} /> 님이 회원({targetUserName.substring(0, 20)})
+          관리자(ADMIN) 역할로 승인.
+        </>
+      );
+    case 'USER_REJECT':
+      return (
+        <>
+          <Name name={userName} /> 님이 회원({targetUserName.substring(0, 20)})
+          가입 거절. (사유: {reason.substring(0, 50)})
+        </>
+      );
     default:
+      // 기타 활동은 안전한 문자열 반환 (JSX 사용 안함)
       const detailStr = details.text || JSON.stringify(details);
-      return detailStr.length > 100
-        ? `${detailStr.substring(0, 100)}...`
-        : detailStr;
+      return (
+        <span>
+          {detailStr.length > 100
+            ? `${detailStr.substring(0, 100)}...`
+            : detailStr}
+        </span>
+      );
   }
 };
 
@@ -93,7 +140,12 @@ export default function AuditLogPage() {
   const router = useRouter();
 
   const today = new Date().toISOString().split('T')[0];
-  const [startDate, setStartDate] = useState(today);
+  const initialStartDate = new Date();
+  initialStartDate.setDate(initialStartDate.getDate() - 30);
+
+  const [startDate, setStartDate] = useState(
+    initialStartDate.toISOString().split('T')[0]
+  );
   const [endDate, setEndDate] = useState(today);
 
   const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -106,13 +158,21 @@ export default function AuditLogPage() {
         `/api/admin/audit-log?startDate=${start}&endDate=${end}`
       );
       if (!res.ok) {
-        alert('로그를 불러오는 데 실패했습니다.');
+        const errorBody = await res.json();
+        console.error('Failed to fetch logs:', errorBody);
+        alert(
+          `로그를 불러오는 데 실패했습니다: ${
+            errorBody.message || res.statusText
+          }`
+        );
+        setLogs([]);
         return;
       }
       const data = await res.json();
       setLogs(data);
     } catch (error) {
       console.error('Error fetching logs:', error);
+      setLogs([]);
     } finally {
       setLoading(false);
     }
@@ -142,7 +202,7 @@ export default function AuditLogPage() {
         관리자({session.user.role}) 활동 감사 로그
       </h1>
 
-      {/* 🟢 [수정] 날짜 필터 영역 (CSS 클래스 적용) */}
+      {/* 🟢 [수정] 날짜 필터 영역 */}
       <div className={styles.dateFilterSection}>
         <label className={styles.filterLabel}>날짜 범위:</label>
         <div className={styles.dateInputGroup}>
@@ -159,6 +219,13 @@ export default function AuditLogPage() {
             onChange={(e) => setEndDate(e.target.value)}
             className={styles.dateInput}
           />
+          <button
+            onClick={() => fetchLogs(startDate, endDate)}
+            className={styles.searchButton}
+            disabled={loading}
+          >
+            조회
+          </button>
         </div>
       </div>
 
@@ -172,7 +239,7 @@ export default function AuditLogPage() {
           <table className={styles.table}>
             <thead>
               <tr>
-                <th className={styles.thDate}>날짜/시간</th>
+                <th className={styles.thDate}>날짜/시간 (KST)</th>
                 <th className={styles.thAction}>액션</th>
                 <th className={styles.thDetails}>상세</th>
               </tr>
@@ -187,7 +254,7 @@ export default function AuditLogPage() {
               ) : (
                 logs.map((log) => {
                   const style = getLogStyle(log.action);
-                  const logDate = safeParseDate(log.created_at);
+                  const logDate = safeParseDate(log.created_at); // KST 변환됨
 
                   return (
                     <tr key={log.id} style={{ backgroundColor: style.bg }}>
@@ -205,7 +272,8 @@ export default function AuditLogPage() {
                         {style.label}
                       </td>
                       <td className={styles.tdDetails}>
-                        {formatLogMessage(log)}
+                        {/* ⭐️ [수정] formatLogContent 호출 */}
+                        {formatLogContent(log)}
                       </td>
                     </tr>
                   );

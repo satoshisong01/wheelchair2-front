@@ -17,17 +17,11 @@ import { WheelchairStatePanel } from './components/WheelchairStatePanel';
 import { PostureControlPanel } from './components/PostureControlPanel';
 import { TopRightPanel } from './components/TopRightPanel';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import PostureSafetyMonitor from './components/PostureSafetyMonitor';
 
 const SOCKET_SERVER_URL = 'https://broker.firstcorea.com:8080';
 
-const CRITICAL_KEYWORDS = [
-  'FALL',
-  'CRITICAL',
-  'EMERGENCY',
-  'WARNING',
-  'FATAL',
-  'COLLISION',
-];
+const CRITICAL_KEYWORDS = ['FALL', 'CRITICAL', 'EMERGENCY', 'WARNING', 'FATAL', 'COLLISION'];
 
 // 타입 정의
 type WheelchairDetailData = DashboardWheelchair & {
@@ -66,12 +60,8 @@ function WheelchairInfoContent() {
   const { data: session, status } = useSession();
   const searchParams = useSearchParams();
 
-  const [allWheelchairs, setAllWheelchairs] = useState<DashboardWheelchair[]>(
-    []
-  );
-  const [detailData, setDetailData] = useState<WheelchairDetailData | null>(
-    null
-  );
+  const [allWheelchairs, setAllWheelchairs] = useState<DashboardWheelchair[]>([]);
+  const [detailData, setDetailData] = useState<WheelchairDetailData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const socketRef = useRef<Socket | null>(null);
@@ -103,7 +93,7 @@ function WheelchairInfoContent() {
         if (targetId) {
           currentIdRef.current = String(targetId);
           const selectedWc = list.find(
-            (wc: any) => String(wc.id) === String(targetId)
+            (wc: any) => String(wc.id) === String(targetId),
           ) as WheelchairDetailData;
 
           if (selectedWc) {
@@ -121,9 +111,7 @@ function WheelchairInfoContent() {
               if (alarmRes.ok) {
                 const allAlarms = await alarmRes.json();
                 fetchedAlarms = allAlarms.filter(
-                  (a: any) =>
-                    String(a.wheelchairId || a.wheelchair_id) ===
-                    String(targetId)
+                  (a: any) => String(a.wheelchairId || a.wheelchair_id) === String(targetId),
                 );
               }
             } catch (e) {
@@ -165,7 +153,7 @@ function WheelchairInfoContent() {
         if (alarmRes.ok) {
           const allAlarms = await alarmRes.json();
           fetchedAlarms = allAlarms.filter(
-            (a: any) => String(a.wheelchairId || a.wheelchair_id) === String(id)
+            (a: any) => String(a.wheelchairId || a.wheelchair_id) === String(id),
           );
         }
       } catch (e) {}
@@ -193,12 +181,11 @@ function WheelchairInfoContent() {
     // 상태 업데이트 수신 (핵심 수정 부분)
     socket.on('wheelchair_status_update', (payload: any) => {
       const currentTargetId = currentIdRef.current;
-      
+
       // ID 비교
       if (
         currentTargetId &&
-        String(payload.wheelchairId || payload.wheelchair_id) ===
-          String(currentTargetId)
+        String(payload.wheelchairId || payload.wheelchair_id) === String(currentTargetId)
       ) {
         setDetailData((prev) => {
           if (!prev) return null;
@@ -210,7 +197,7 @@ function WheelchairInfoContent() {
               ...prev.status,
 
               // 🟢 [매핑] payload에 값이 있을 때만 업데이트 (null check)
-              
+
               // 1. 배터리/속도/전압/전류
               current_battery: payload.batteryPercent ?? prev.status.current_battery,
               current_speed: payload.speed ?? prev.status.current_speed,
@@ -223,7 +210,7 @@ function WheelchairInfoContent() {
 
               // 3. 장기 데이터 (CW/lt)
               // ⭐️ Worker는 'light'로 보내므로 payload.light를 받아서 status.light에 저장
-              light: payload.light ?? prev.status.light, 
+              light: payload.light ?? prev.status.light,
               // DrivingInfoPanel 등에서 posture_time을 쓴다면 light 값으로 동기화
               posture_time: payload.light ?? prev.status.posture_time,
               operating_time: payload.operatingTime ?? prev.status.operating_time,
@@ -257,12 +244,9 @@ function WheelchairInfoContent() {
       const currentTargetId = currentIdRef.current;
       if (
         currentTargetId &&
-        String(newAlarm.wheelchairId || newAlarm.wheelchair_id) ===
-          String(currentTargetId)
+        String(newAlarm.wheelchairId || newAlarm.wheelchair_id) === String(currentTargetId)
       ) {
-        setDetailData((prev) =>
-          prev ? { ...prev, alarms: [newAlarm, ...prev.alarms] } : null
-        );
+        setDetailData((prev) => (prev ? { ...prev, alarms: [newAlarm, ...prev.alarms] } : null));
       }
     });
 
@@ -275,10 +259,7 @@ function WheelchairInfoContent() {
   }, [status]);
 
   if (status === 'loading' || isLoading) return <LoadingSpinner />;
-  if (!detailData)
-    return (
-      <div className={styles.loadingContainer}>등록된 휠체어가 없습니다.</div>
-    );
+  if (!detailData) return <div className={styles.loadingContainer}>등록된 휠체어가 없습니다.</div>;
 
   const isCritical = (alarm: any) => {
     const type = (alarm.alarmType || alarm.type || '').toUpperCase();
@@ -290,6 +271,7 @@ function WheelchairInfoContent() {
 
   return (
     <div className={styles.container}>
+      {detailData && <PostureSafetyMonitor status={detailData.status} wheelchairId={String(detailData.id)}/>}
       <InfoBar
         wc={detailData}
         allWheelchairs={allWheelchairs}
@@ -318,9 +300,7 @@ function WheelchairInfoContent() {
           <div className={styles.eventArea}>
             <div className={`${styles.card} ${styles.eventCard}`}>
               <div className={styles.eventHeader}>
-                <h2 className={`${styles.sectionTitle} ${styles.warningTitle}`}>
-                  경고 EVENT
-                </h2>
+                <h2 className={`${styles.sectionTitle} ${styles.warningTitle}`}>경고 EVENT</h2>
               </div>
               <div className={styles.scrollableContent}>
                 <AlertList title="" alarms={warningEvents} />
@@ -328,9 +308,7 @@ function WheelchairInfoContent() {
             </div>
             <div className={`${styles.card} ${styles.eventCard}`}>
               <div className={styles.eventHeader}>
-                <h2 className={`${styles.sectionTitle} ${styles.infoTitle}`}>
-                  알림 EVENT
-                </h2>
+                <h2 className={`${styles.sectionTitle} ${styles.infoTitle}`}>알림 EVENT</h2>
               </div>
               <div className={styles.scrollableContent}>
                 <AlertList title="" alarms={infoEvents} />

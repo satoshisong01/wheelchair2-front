@@ -19,8 +19,8 @@ interface MonitorProps {
 }
 
 // ⏰ 실제 서비스용: 2시간
-// const WARNING_DELAY_MS = 2 * 60 * 60 * 1000;
-const WARNING_DELAY_MS = 10 * 1000;
+const WARNING_DELAY_MS = 2 * 60 * 60 * 1000;
+// const WARNING_DELAY_MS = 10 * 1000;
 
 export default function PostureSafetyMonitor({ status, wheelchairId }: MonitorProps) {
   const [showAlarm, setShowAlarm] = useState(false);

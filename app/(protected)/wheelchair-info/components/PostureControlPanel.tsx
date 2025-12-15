@@ -52,11 +52,7 @@ const PostureItem = ({
 );
 
 // 5. PostureControlPanel (최신 데이터 매핑 적용)
-export const PostureControlPanel = ({
-  wc,
-}: {
-  wc: DashboardWheelchair | any;
-}) => {
+export const PostureControlPanel = ({ wc }: { wc: DashboardWheelchair | any }) => {
   const status = wc?.status || {};
 
   // ⭐️ [데이터 매핑] DB 컬럼명(snake_case)과 소켓 데이터 매칭
@@ -81,9 +77,7 @@ export const PostureControlPanel = ({
       })
     : 'N/A';
 
-  const lastDate = status.last_seen
-    ? new Date(status.last_seen).toLocaleDateString()
-    : 'N/A';
+  const lastDate = status.last_seen ? new Date(status.last_seen).toLocaleDateString() : 'N/A';
 
   const displayTime = `${lastDate} ${lastTime}`;
 
@@ -132,7 +126,7 @@ export const PostureControlPanel = ({
         {/* Row 3: 전후방 경사, 측면 경사 */}
         <PostureItem
           title="전후방 경사"
-          imageUrl="/icons/secondtab/tilt-adjustment.svg" // 아이콘 적절한 걸로 변경 권장
+          imageUrl="/icons/secondtab/front back tilt.svg" // 아이콘 적절한 걸로 변경 권장
           value={Number(valSlopeFr).toFixed(1)}
           max="20"
           unit="°"
@@ -140,7 +134,7 @@ export const PostureControlPanel = ({
         />
         <PostureItem
           title="측면 경사"
-          imageUrl="/icons/secondtab/tilt-adjustment.svg" // 아이콘 적절한 걸로 변경 권장
+          imageUrl="/icons/secondtab/side tilt.svg" // 아이콘 적절한 걸로 변경 권장
           value={Number(valSlopeSide).toFixed(1)}
           max="20"
           unit="°"

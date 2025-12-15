@@ -5,9 +5,10 @@
 import { useState, useEffect, useRef } from 'react';
 
 interface MonitorProps {
-  wheelchairId: string; // 🟢 ID Prop 추가
+  wheelchairId: string;
   status: {
     current_speed: number;
+    last_seen?: string | Date; // 🟢 마지막 통신 시간 필드 추가
     angle_back?: number;
     angle_seat?: number;
     foot_angle?: number;
@@ -20,13 +21,16 @@ interface MonitorProps {
 
 // ⏰ 실제 서비스용: 2시간
 const WARNING_DELAY_MS = 2 * 60 * 60 * 1000;
-// const WARNING_DELAY_MS = 10 * 1000;
+// const WARNING_DELAY_MS = 10 * 1000; // ⚡️ 테스트용
+
+// 🟢 통신 두절 판단 기준 (30초 동안 새 데이터 없으면 멈춘 것으로 간주)
+const DISCONNECT_THRESHOLD_MS = 30 * 1000;
 
 export default function PostureSafetyMonitor({ status, wheelchairId }: MonitorProps) {
   const [showAlarm, setShowAlarm] = useState(false);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
 
-  // 저장소 키 생성 (기기별로 따로 시간 관리)
+  // 저장소 키
   const STORAGE_KEY = `posture_last_change_${wheelchairId}`;
 
   const latestStatusRef = useRef(status);
@@ -47,7 +51,7 @@ export default function PostureSafetyMonitor({ status, wheelchairId }: MonitorPr
     };
   }, []);
 
-  // 2. 오디오 잠금 해제 (클릭 시)
+  // 2. 오디오 잠금 해제
   useEffect(() => {
     const unlockAudio = () => {
       if (audioRef.current && !audioUnlocked) {
@@ -69,35 +73,27 @@ export default function PostureSafetyMonitor({ status, wheelchairId }: MonitorPr
     };
   }, [audioUnlocked]);
 
-  // 3. 상태 감지 및 시간 저장 로직 (핵심!)
+  // 3. 상태 감지 및 시간 저장
   useEffect(() => {
     if (!status) return;
     latestStatusRef.current = status;
 
-    // (1) 처음 데이터가 들어왔을 때
     if (!prevStatus.current) {
       prevStatus.current = status;
-
-      // ⭐️ 핵심: 브라우저 저장소(localStorage)에서 마지막 변경 시간을 불러옵니다.
       const savedTime = localStorage.getItem(STORAGE_KEY);
       if (savedTime) {
-        // 저장된 시간이 있으면 그걸 사용 (새로고침 해도 유지됨!)
         const parsedTime = parseInt(savedTime, 10);
-        // 단, 미래의 시간이거나 너무 이상한 값이면 현재 시간으로 초기화
         if (!isNaN(parsedTime) && parsedTime <= Date.now()) {
           lastChangeTime.current = parsedTime;
-          console.log(`💾 복원된 시간: ${new Date(parsedTime).toLocaleTimeString()}`);
         } else {
           updateLastChangeTime();
         }
       } else {
-        // 저장된 게 없으면 현재 시간으로 시작
         updateLastChangeTime();
       }
       return;
     }
 
-    // (2) 자세 변경 감지
     const postureKeys = [
       'angle_back',
       'angle_seat',
@@ -113,44 +109,59 @@ export default function PostureSafetyMonitor({ status, wheelchairId }: MonitorPr
     });
 
     if (hasChanged) {
-      console.log('🔄 자세 변경됨 -> 타이머 리셋 및 저장');
+      console.log('🔄 자세 변경됨 -> 타이머 리셋');
       prevStatus.current = status;
-      updateLastChangeTime(); // 시간 갱신 및 저장
+      updateLastChangeTime();
       if (showAlarm) stopAlarm();
     }
   }, [status, showAlarm, STORAGE_KEY]);
 
-  // 🛠 시간 업데이트 및 localStorage 저장 헬퍼 함수
   const updateLastChangeTime = () => {
     const now = Date.now();
     lastChangeTime.current = now;
     localStorage.setItem(STORAGE_KEY, now.toString());
   };
 
-  // 4. 타이머 체크
+  // 4. 타이머 체크 (핵심 수정 부분)
   useEffect(() => {
     const timer = setInterval(() => {
       const currentStatus = latestStatusRef.current;
       if (!currentStatus) return;
 
-      const isDriving = (currentStatus.current_speed || 0) > 0;
+      const now = Date.now();
+
+      // 🟢 (1) 데이터 신선도 체크
+      // last_seen이 없거나, 현재 시간과 차이가 30초 이상 나면 '오래된 데이터'
+      let isDataFresh = true;
+      if (currentStatus.last_seen) {
+        const lastSeenTime = new Date(currentStatus.last_seen).getTime();
+        if (now - lastSeenTime > DISCONNECT_THRESHOLD_MS) {
+          isDataFresh = false;
+        }
+      }
+
+      // 🟢 (2) 운행 중 판단: "속도 > 0" AND "데이터가 신선함"
+      const isSpeeding = (currentStatus.current_speed || 0) > 0;
+      const isDriving = isSpeeding && isDataFresh;
 
       if (isDriving) {
-        const elapsed = Date.now() - lastChangeTime.current;
-        // console.log(`⏱️ 경과: ${(elapsed/1000).toFixed(1)}초`); // 로그가 너무 많으면 주석 처리
-
+        const elapsed = now - lastChangeTime.current;
         if (elapsed > WARNING_DELAY_MS) {
           triggerAlarm();
         }
       } else {
-        // 운행을 멈추면 시간을 현재로 계속 리셋 (운행 중일 때만 카운트하므로)
-        // 멈춘 상태에서도 타이머를 초기화하여 저장소도 갱신
+        // 운행 중이 아니거나 통신이 끊기면 -> 타이머 계속 리셋 (알람 방지)
+
+        // 디버깅용 로그 (테스트 할 때만 주석 해제)
+        // if (!isDataFresh && isSpeeding) console.log("⚠️ 통신 끊김: 속도는 있지만 데이터가 오래됨");
+
         updateLastChangeTime();
+        if (showAlarm) stopAlarm(); // 혹시 켜져있으면 끔
       }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [STORAGE_KEY]); // 키가 바뀌면 타이머 재설정
+  }, [STORAGE_KEY, showAlarm]);
 
   // --- 알람 제어 ---
   const triggerAlarm = () => {
@@ -170,7 +181,7 @@ export default function PostureSafetyMonitor({ status, wheelchairId }: MonitorPr
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
     }
-    updateLastChangeTime(); // 알람 끄면 시간 초기화
+    updateLastChangeTime();
   };
 
   if (!showAlarm) return null;

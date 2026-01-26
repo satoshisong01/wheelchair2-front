@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     ) {
       return NextResponse.json(
         { error: 'Unauthorized: 기기 사용자로 로그인되지 않았습니다.' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -39,7 +39,7 @@ export async function GET(request: Request) {
     if (idResult.rows.length === 0) {
       return NextResponse.json(
         { error: '연결된 휠체어 정보를 찾을 수 없습니다.' },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -60,7 +60,7 @@ export async function GET(request: Request) {
         LEFT JOIN wheelchair_status s ON w.id = s.wheelchair_id
         WHERE w.id = $1
       `,
-        [myWheelchairId]
+        [myWheelchairId],
       ),
 
       // (B) 알람 내역 (최신순)
@@ -70,7 +70,7 @@ export async function GET(request: Request) {
         WHERE wheelchair_id = $1 
         ORDER BY alarm_time DESC
       `,
-        [myWheelchairId]
+        [myWheelchairId],
       ),
 
       // (C) 정비 이력 (최신순)
@@ -80,7 +80,7 @@ export async function GET(request: Request) {
         WHERE wheelchair_id = $1 
         ORDER BY created_at DESC
       `,
-        [myWheelchairId]
+        [myWheelchairId],
       ),
     ]);
 
@@ -141,9 +141,6 @@ export async function GET(request: Request) {
     return NextResponse.json(responseData);
   } catch (error: any) {
     console.error('[API /my-wheelchair] Error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal Server Error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }

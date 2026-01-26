@@ -90,3 +90,5 @@ export default function LoginPage() {
   // 5. authenticated 상태일 경우 (useEffect가 router.replace('/')를 실행하기 전)
   return <LoadingSpinner />;
 }
+
+

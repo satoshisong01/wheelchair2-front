@@ -52,3 +52,5 @@ declare module 'next-auth' {
     // ‼️ [삭제] hasMedicalInfo 제거
   }
 }
+
+

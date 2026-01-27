@@ -19,6 +19,16 @@ export default function MobileViewPage() {
   const { data: session } = useSession();
   const router = useRouter();
 
+  const sendVibrationSignal = () => {
+    // 앱(WebView) 안에서 실행 중인지 확인
+    if ((window as any).ReactNativeWebView) {
+      // 앱한테 "야, 진동 울려!" 라고 메시지 전송
+      (window as any).ReactNativeWebView.postMessage(JSON.stringify({ type: 'VIBRATE' }));
+    } else {
+      alert('여기는 PC 브라우저라 진동이 안 울려요. 앱에서 눌러주세요!');
+    }
+  };
+
   // 🟢 1. 실시간 데이터 가져오기
   const { data: wheelchairData, loading } = useMyWheelchair();
   const status = wheelchairData?.status;
@@ -169,6 +179,13 @@ export default function MobileViewPage() {
         >
           <Settings className="w-5 h-5 text-gray-500" />
           <span className="font-medium text-gray-600">설정 (알림 및 기능 제어)</span>
+        </button>
+
+        <button
+          onClick={sendVibrationSignal}
+          className="w-full mt-4 bg-red-500 text-white p-4 rounded-2xl shadow-lg font-bold active:bg-red-600 transition-colors"
+        >
+          📳 진동 테스트 (누르면 폰이 떨려요)
         </button>
       </div>
     </div>

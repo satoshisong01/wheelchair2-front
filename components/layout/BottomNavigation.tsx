@@ -21,36 +21,34 @@ export default function BottomNavigation() {
       {isManager && (
         <Link
           href="/dashboard"
-          className={`${styles.navItem} ${
-            pathname === '/dashboard' ? styles.active : ''
-          }`}
+          className={`${styles.navItem} ${pathname === '/dashboard' ? styles.active : ''}`}
         >
           <span className={styles.icon}>📊</span>
           <span className={styles.label}>대시보드</span>
         </Link>
       )}
 
-      {/* 2. 휠체어 정보 (모두) */}
+      {/* 2. 휠체어 정보 (모두) -> 일반 사용자는 '홈'으로 표시 */}
       <Link
         href="/wheelchair-info"
         className={`${styles.navItem} ${
           pathname.startsWith('/wheelchair-info') ? styles.active : ''
         }`}
       >
-        <span className={styles.icon}>♿</span>
-        <span className={styles.label}>정보</span>
+        <span className={styles.icon}>{isManager ? '♿' : '🏠'}</span>
+        <span className={styles.label}>{isManager ? '정보' : '홈'}</span>
       </Link>
 
-      {/* 3. 통계 그래프 (모두) */}
-      <Link
-        href="/stats"
-        className={`${styles.navItem} ${
-          pathname.startsWith('/stats') ? styles.active : ''
-        }`}
-      >
-        <span className={styles.icon}>📈</span>
-        <span className={styles.label}>통계</span>
-      </Link>
+      {/* 3. 통계 그래프 (관리자 전용으로 변경) */}
+      {isManager && (
+        <Link
+          href="/stats"
+          className={`${styles.navItem} ${pathname.startsWith('/stats') ? styles.active : ''}`}
+        >
+          <span className={styles.icon}>📈</span>
+          <span className={styles.label}>통계</span>
+        </Link>
+      )}
 
       {/* 4. 기기 관리 (Admin, Master) */}
       {isManager && (
@@ -69,9 +67,7 @@ export default function BottomNavigation() {
       {isMaster && (
         <Link
           href="/user-management"
-          className={`${styles.navItem} ${
-            pathname === '/user-management' ? styles.active : ''
-          }`}
+          className={`${styles.navItem} ${pathname === '/user-management' ? styles.active : ''}`}
         >
           <span className={styles.icon}>👥</span>
           <span className={styles.label}>회원관리</span>
@@ -82,9 +78,7 @@ export default function BottomNavigation() {
       {isMaster && (
         <Link
           href="/audit-log"
-          className={`${styles.navItem} ${
-            pathname === '/audit-log' ? styles.active : ''
-          }`}
+          className={`${styles.navItem} ${pathname === '/audit-log' ? styles.active : ''}`}
         >
           <span className={styles.icon}>📑</span>
           <span className={styles.label}>감사로그</span>

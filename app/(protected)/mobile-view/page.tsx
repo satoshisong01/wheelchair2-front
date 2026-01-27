@@ -1,10 +1,9 @@
-// app/(protected)/mobile-view/page.tsx
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useMyWheelchair } from '../../hooks/useMyWheelchair'; // 🟢 훅 연결
+import { useMyWheelchair } from '../../hooks/useMyWheelchair';
 import {
   Battery,
   MapPin,
@@ -13,48 +12,47 @@ import {
   Bell,
   BrainCircuit,
   Settings,
+  AlertTriangle,
 } from 'lucide-react';
 
 export default function MobileViewPage() {
   const { data: session } = useSession();
   const router = useRouter();
 
-  const sendVibrationSignal = () => {
-    // 앱(WebView) 안에서 실행 중인지 확인
-    if ((window as any).ReactNativeWebView) {
-      // 앱한테 "야, 진동 울려!" 라고 메시지 전송
-      (window as any).ReactNativeWebView.postMessage(JSON.stringify({ type: 'VIBRATE' }));
-    } else {
-      alert('여기는 PC 브라우저라 진동이 안 울려요. 앱에서 눌러주세요!');
-    }
-  };
-
-  // 🟢 1. 실시간 데이터 가져오기
+  // 🟢 1. 데이터 가져오기 (기존 훅 사용)
   const { data: wheelchairData, loading } = useMyWheelchair();
   const status = wheelchairData?.status;
 
-  // 🟢 2. 데이터 가공 (없으면 기본값 0)
-  // 배터리
+  // 🟢 2. 알람이 있는지 확인 (API에서 alarms 배열이 온다고 가정)
+  // (타입 에러 방지를 위해 any 처리 혹은 인터페이스 확인 필요)
+  const alarms = (wheelchairData as any)?.alarms || [];
+  const hasAlarms = alarms.length > 0;
+
+  // 🟢 [핵심 추가] 데이터가 바뀔 때마다 감시 -> 알람 있으면 진동 발사! 🚀
+  useEffect(() => {
+    if (hasAlarms) {
+      // 앱 환경인지 확인
+      if ((window as any).ReactNativeWebView) {
+        console.log('🚨 위험 감지! 앱으로 진동 신호 전송');
+        (window as any).ReactNativeWebView.postMessage(JSON.stringify({ type: 'VIBRATE' }));
+      }
+    }
+  }, [hasAlarms]); // hasAlarms 값이 true가 될 때 실행됨
+
+  // --- 기존 데이터 가공 로직 유지 ---
   const batteryLevel = status?.current_battery ?? 0;
   const isLowBattery = batteryLevel < 20;
-
-  // 주행 거리 (소수점 1자리)
   const distanceKm = status?.distance ? Number(status.distance).toFixed(1) : '0.0';
-
-  // 자세 (시트 각도)
   const seatAngle = status?.angleSeat ? Number(status.angleSeat).toFixed(0) : '0';
-
-  // 온도
   const temperature = status?.temperature ? Number(status.temperature).toFixed(1) : '24.0';
 
-  // 메뉴 아이템 정의
+  // 메뉴 아이템 정의 (기존 유지)
   const menuItems = [
     {
       id: 'battery',
       title: '배터리 정보',
       value: `${batteryLevel}%`,
       sub: isLowBattery ? '충전 필요!' : '주행 가능',
-      // 배터리가 없으면(0) 회색, 낮으면 빨강, 정상이면 파랑
       icon: (
         <Battery
           className={`w-6 h-6 ${batteryLevel === 0 ? 'text-gray-400' : isLowBattery ? 'text-red-600' : 'text-blue-600'}`}
@@ -79,13 +77,13 @@ export default function MobileViewPage() {
     {
       id: 'posture',
       title: '자세 정보',
-      value: `${seatAngle}°`, // 현재 각도 표시
+      value: `${seatAngle}°`,
       sub: '현재 시트 각도',
       icon: <Accessibility className="w-6 h-6 text-indigo-600" />,
       bgColor: 'bg-indigo-50',
       borderColor: 'border-indigo-200',
       textColor: 'text-indigo-900',
-      highlight: true, // 강조 효과
+      highlight: true,
       onClick: () => router.push('/mobile-view/posture'),
     },
     {
@@ -97,17 +95,22 @@ export default function MobileViewPage() {
       bgColor: 'bg-orange-50',
       borderColor: 'border-orange-100',
       textColor: 'text-orange-900',
-      onClick: () => router.push('/mobile-view/weather'), // 🟢 여기로 이동하게 수정!
+      onClick: () => router.push('/mobile-view/weather'),
     },
     {
       id: 'event',
       title: '이벤트 이력',
-      value: '안전', // 추후 알림 개수 연동
-      sub: '최근 경고 없음',
-      icon: <Bell className="w-6 h-6 text-red-600" />,
-      bgColor: 'bg-red-50',
-      borderColor: 'border-red-100',
-      textColor: 'text-red-900',
+      // 알람이 있으면 "위험!" 표시, 없으면 "안전"
+      value: hasAlarms ? `${alarms.length}건 감지` : '안전',
+      sub: hasAlarms ? '확인 필요' : '최근 경고 없음',
+      icon: (
+        <Bell
+          className={`w-6 h-6 ${hasAlarms ? 'text-red-600 animate-bounce' : 'text-gray-600'}`}
+        />
+      ),
+      bgColor: hasAlarms ? 'bg-red-100' : 'bg-gray-50',
+      borderColor: hasAlarms ? 'border-red-300' : 'border-gray-100',
+      textColor: hasAlarms ? 'text-red-900' : 'text-gray-900',
       onClick: () => router.push('/mobile-view/events'),
     },
     {
@@ -124,21 +127,36 @@ export default function MobileViewPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col pb-6">
+    // 배경색: 알람이 있으면 전체가 살짝 붉은색(alert effect), 없으면 평소대로 회색
+    <div
+      className={`min-h-screen flex flex-col pb-6 transition-colors duration-500 ${hasAlarms ? 'bg-red-50' : 'bg-gray-50'}`}
+    >
       {/* 1. 상단 헤더 */}
-      <header className="bg-white px-6 py-5 shadow-sm rounded-b-3xl mb-4 z-10">
+      <header
+        className={`px-6 py-5 shadow-sm rounded-b-3xl mb-4 z-10 transition-colors duration-500 ${hasAlarms ? 'bg-red-500' : 'bg-white'}`}
+      >
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-xl font-bold text-gray-800">
-              {wheelchairData?.nickname || session?.user?.name || '사용자'}님 👋
+            <h1 className={`text-xl font-bold ${hasAlarms ? 'text-white' : 'text-gray-800'}`}>
+              {hasAlarms
+                ? '🚨 경고 발생!'
+                : `${wheelchairData?.nickname || session?.user?.name || '사용자'}님 👋`}
             </h1>
-            <p className="text-sm text-gray-500 mt-1">
-              {loading ? '데이터 불러오는 중...' : '오늘도 안전한 하루 되세요!'}
+            <p className={`text-sm mt-1 ${hasAlarms ? 'text-red-100' : 'text-gray-500'}`}>
+              {hasAlarms
+                ? '휠체어 상태를 확인하세요'
+                : loading
+                  ? '데이터 불러오는 중...'
+                  : '오늘도 안전한 하루 되세요!'}
             </p>
           </div>
           <div className="flex flex-col items-end">
-            <span className="text-3xl font-bold text-gray-800">{temperature}°</span>
-            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full mt-1">
+            <span className={`text-3xl font-bold ${hasAlarms ? 'text-white' : 'text-gray-800'}`}>
+              {temperature}°
+            </span>
+            <span
+              className={`text-xs px-2 py-1 rounded-full mt-1 ${hasAlarms ? 'bg-red-400 text-white' : 'bg-gray-100 text-gray-500'}`}
+            >
               실시간 센서
             </span>
           </div>
@@ -147,6 +165,20 @@ export default function MobileViewPage() {
 
       {/* 2. 메인 그리드 메뉴 (6개 타일) */}
       <div className="flex-1 px-4 overflow-y-auto">
+        {/* 🚨 알람 발생 시 최상단에 빨간 박스 표시 */}
+        {hasAlarms && (
+          <div className="mb-4 bg-white border-l-4 border-red-500 rounded-r-xl p-4 shadow-md flex items-start animate-pulse">
+            <AlertTriangle className="w-6 h-6 text-red-500 mr-3 flex-shrink-0" />
+            <div>
+              <h3 className="font-bold text-red-600">위험 신호가 감지되었습니다</h3>
+              <p className="text-sm text-gray-600 mt-1">
+                {alarms[0]?.message || '센서값 이상 감지'} 등 {alarms.length}건의 알람
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* 기존 그리드 유지 */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           {menuItems.map((item) => (
             <button
@@ -181,12 +213,8 @@ export default function MobileViewPage() {
           <span className="font-medium text-gray-600">설정 (알림 및 기능 제어)</span>
         </button>
 
-        <button
-          onClick={sendVibrationSignal}
-          className="w-full mt-4 bg-red-500 text-white p-4 rounded-2xl shadow-lg font-bold active:bg-red-600 transition-colors"
-        >
-          📳 진동 테스트 (누르면 폰이 떨려요)
-        </button>
+        {/* (테스트 버튼은 삭제했습니다. 이제 자동으로 울리니까요!) */}
+        <div className="h-6"></div>
       </div>
     </div>
   );

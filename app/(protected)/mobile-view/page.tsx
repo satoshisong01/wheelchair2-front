@@ -211,5 +211,5 @@ export default function MobileViewPage() {
         <div className="h-6"></div>
       </div>
     </div>
-  );ㅇ
+  );
 }

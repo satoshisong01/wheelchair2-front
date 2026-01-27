@@ -204,18 +204,12 @@ export default function MobileViewPage() {
           ))}
         </div>
 
-        {/* 3. 하단 설정 버튼 */}
-        <button
-          onClick={() => alert('설정 기능 준비중입니다.')}
-          className="w-full bg-white border border-gray-200 p-4 rounded-2xl shadow-sm flex items-center justify-center space-x-3 active:bg-gray-50 transition-colors"
-        >
-          <Settings className="w-5 h-5 text-gray-500" />
-          <span className="font-medium text-gray-600">설정 (알림 및 기능 제어)</span>
-        </button>
+        {/* 🟢 [삭제 완료] 설정 버튼이 있던 자리입니다. 
+             이제 상단 헤더의 ⚙️ 아이콘이 이 역할을 대신합니다. */}
 
         {/* (테스트 버튼은 삭제했습니다. 이제 자동으로 울리니까요!) */}
         <div className="h-6"></div>
       </div>
     </div>
-  );
+  );ㅇ
 }

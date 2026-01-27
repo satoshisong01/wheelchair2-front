@@ -102,3 +102,78 @@
   font-size: 14px;
   text-align: center;
 }
+
+/* 알림 섹션 스타일 */
+.notificationList {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-top: 10px;
+}
+
+.notificationItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+}
+
+.notiText {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.notiTitle {
+  font-weight: bold;
+  font-size: 1rem;
+  color: #333;
+}
+
+.notiDesc {
+  font-size: 0.85rem;
+  color: #777;
+}
+
+/* 토글 스위치 디자인 */
+.toggleSwitch {
+  width: 50px;
+  height: 26px;
+  background-color: #ccc;
+  border-radius: 15px;
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.toggleSwitch.on {
+  background-color: #27b4e9; /* 휠체어 테마색 */
+}
+
+.toggleHandle {
+  width: 22px;
+  height: 22px;
+  background-color: white;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: transform 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggleSwitch.on .toggleHandle {
+  transform: translateX(24px);
+}
+
+/* 기존 CapsLock 경고 스타일 정리 */
+.capsLockWarning {
+  color: #ff9f40;
+  font-size: 13px;
+  font-weight: bold;
+  margin-top: -10px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}

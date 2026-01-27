@@ -23,8 +23,15 @@ export default function MyPage() {
   const [isError, setIsError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // 🟢 [추가] Caps Lock 감지 상태
+  // 🟢 Caps Lock 감지 상태
   const [isCapsLock, setIsCapsLock] = useState(false);
+
+  // 🟢 [추가] 알림 설정 상태 (나중에 DB 연결)
+  const [notifications, setNotifications] = useState({
+    emergency: true, // 낙상, 전복, 장애물 (긴급 위험)
+    battery: true, // 저전압 알림 (기본 관리) - [추가]
+    posture: true, // 욕창 방지 알림 (정기 관리)
+  });
 
   // 기기 사용자라면 시리얼 번호 불러오기
   useEffect(() => {
@@ -49,13 +56,21 @@ export default function MyPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // 🟢 [추가] 키 입력 시 CapsLock 상태 확인 핸들러
+  // 🟢 키 입력 시 CapsLock 상태 확인 핸들러
   const checkCapsLock = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.getModifierState('CapsLock')) {
       setIsCapsLock(true);
     } else {
       setIsCapsLock(false);
     }
+  };
+
+  // 🟢 [추가] 알림 토글 핸들러
+  const toggleNotification = (type: 'emergency' | 'battery' | 'posture') => {
+    setNotifications((prev) => ({
+      ...prev,
+      [type]: !prev[type],
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -116,38 +131,78 @@ export default function MyPage() {
         <div className={styles.profileInfo}>
           <p>
             <strong>접속 계정:</strong>{' '}
-            {session?.user?.email ||
-              (session?.user as any)?.deviceId ||
-              '정보 없음'}
+            {session?.user?.email || (session?.user as any)?.deviceId || '정보 없음'}
           </p>
           <p>
             <strong>권한:</strong> {userRole}
           </p>
           {isDeviceUser && (
-            <>
-              <p
-                style={{
-                  marginTop: '10px',
-                  fontSize: '1.1em',
-                  color: '#27b4e9',
-                }}
-              >
-                <strong>기기 시리얼 (S/N): {deviceSerial}</strong>
-              </p>
-              {/* <p style={{ color: 'black', fontSize: '0.9em' }}>
-                <strong>시스템 ID (UUID):</strong> {wheelchairId}
-              </p> */}
-            </>
+            <p
+              style={{
+                marginTop: '10px',
+                fontSize: '1.1em',
+                color: '#27b4e9',
+              }}
+            >
+              <strong>기기 시리얼 (S/N): {deviceSerial}</strong>
+            </p>
           )}
         </div>
       </div>
 
-      {/* 2. 비밀번호 변경 폼 */}
+      {/* 2. 🟢 [추가] 알림 설정 섹션 (UI만 구현) */}
+      <div className={styles.formCard} style={{ marginBottom: '20px' }}>
+        <h3>알림 설정</h3>
+        <div className={styles.notificationList}>
+          {/* 1. 긴급 위험 알림 (낙상/전복/장애물) */}
+          <div className={styles.notificationItem}>
+            <div className={styles.notiText}>
+              <span className={styles.notiTitle}>🚨 긴급 위험 알림</span>
+              <span className={styles.notiDesc}>낙상 사고, 전복 위험, 장애물 감지</span>
+            </div>
+            <div
+              className={`${styles.toggleSwitch} ${notifications.emergency ? styles.on : ''}`}
+              onClick={() => toggleNotification('emergency')}
+            >
+              <div className={styles.toggleHandle} />
+            </div>
+          </div>
+
+          {/* 2. 배터리 관리 알림 (저전압) - [독립 분리] */}
+          <div className={styles.notificationItem}>
+            <div className={styles.notiText}>
+              <span className={styles.notiTitle}>🔋 배터리 관리 알림</span>
+              <span className={styles.notiDesc}>배터리 저전압 및 충전 필요 알림</span>
+            </div>
+            <div
+              className={`${styles.toggleSwitch} ${notifications.battery ? styles.on : ''}`}
+              onClick={() => toggleNotification('battery')}
+            >
+              <div className={styles.toggleHandle} />
+            </div>
+          </div>
+
+          {/* 3. 욕창 방지 알림 (자세 교정) */}
+          <div className={styles.notificationItem}>
+            <div className={styles.notiText}>
+              <span className={styles.notiTitle}>🧘 욕창 방지 알림</span>
+              <span className={styles.notiDesc}>15분 이상 동일 자세 유지 시 교정 알림</span>
+            </div>
+            <div
+              className={`${styles.toggleSwitch} ${notifications.posture ? styles.on : ''}`}
+              onClick={() => toggleNotification('posture')}
+            >
+              <div className={styles.toggleHandle} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. 비밀번호 변경 폼 */}
       {isDeviceUser ? (
         <div className={styles.formCard}>
           <h3>비밀번호 변경</h3>
           <form onSubmit={handleSubmit} className={styles.form}>
-            {/* 현재 비밀번호 */}
             <div className={styles.formGroup}>
               <label>현재 비밀번호</label>
               <input
@@ -155,13 +210,12 @@ export default function MyPage() {
                 name="currentPassword"
                 value={formData.currentPassword}
                 onChange={handleChange}
-                onKeyUp={checkCapsLock} // 🟢 감지 추가
+                onKeyUp={checkCapsLock}
                 placeholder="현재 비밀번호 입력"
                 required
               />
             </div>
 
-            {/* 수정할 비밀번호 */}
             <div className={styles.formGroup}>
               <label>수정할 비밀번호</label>
               <input
@@ -169,13 +223,12 @@ export default function MyPage() {
                 name="newPassword"
                 value={formData.newPassword}
                 onChange={handleChange}
-                onKeyUp={checkCapsLock} // 🟢 감지 추가
+                onKeyUp={checkCapsLock}
                 placeholder="새로운 비밀번호"
                 required
               />
             </div>
 
-            {/* 비밀번호 확인 */}
             <div className={styles.formGroup}>
               <label>수정할 비밀번호 재확인</label>
               <input
@@ -183,42 +236,17 @@ export default function MyPage() {
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                onKeyUp={checkCapsLock} // 🟢 감지 추가
+                onKeyUp={checkCapsLock}
                 placeholder="새로운 비밀번호 확인"
                 required
               />
             </div>
 
-            {/* 🟢 [추가] Caps Lock 경고 메시지 */}
-            {isCapsLock && (
-              <p
-                style={{
-                  color: '#ff9f40',
-                  fontSize: '13px',
-                  fontWeight: 'bold',
-                  marginTop: '-10px',
-                  marginBottom: '10px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                }}
-              >
-                ⚠️ Caps Lock이 켜져 있습니다.
-              </p>
-            )}
+            {isCapsLock && <p className={styles.capsLockWarning}>⚠️ Caps Lock이 켜져 있습니다.</p>}
 
-            {/* 결과 메시지 */}
-            {message && (
-              <p className={isError ? styles.errorMsg : styles.successMsg}>
-                {message}
-              </p>
-            )}
+            {message && <p className={isError ? styles.errorMsg : styles.successMsg}>{message}</p>}
 
-            <button
-              type="submit"
-              className={styles.submitBtn}
-              disabled={isLoading}
-            >
+            <button type="submit" className={styles.submitBtn} disabled={isLoading}>
               {isLoading ? '변경 중...' : '비밀번호 변경'}
             </button>
           </form>

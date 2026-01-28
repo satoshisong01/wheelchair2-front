@@ -11,7 +11,6 @@ import {
   CloudSun,
   Bell,
   BrainCircuit,
-  Settings,
   AlertTriangle,
 } from 'lucide-react';
 
@@ -19,34 +18,43 @@ export default function MobileViewPage() {
   const { data: session } = useSession();
   const router = useRouter();
 
-  // 🟢 1. 데이터 가져오기 (기존 훅 사용)
+  // 1. 데이터 가져오기 (관리자/기기 사용자 공용 훅)
   const { data: wheelchairData, loading } = useMyWheelchair();
-  const status = wheelchairData?.status;
 
-  // 🟢 2. 알람이 있는지 확인 (API에서 alarms 배열이 온다고 가정)
-  // (타입 에러 방지를 위해 any 처리 혹은 인터페이스 확인 필요)
+  // TypeScript 에러 방지를 위해 any 단언 사용
+  const status = (wheelchairData?.status || {}) as any;
+
+  // 2. 알람 존재 여부 확인
   const alarms = (wheelchairData as any)?.alarms || [];
   const hasAlarms = alarms.length > 0;
 
-  // 🟢 [핵심 추가] 데이터가 바뀔 때마다 감시 -> 알람 있으면 진동 발사! 🚀
+  // 3. 위험 상황 시 앱 진동 신호 전송
   useEffect(() => {
     if (hasAlarms) {
-      // 앱 환경인지 확인
       if ((window as any).ReactNativeWebView) {
-        console.log('🚨 위험 감지! 앱으로 진동 신호 전송');
         (window as any).ReactNativeWebView.postMessage(JSON.stringify({ type: 'VIBRATE' }));
       }
     }
-  }, [hasAlarms]); // hasAlarms 값이 true가 될 때 실행됨
+  }, [hasAlarms]);
 
-  // --- 기존 데이터 가공 로직 유지 ---
-  const batteryLevel = status?.current_battery ?? 0;
+  // --- 데이터 가공 로직 ---
+
+  // 배터리 및 운행 정보
+  const batteryLevel = status.current_battery ?? 0;
   const isLowBattery = batteryLevel < 20;
-  const distanceKm = status?.distance ? Number(status.distance).toFixed(1) : '0.0';
-  const seatAngle = status?.angleSeat ? Number(status.angleSeat).toFixed(0) : '0';
-  const temperature = status?.temperature ? Number(status.temperature).toFixed(1) : '24.0';
+  const distanceKm = status.distance ? Number(status.distance).toFixed(1) : '0.0';
+  const seatAngle = status.angleSeat ? Number(status.angleSeat).toFixed(0) : '0';
 
-  // 메뉴 아이템 정의 (기존 유지)
+  // 기온 정보 (기기 내부 센서 vs 외부 날씨 API)
+  const sensorTemp = status.temperature ? Number(status.temperature).toFixed(1) : '24.0';
+  const outdoorTemp = status.outdoorTemp ?? sensorTemp; // 🟢 API 연동 시 실제 외부 기온으로 교체
+  const weatherDesc = status.weatherDesc ?? '맑음'; // 🟢 API 연동 시 날씨 설명으로 교체
+
+  // 자세 관리 데이터 (데이터 연동 전 가상 데이터)
+  const postureMaintainTime = status.postureTime ?? '0시간 45분';
+  const ulcerPreventionCount = status.ulcerCount ?? 5;
+
+  // 메뉴 아이템 정의 (6개 그리드 타일)
   const menuItems = [
     {
       id: 'battery',
@@ -76,21 +84,21 @@ export default function MobileViewPage() {
     },
     {
       id: 'posture',
-      title: '자세 정보',
-      value: `${seatAngle}°`,
-      sub: '현재 시트 각도',
+      title: '자세 및 욕창 예방',
+      value: postureMaintainTime,
+      sub: `현재 ${seatAngle}° | 오늘 예방 ${ulcerPreventionCount}회`,
       icon: <Accessibility className="w-6 h-6 text-indigo-600" />,
       bgColor: 'bg-indigo-50',
       borderColor: 'border-indigo-200',
       textColor: 'text-indigo-900',
-      highlight: true,
+      highlight: true, // 핵심 관리 지표 강조
       onClick: () => router.push('/mobile-view/posture'),
     },
     {
       id: 'weather',
-      title: '날씨 정보',
-      value: `${temperature}°C`,
-      sub: '현재 기온',
+      title: '외부 날씨 정보',
+      value: `${outdoorTemp}°C`,
+      sub: `현재 상태: ${weatherDesc}`,
       icon: <CloudSun className="w-6 h-6 text-orange-600" />,
       bgColor: 'bg-orange-50',
       borderColor: 'border-orange-100',
@@ -100,7 +108,6 @@ export default function MobileViewPage() {
     {
       id: 'event',
       title: '이벤트 이력',
-      // 알람이 있으면 "위험!" 표시, 없으면 "안전"
       value: hasAlarms ? `${alarms.length}건 감지` : '안전',
       sub: hasAlarms ? '확인 필요' : '최근 경고 없음',
       icon: (
@@ -127,11 +134,10 @@ export default function MobileViewPage() {
   ];
 
   return (
-    // 배경색: 알람이 있으면 전체가 살짝 붉은색(alert effect), 없으면 평소대로 회색
     <div
       className={`min-h-screen flex flex-col pb-6 transition-colors duration-500 ${hasAlarms ? 'bg-red-50' : 'bg-gray-50'}`}
     >
-      {/* 1. 상단 헤더 */}
+      {/* 1. 상단 헤더 섹션 */}
       <header
         className={`px-6 py-5 shadow-sm rounded-b-3xl mb-4 z-10 transition-colors duration-500 ${hasAlarms ? 'bg-red-500' : 'bg-white'}`}
       >
@@ -152,7 +158,7 @@ export default function MobileViewPage() {
           </div>
           <div className="flex flex-col items-end">
             <span className={`text-3xl font-bold ${hasAlarms ? 'text-white' : 'text-gray-800'}`}>
-              {temperature}°
+              {sensorTemp}°
             </span>
             <span
               className={`text-xs px-2 py-1 rounded-full mt-1 ${hasAlarms ? 'bg-red-400 text-white' : 'bg-gray-100 text-gray-500'}`}
@@ -163,9 +169,9 @@ export default function MobileViewPage() {
         </div>
       </header>
 
-      {/* 2. 메인 그리드 메뉴 (6개 타일) */}
+      {/* 2. 메인 컨텐츠 영역 */}
       <div className="flex-1 px-4 overflow-y-auto">
-        {/* 🚨 알람 발생 시 최상단에 빨간 박스 표시 */}
+        {/* 위험 감지 경고 배너 */}
         {hasAlarms && (
           <div className="mb-4 bg-white border-l-4 border-red-500 rounded-r-xl p-4 shadow-md flex items-start animate-pulse">
             <AlertTriangle className="w-6 h-6 text-red-500 mr-3 flex-shrink-0" />
@@ -178,8 +184,8 @@ export default function MobileViewPage() {
           </div>
         )}
 
-        {/* 기존 그리드 유지 */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        {/* 메뉴 그리드 (3x2 배열) */}
+        <div className="grid grid-cols-2 gap-3 mb-6">
           {menuItems.map((item) => (
             <button
               key={item.id}
@@ -204,10 +210,7 @@ export default function MobileViewPage() {
           ))}
         </div>
 
-        {/* 🟢 [삭제 완료] 설정 버튼이 있던 자리입니다. 
-             이제 상단 헤더의 ⚙️ 아이콘이 이 역할을 대신합니다. */}
-
-        {/* (테스트 버튼은 삭제했습니다. 이제 자동으로 울리니까요!) */}
+        {/* 하단 여백 공백 */}
         <div className="h-6"></div>
       </div>
     </div>

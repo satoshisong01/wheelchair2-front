@@ -10,10 +10,7 @@ export default function MyPage() {
   const isDeviceUser = userRole === 'DEVICE_USER';
   const wheelchairId = (session?.user as any)?.wheelchairId;
 
-  // 시리얼 번호 상태
   const [deviceSerial, setDeviceSerial] = useState<string>('-');
-
-  // 폼 상태
   const [formData, setFormData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -22,55 +19,63 @@ export default function MyPage() {
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
-  // 🟢 Caps Lock 감지 상태
   const [isCapsLock, setIsCapsLock] = useState(false);
 
-  // 🟢 [추가] 알림 설정 상태 (나중에 DB 연결)
+  // 🟢 알림 설정 상태
   const [notifications, setNotifications] = useState({
-    emergency: true, // 낙상, 전복, 장애물 (긴급 위험)
-    battery: true, // 저전압 알림 (기본 관리) - [추가]
-    posture: true, // 욕창 방지 알림 (정기 관리)
+    emergency: true,
+    battery: true,
+    posture: true,
   });
 
-  // 기기 사용자라면 시리얼 번호 불러오기
+  // 🟢 초기 설정값 로딩
   useEffect(() => {
-    const fetchSerial = async () => {
-      if (!isDeviceUser) return;
+    const fetchSettings = async () => {
+      if (!isDeviceUser || !wheelchairId) return;
       try {
         const res = await fetch('/api/device-info');
         if (res.ok) {
           const data = await res.json();
-          if (data.serial) {
-            setDeviceSerial(data.serial);
+          if (data.serial) setDeviceSerial(data.serial);
+          if (data.status) {
+            setNotifications({
+              emergency: data.status.push_emergency ?? true,
+              battery: data.status.push_battery ?? true,
+              posture: data.status.push_posture ?? true,
+            });
           }
         }
       } catch (err) {
-        console.error('시리얼 번호 로딩 실패:', err);
+        console.error('설정 로딩 실패:', err);
       }
     };
-    fetchSerial();
-  }, [isDeviceUser]);
+    fetchSettings();
+  }, [isDeviceUser, wheelchairId]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // 🟢 키 입력 시 CapsLock 상태 확인 핸들러
   const checkCapsLock = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.getModifierState('CapsLock')) {
-      setIsCapsLock(true);
-    } else {
-      setIsCapsLock(false);
-    }
+    setIsCapsLock(e.getModifierState('CapsLock'));
   };
 
-  // 🟢 [추가] 알림 토글 핸들러
-  const toggleNotification = (type: 'emergency' | 'battery' | 'posture') => {
-    setNotifications((prev) => ({
-      ...prev,
-      [type]: !prev[type],
-    }));
+  // 🟢 알림 토글 핸들러 (API 연동)
+  const toggleNotification = async (type: 'emergency' | 'battery' | 'posture') => {
+    const nextEnabled = !notifications[type];
+    setNotifications((prev) => ({ ...prev, [type]: nextEnabled }));
+
+    try {
+      const res = await fetch('/api/user/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ wheelchairId, type, enabled: nextEnabled }),
+      });
+      if (!res.ok) throw new Error();
+    } catch (err) {
+      alert('설정 저장 실패');
+      setNotifications((prev) => ({ ...prev, [type]: !nextEnabled }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -90,7 +95,6 @@ export default function MyPage() {
     }
 
     setIsLoading(true);
-
     try {
       const res = await fetch('/api/auth/change-password', {
         method: 'POST',
@@ -100,19 +104,10 @@ export default function MyPage() {
           newPassword: formData.newPassword,
         }),
       });
-
       const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.message || '오류가 발생했습니다.');
-      }
-
+      if (!res.ok) throw new Error(data.message || '오류 발생');
       setMessage('비밀번호가 성공적으로 변경되었습니다.');
-      setFormData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-      });
+      setFormData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setIsError(false);
     } catch (error: any) {
       setIsError(true);
@@ -126,7 +121,6 @@ export default function MyPage() {
     <div className={styles.container}>
       <h1 className={styles.pageTitle}>마이페이지</h1>
 
-      {/* 1. 프로필 정보 */}
       <div className={styles.profileBox}>
         <div className={styles.profileInfo}>
           <p>
@@ -137,24 +131,16 @@ export default function MyPage() {
             <strong>권한:</strong> {userRole}
           </p>
           {isDeviceUser && (
-            <p
-              style={{
-                marginTop: '10px',
-                fontSize: '1.1em',
-                color: '#27b4e9',
-              }}
-            >
+            <p style={{ marginTop: '10px', fontSize: '1.1em', color: '#27b4e9' }}>
               <strong>기기 시리얼 (S/N): {deviceSerial}</strong>
             </p>
           )}
         </div>
       </div>
 
-      {/* 2. 🟢 [추가] 알림 설정 섹션 (UI만 구현) */}
       <div className={styles.formCard} style={{ marginBottom: '20px' }}>
         <h3>알림 설정</h3>
         <div className={styles.notificationList}>
-          {/* 1. 긴급 위험 알림 (낙상/전복/장애물) */}
           <div className={styles.notificationItem}>
             <div className={styles.notiText}>
               <span className={styles.notiTitle}>🚨 긴급 위험 알림</span>
@@ -167,8 +153,6 @@ export default function MyPage() {
               <div className={styles.toggleHandle} />
             </div>
           </div>
-
-          {/* 2. 배터리 관리 알림 (저전압) - [독립 분리] */}
           <div className={styles.notificationItem}>
             <div className={styles.notiText}>
               <span className={styles.notiTitle}>🔋 배터리 관리 알림</span>
@@ -181,8 +165,6 @@ export default function MyPage() {
               <div className={styles.toggleHandle} />
             </div>
           </div>
-
-          {/* 3. 욕창 방지 알림 (자세 교정) */}
           <div className={styles.notificationItem}>
             <div className={styles.notiText}>
               <span className={styles.notiTitle}>🧘 욕창 방지 알림</span>
@@ -198,7 +180,6 @@ export default function MyPage() {
         </div>
       </div>
 
-      {/* 3. 비밀번호 변경 폼 */}
       {isDeviceUser ? (
         <div className={styles.formCard}>
           <h3>비밀번호 변경</h3>
@@ -215,7 +196,6 @@ export default function MyPage() {
                 required
               />
             </div>
-
             <div className={styles.formGroup}>
               <label>수정할 비밀번호</label>
               <input
@@ -228,7 +208,6 @@ export default function MyPage() {
                 required
               />
             </div>
-
             <div className={styles.formGroup}>
               <label>수정할 비밀번호 재확인</label>
               <input
@@ -241,11 +220,8 @@ export default function MyPage() {
                 required
               />
             </div>
-
             {isCapsLock && <p className={styles.capsLockWarning}>⚠️ Caps Lock이 켜져 있습니다.</p>}
-
             {message && <p className={isError ? styles.errorMsg : styles.successMsg}>{message}</p>}
-
             <button type="submit" className={styles.submitBtn} disabled={isLoading}>
               {isLoading ? '변경 중...' : '비밀번호 변경'}
             </button>

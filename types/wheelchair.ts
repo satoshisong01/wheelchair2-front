@@ -38,6 +38,9 @@ export interface WheelchairStatus {
   angleBack?: number | null;
   angleSeat?: number | null;
   footAngle?: number | null;
+
+  postureTime?: string | null; // 자세 유지 시간 (예: "0시간 45분")
+  ulcerCount?: number | null; // 욕창 예방 활동 횟수 (예: 5)
 }
 
 // ---------------------------------------------------------------------

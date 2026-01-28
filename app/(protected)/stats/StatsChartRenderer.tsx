@@ -229,7 +229,7 @@ const StatsChartRenderer: React.FC<StatsChartRendererProps> = ({
     <>
       {aiAnalysisComment && (
         <div className={styles.aiAnalysisBox}>
-          <h4>✨ AI 분석 리포트</h4>
+          <h4>✨ 분석 리포트</h4>
           <div
             className={styles.aiAnalysisContent}
             dangerouslySetInnerHTML={{
@@ -285,7 +285,7 @@ const StatsChartRenderer: React.FC<StatsChartRendererProps> = ({
         <div className={styles.canvasWrapper}>
           {isLoading ? (
             <div className={styles.loadingSpinnerWrapper}>
-              <LoadingSpinner text="AI가 데이터를 분석 중입니다." />
+              <LoadingSpinner text="데이터를 분석 중입니다." />
             </div>
           ) : chartData ? (
             chartType === 'BAR' ? (

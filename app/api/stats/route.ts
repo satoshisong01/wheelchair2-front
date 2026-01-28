@@ -166,7 +166,7 @@ async function generateAnalysisComment(
 
   // ⭐️ [핵심 수정 1] 전체 기기일 경우 심층 분석 스킵
   if (deviceId === 'ALL') {
-    return '개별 기기를 선택하시면 AI 심층 분석 리포트가 제공됩니다.';
+    return '개별 기기를 선택하시면 심층 분석 리포트가 제공됩니다.';
   }
 
   const selectedMetricLabel = METRIC_CONFIG[metric]?.label || '주요 지표';

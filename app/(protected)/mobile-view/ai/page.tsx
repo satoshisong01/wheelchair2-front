@@ -16,7 +16,7 @@ export default function MobileAIPage() {
         <button onClick={() => router.back()} className="p-2 -ml-2 text-gray-600">
           <ChevronLeft className="w-6 h-6" />
         </button>
-        <h1 className="text-lg font-bold text-gray-800 ml-2">AI 패턴 분석</h1>
+        <h1 className="text-lg font-bold text-gray-800 ml-2">패턴 분석</h1>
       </header>
 
       {/* ⭐️ 기존 통계 기능 그대로 가져오기 */}

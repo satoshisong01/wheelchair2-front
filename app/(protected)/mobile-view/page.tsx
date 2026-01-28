@@ -123,7 +123,7 @@ export default function MobileViewPage() {
     },
     {
       id: 'ai',
-      title: 'AI 패턴 인식',
+      title: '패턴 인식',
       value: '분석중',
       sub: '주행 습관 분석',
       icon: <BrainCircuit className="w-6 h-6 text-purple-600" />,

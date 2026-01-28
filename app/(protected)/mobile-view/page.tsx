@@ -45,14 +45,13 @@ export default function MobileViewPage() {
   const distanceKm = status.distance ? Number(status.distance).toFixed(1) : '0.0';
   const seatAngle = status.angleSeat ? Number(status.angleSeat).toFixed(0) : '0';
 
-  // 기온 정보 (기기 내부 센서 vs 외부 날씨 API)
-  // 🟢 [수정] worker.ts에서 저장하는 DB 컬럼명(snake_case)을 직접 참조합니다.
+  // 기온 및 날씨 정보 (DB snake_case 컬럼 참조)
   const sensorTemp = status.temperature ? Number(status.temperature).toFixed(1) : '24.0';
   const outdoorTemp =
     status.outdoor_temp !== undefined ? Number(status.outdoor_temp).toFixed(1) : sensorTemp;
   const weatherDesc = status.weather_desc ?? '맑음';
 
-  // 자세 관리 데이터 (데이터 연동 전 가상 데이터)
+  // 자세 관리 데이터
   const postureMaintainTime = status.postureTime ?? '0시간 45분';
   const ulcerPreventionCount = status.ulcerCount ?? 5;
 
@@ -93,7 +92,7 @@ export default function MobileViewPage() {
       bgColor: 'bg-indigo-50',
       borderColor: 'border-indigo-200',
       textColor: 'text-indigo-900',
-      highlight: true, // 핵심 관리 지표 강조
+      highlight: true,
       onClick: () => router.push('/mobile-view/posture'),
     },
     {
@@ -139,34 +138,24 @@ export default function MobileViewPage() {
     <div
       className={`min-h-screen flex flex-col pb-6 transition-colors duration-500 ${hasAlarms ? 'bg-red-50' : 'bg-gray-50'}`}
     >
-      {/* 1. 상단 헤더 섹션 */}
+      {/* 1. 상단 헤더 섹션 (온도 표시 제거됨) */}
       <header
-        className={`px-6 py-5 shadow-sm rounded-b-3xl mb-4 z-10 transition-colors duration-500 ${hasAlarms ? 'bg-red-500' : 'bg-white'}`}
+        className={`px-6 py-8 shadow-sm rounded-b-3xl mb-4 z-10 transition-colors duration-500 ${hasAlarms ? 'bg-red-500' : 'bg-white'}`}
       >
         <div className="flex justify-between items-center">
           <div>
-            <h1 className={`text-xl font-bold ${hasAlarms ? 'text-white' : 'text-gray-800'}`}>
+            <h1 className={`text-2xl font-bold ${hasAlarms ? 'text-white' : 'text-gray-800'}`}>
               {hasAlarms
                 ? '🚨 경고 발생!'
                 : `${wheelchairData?.nickname || session?.user?.name || '사용자'}님 👋`}
             </h1>
-            <p className={`text-sm mt-1 ${hasAlarms ? 'text-red-100' : 'text-gray-500'}`}>
+            <p className={`text-base mt-1 ${hasAlarms ? 'text-red-100' : 'text-gray-500'}`}>
               {hasAlarms
-                ? '휠체어 상태를 확인하세요'
+                ? '휠체어 상태를 즉시 확인하세요'
                 : loading
-                  ? '데이터 불러오는 중...'
-                  : '오늘도 안전한 하루 되세요!'}
+                  ? '데이터를 불러오고 있습니다...'
+                  : '오늘도 안전하고 쾌적한 주행 되세요!'}
             </p>
-          </div>
-          <div className="flex flex-col items-end">
-            <span className={`text-3xl font-bold ${hasAlarms ? 'text-white' : 'text-gray-800'}`}>
-              {sensorTemp}°
-            </span>
-            <span
-              className={`text-xs px-2 py-1 rounded-full mt-1 ${hasAlarms ? 'bg-red-400 text-white' : 'bg-gray-100 text-gray-500'}`}
-            >
-              실시간 센서
-            </span>
           </div>
         </div>
       </header>
@@ -178,15 +167,15 @@ export default function MobileViewPage() {
           <div className="mb-4 bg-white border-l-4 border-red-500 rounded-r-xl p-4 shadow-md flex items-start animate-pulse">
             <AlertTriangle className="w-6 h-6 text-red-500 mr-3 flex-shrink-0" />
             <div>
-              <h3 className="font-bold text-red-600">위험 신호가 감지되었습니다</h3>
-              <p className="text-sm text-gray-600 mt-1">
-                {alarms[0]?.message || '센서값 이상 감지'} 등 {alarms.length}건의 알람
+              <h3 className="font-bold text-red-600 text-lg">위험 신호 감지</h3>
+              <p className="text-sm text-gray-600 mt-0.5">
+                {alarms[0]?.message || '센서 이상이 발견되었습니다.'}
               </p>
             </div>
           </div>
         )}
 
-        {/* 메뉴 그리드 (3x2 배열) */}
+        {/* 메뉴 그리드 */}
         <div className="grid grid-cols-2 gap-3 mb-6">
           {menuItems.map((item) => (
             <button
@@ -212,7 +201,7 @@ export default function MobileViewPage() {
           ))}
         </div>
 
-        {/* 하단 여백 공백 */}
+        {/* 하단 여백 */}
         <div className="h-6"></div>
       </div>
     </div>

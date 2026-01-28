@@ -1,27 +1,30 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { socket } from '@/lib/socket';
-// 🔴 수정 전: import { Wheelchair } from '@/types/wheelchair';
-// 🟢 수정 후: DashboardWheelchair (status 속성이 포함된 타입) 사용
 import { DashboardWheelchair } from '@/types/wheelchair';
 
 export function useMyWheelchair() {
   const { data: session } = useSession();
 
-  // 🟢 State 타입도 DashboardWheelchair로 변경
   const [data, setData] = useState<DashboardWheelchair | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!session) return;
 
-    // 1. 초기 데이터 가져오기
+    // 1. 초기 데이터 가져오기 (날씨 및 알림 설정 포함)
     const fetchData = async () => {
       try {
-        const res = await fetch('/api/my-wheelchair');
+        // 🟢 /api/device-info를 통해 시리얼 번호와 함께 status(날씨, 설정 등)를 한꺼번에 가져옵니다.
+        const res = await fetch('/api/device-info');
         if (res.ok) {
           const json = await res.json();
-          setData(json);
+          // API 응답 형식이 { serial, status } 인 경우 DashboardWheelchair 형식에 맞게 변환
+          setData({
+            ...json,
+            // API 응답의 status를 초기 상태로 저장
+            status: json.status || {},
+          } as DashboardWheelchair);
         }
       } catch (error) {
         console.error('Failed to fetch wheelchair data', error);
@@ -37,12 +40,13 @@ export function useMyWheelchair() {
       socket.connect();
     }
 
+    // 실시간 상태 업데이트 처리
     const handleStatusUpdate = (update: any) => {
-      // 데이터 업데이트 로직
       setData((prev) => {
         if (!prev) return prev;
 
-        // 기존 status가 null일 수 있으므로 안전하게 병합
+        // 기존에 DB에서 불러온 정보(날씨, 알림 설정 등)를 유지하면서
+        // 소켓으로 들어온 실시간 센서 데이터만 덮어씁니다.
         const currentStatus = prev.status || {};
 
         return {

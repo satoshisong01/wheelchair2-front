@@ -46,9 +46,11 @@ export default function MobileViewPage() {
   const seatAngle = status.angleSeat ? Number(status.angleSeat).toFixed(0) : '0';
 
   // 기온 정보 (기기 내부 센서 vs 외부 날씨 API)
+  // 🟢 [수정] worker.ts에서 저장하는 DB 컬럼명(snake_case)을 직접 참조합니다.
   const sensorTemp = status.temperature ? Number(status.temperature).toFixed(1) : '24.0';
-  const outdoorTemp = status.outdoorTemp ?? sensorTemp; // 🟢 API 연동 시 실제 외부 기온으로 교체
-  const weatherDesc = status.weatherDesc ?? '맑음'; // 🟢 API 연동 시 날씨 설명으로 교체
+  const outdoorTemp =
+    status.outdoor_temp !== undefined ? Number(status.outdoor_temp).toFixed(1) : sensorTemp;
+  const weatherDesc = status.weather_desc ?? '맑음';
 
   // 자세 관리 데이터 (데이터 연동 전 가상 데이터)
   const postureMaintainTime = status.postureTime ?? '0시간 45분';

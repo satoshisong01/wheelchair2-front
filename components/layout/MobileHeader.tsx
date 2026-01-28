@@ -2,6 +2,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { signOut, useSession } from 'next-auth/react';
 import styles from './MobileHeader.module.css';
 
@@ -26,9 +27,16 @@ export default function MobileHeader() {
   return (
     <header className={styles.header}>
       <div className={styles.logo}>
-        {/* 기기 사용자는 '휠체어 정보', 관리자는 '대시보드'로 이동 */}
-        <Link href={isDeviceUser ? '/wheelchair-info' : '/dashboard'}>
-          FIRST C&D
+        <Link href={isDeviceUser ? '/mobile-view' : '/dashboard'}>
+          {/* 🟢 [수정] 텍스트 대신 로고 이미지 사용 */}
+          <Image
+            src="/logo.png"
+            alt="FIRST C&D"
+            width={120} // 로고 비율에 맞춰 조절 (예: 가로 120px)
+            height={30} // 헤더 높이에 맞춰 조절 (예: 세로 30px)
+            style={{ objectFit: 'contain' }} // 비율 유지
+            priority // 상단 로고이므로 우선 로딩
+          />
         </Link>
       </div>
 

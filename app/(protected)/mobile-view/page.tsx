@@ -18,44 +18,30 @@ export default function MobileViewPage() {
   const { data: session } = useSession();
   const router = useRouter();
 
-  // 1. 데이터 가져오기 (관리자/기기 사용자 공용 훅)
   const { data: wheelchairData, loading } = useMyWheelchair();
-
-  // TypeScript 에러 방지를 위해 any 단언 사용
   const status = (wheelchairData?.status || {}) as any;
-
-  // 2. 알람 존재 여부 확인
   const alarms = (wheelchairData as any)?.alarms || [];
   const hasAlarms = alarms.length > 0;
 
-  // 3. 위험 상황 시 앱 진동 신호 전송
+  // 진동 효과
   useEffect(() => {
-    if (hasAlarms) {
-      if ((window as any).ReactNativeWebView) {
-        (window as any).ReactNativeWebView.postMessage(JSON.stringify({ type: 'VIBRATE' }));
-      }
+    if (hasAlarms && (window as any).ReactNativeWebView) {
+      (window as any).ReactNativeWebView.postMessage(JSON.stringify({ type: 'VIBRATE' }));
     }
   }, [hasAlarms]);
 
-  // --- 데이터 가공 로직 ---
-
-  // 배터리 및 운행 정보
+  // --- 데이터 가공 ---
   const batteryLevel = status.current_battery ?? 0;
   const isLowBattery = batteryLevel < 20;
   const distanceKm = status.distance ? Number(status.distance).toFixed(1) : '0.0';
   const seatAngle = status.angleSeat ? Number(status.angleSeat).toFixed(0) : '0';
-
-  // 기온 및 날씨 정보 (DB snake_case 컬럼 참조)
   const sensorTemp = status.temperature ? Number(status.temperature).toFixed(1) : '24.0';
   const outdoorTemp =
     status.outdoor_temp !== undefined ? Number(status.outdoor_temp).toFixed(1) : sensorTemp;
   const weatherDesc = status.weather_desc ?? '맑음';
-
-  // 자세 관리 데이터
   const postureMaintainTime = status.postureTime ?? '0시간 45분';
   const ulcerPreventionCount = status.ulcerCount ?? 5;
 
-  // 메뉴 아이템 정의 (6개 그리드 타일)
   const menuItems = [
     {
       id: 'battery',
@@ -123,7 +109,7 @@ export default function MobileViewPage() {
     },
     {
       id: 'ai',
-      title: '패턴 인식',
+      title: 'AI 패턴 인식',
       value: '분석중',
       sub: '주행 습관 분석',
       icon: <BrainCircuit className="w-6 h-6 text-purple-600" />,
@@ -138,7 +124,7 @@ export default function MobileViewPage() {
     <div
       className={`min-h-screen flex flex-col pb-6 transition-colors duration-500 ${hasAlarms ? 'bg-red-50' : 'bg-gray-50'}`}
     >
-      {/* 1. 상단 헤더 섹션 (온도 표시 제거됨) */}
+      {/* 상단 헤더 */}
       <header
         className={`px-6 py-8 shadow-sm rounded-b-3xl mb-4 z-10 transition-colors duration-500 ${hasAlarms ? 'bg-red-500' : 'bg-white'}`}
       >
@@ -151,18 +137,17 @@ export default function MobileViewPage() {
             </h1>
             <p className={`text-base mt-1 ${hasAlarms ? 'text-red-100' : 'text-gray-500'}`}>
               {hasAlarms
-                ? '휠체어 상태를 즉시 확인하세요'
+                ? '휠체어 상태를 확인하세요'
                 : loading
-                  ? '데이터를 불러오고 있습니다...'
-                  : '오늘도 안전하고 쾌적한 주행 되세요!'}
+                  ? '데이터 로딩 중...'
+                  : '오늘도 안전한 주행 되세요!'}
             </p>
           </div>
         </div>
       </header>
 
-      {/* 2. 메인 컨텐츠 영역 */}
+      {/* 메인 컨텐츠 */}
       <div className="flex-1 px-4 overflow-y-auto">
-        {/* 위험 감지 경고 배너 */}
         {hasAlarms && (
           <div className="mb-4 bg-white border-l-4 border-red-500 rounded-r-xl p-4 shadow-md flex items-start animate-pulse">
             <AlertTriangle className="w-6 h-6 text-red-500 mr-3 flex-shrink-0" />
@@ -175,33 +160,33 @@ export default function MobileViewPage() {
           </div>
         )}
 
-        {/* 메뉴 그리드 */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
+        {/* 🟢 반응형 그리드 적용 */}
+        {/* 모바일: grid-cols-1 (1줄) / PC(md 이상): md:grid-cols-2 (2줄) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
           {menuItems.map((item) => (
             <button
               key={item.id}
               onClick={item.onClick}
               className={`
-                relative p-4 rounded-2xl border text-left transition-all active:scale-95 shadow-sm
-                flex flex-col justify-between h-40
+                relative p-5 rounded-2xl border text-left transition-all active:scale-95 shadow-sm
+                flex flex-col justify-between 
+                h-32 md:h-40  /* 🟢 모바일: h-32 (작게), PC: h-40 (크게) 자동 조절 */
                 ${item.bgColor} ${item.borderColor}
                 ${item.highlight ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}
               `}
             >
               <div className="flex justify-between items-start">
-                <span className={`font-semibold text-sm ${item.textColor}`}>{item.title}</span>
+                <span className={`font-semibold text-base ${item.textColor}`}>{item.title}</span>
                 {item.icon}
               </div>
-
               <div className="mt-2">
-                <div className={`text-2xl font-bold ${item.textColor}`}>{item.value}</div>
-                <div className={`text-xs mt-1 opacity-80 ${item.textColor}`}>{item.sub}</div>
+                <div className={`text-3xl font-bold ${item.textColor}`}>{item.value}</div>
+                <div className={`text-sm mt-1 opacity-80 ${item.textColor}`}>{item.sub}</div>
               </div>
             </button>
           ))}
         </div>
 
-        {/* 하단 여백 */}
         <div className="h-6"></div>
       </div>
     </div>

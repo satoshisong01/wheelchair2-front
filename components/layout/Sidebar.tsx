@@ -2,6 +2,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import styles from './Sidebar.module.css';
@@ -59,9 +60,16 @@ export default function Sidebar() {
     <nav className={styles.sidebar}>
       {/* 1. 상단 로고 */}
       <div className={styles.logo}>
-        {/* 기기 사용자는 홈(/mobile-view)으로, 관리자는 대시보드(/dashboard)로 이동 */}
         <Link href={isDeviceUser ? '/mobile-view' : isManager ? '/dashboard' : '/wheelchair-info'}>
-          FIRST C&D
+          {/* 🟢 [수정] 텍스트 대신 로고 이미지 사용 */}
+          <Image
+            src="/logo.png"
+            alt="FIRST C&D"
+            width={140} // 사이드바 너비에 맞춰 조절
+            height={40}
+            style={{ objectFit: 'contain' }}
+            priority
+          />
         </Link>
       </div>
 

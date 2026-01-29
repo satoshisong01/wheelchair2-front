@@ -249,7 +249,7 @@ export default function AuditLogPage() {
             style={{
               border: 'solid 2px black',
               padding: '5px',
-              borderRadius: '10px',
+              borderRadius: '8px',
               cursor: 'pointer',
             }}
             onClick={() => fetchLogs(startDate, endDate)}

@@ -1,10 +1,9 @@
-// app/(protected)/audit-log/page.tsx
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-// ⚠️ npm install date-fns 필요
+// 🟢 [수정] addHours 다시 추가 (UTC -> KST 수동 변환용)
 import { format, toDate, addHours } from 'date-fns';
 import { ko } from 'date-fns/locale/ko';
 import styles from './page.module.css';
@@ -20,7 +19,7 @@ interface AuditLog {
   action: string;
   details: string | any;
   user_name?: string;
-  created_at: string; // UTC 시간 (예: 2025-12-12 00:00:00.000)
+  created_at: string; // UTC 시간 (예: 2026-01-29 06:59:00)
   device_serial?: string;
   [key: string]: any;
 }
@@ -28,15 +27,26 @@ interface AuditLog {
 // ------------------------------------------------
 // 2. 헬퍼 함수들
 // ------------------------------------------------
-// KST (+9시간)로 변환
+
 const safeParseDate = (dateString: string) => {
   if (!dateString) return null;
-  let date = new Date(dateString.replace(' ', 'T') + 'Z');
+
+  // 1. 일단 날짜 객체로 만듭니다.
+  let date = new Date(dateString);
+
+  // 파싱 실패시 date-fns 도움 받기
   if (isNaN(date.getTime())) {
     date = toDate(dateString);
   }
   if (isNaN(date.getTime())) return null;
-  return addHours(date, 9);
+
+  // 2. [강력한 해결책]
+  // 현재 이 date 객체가 몇 시로 인식되든 상관없이,
+  // 무조건 9시간(32,400,000ms)을 더해서 미래로 보내버립니다.
+  // 예: 07:00 -> 16:00
+  const targetTime = date.getTime() + 9 * 60 * 60 * 1000;
+
+  return new Date(targetTime);
 };
 
 const LOG_CONFIG = {
@@ -47,7 +57,6 @@ const LOG_CONFIG = {
   USER_UPDATE: { color: '#ffc107', label: '정보 수정', bg: '#fff3cd' },
   USER_APPROVE: { color: '#79aa1d', label: '관리자 승인', bg: '#e6ffed' },
   USER_REJECT: { color: '#dc3545', label: '관리자 거절', bg: '#f8d7da' },
-  // ⭐️ [추가] 서버 알림 스타일 추가
   SERVER_ALERT: { color: '#ff0000', label: '🚨 서버 경고', bg: '#ffebe9' },
   DEFAULT: { color: '#000', label: '기타 활동', bg: '#fff' },
 };
@@ -56,10 +65,10 @@ const getLogStyle = (action: string) => {
   return LOG_CONFIG[action as keyof typeof LOG_CONFIG] || LOG_CONFIG.DEFAULT;
 };
 
-// ⭐️ [신규 컴포넌트] 이름을 강조하는 컴포넌트 (JSX 반환용)
+// 이름을 강조하는 컴포넌트
 const Name = ({ name }: { name: string }) => <strong style={{ fontWeight: 'bold' }}>{name}</strong>;
 
-// ⭐️ [핵심 수정] 로그 메시지 포맷팅 로직 (SERVER_ALERT 케이스 추가)
+// 로그 메시지 포맷팅 로직
 const formatLogContent = (log: AuditLog) => {
   let details: any;
   try {
@@ -78,7 +87,7 @@ const formatLogContent = (log: AuditLog) => {
   const targetUserName = details.targetUserName || details.targetUserEmail || targetUserId;
   const reason = details?.reason || '없음';
 
-  // 🎯 기기 사용자일 경우, 사용자 이름 대신 시리얼 넘버를 사용
+  // 기기 사용자일 경우 이름 대신 시리얼 넘버 사용
   const isDeviceUserLog = log.user_role === 'DEVICE_USER';
   const displayActorName = isDeviceUserLog ? serial || '알 수 없는 기기' : userName;
 
@@ -100,7 +109,6 @@ const formatLogContent = (log: AuditLog) => {
     case 'LOGIN':
     case 'LOGOUT':
       if (isDeviceUserLog) {
-        // ⭐️ [수정] 기기 사용자 로그인/로그아웃 메시지
         return (
           <>
             기기 (<Name name={displayActorName} />
@@ -109,7 +117,6 @@ const formatLogContent = (log: AuditLog) => {
           </>
         );
       }
-      // ⭐️ [수정] 관리자 로그인/로그아웃 메시지
       return (
         <>
           {log.user_role} <Name name={displayActorName} /> 님이 {action.toLowerCase()}했습니다.
@@ -117,7 +124,6 @@ const formatLogContent = (log: AuditLog) => {
       );
     case 'USER_UPDATE':
       if (isDeviceUserLog) {
-        // ⭐️ [수정] 기기 사용자 비밀번호 변경 메시지
         return (
           <>
             기기 사용자 (<Name name={displayActorName} />
@@ -140,7 +146,6 @@ const formatLogContent = (log: AuditLog) => {
           {reason.substring(0, 50)})
         </>
       );
-    // ⭐️ [추가] 서버 경고 처리 로직
     case 'SERVER_ALERT':
       const reasonText = details.reason || '시스템 부하 경고';
       const cpu = details.cpu_usage || 'N/A';
@@ -151,12 +156,12 @@ const formatLogContent = (log: AuditLog) => {
           서버 (<Name name={serverId} />
           )에서 **{reasonText}** 감지. (CPU: {cpu}%, RAM Free: {memory} GB)
           <span style={{ color: '#aaa', fontSize: '0.9em', display: 'block' }}>
-            프로세스 스냅샷: {details.process_snapshot.substring(0, 100)}...
+            프로세스 스냅샷:{' '}
+            {details.process_info ? details.process_info.substring(0, 100) : '없음'}...
           </span>
         </>
       );
     default:
-      // 기타 활동은 안전한 문자열 반환 (JSX 사용 안함)
       const detailStr = details.text || JSON.stringify(details);
       return (
         <span>{detailStr.length > 100 ? `${detailStr.substring(0, 100)}...` : detailStr}</span>
@@ -224,7 +229,6 @@ export default function AuditLogPage() {
     <div className={styles.container}>
       <h1 className={styles.pageTitle}>관리자({session.user.role}) 활동 감사 로그</h1>
 
-      {/* 🟢 [수정] 날짜 필터 영역 */}
       <div className={styles.dateFilterSection}>
         <label className={styles.filterLabel}>날짜 범위:</label>
         <div className={styles.dateInputGroup}>
@@ -254,7 +258,6 @@ export default function AuditLogPage() {
       {loading && <div className={styles.loadingText}>로그를 불러오는 중...</div>}
 
       {!loading && (
-        // 🟢 [수정] 테이블 가로 스크롤을 위한 컨테이너 적용
         <div className={styles.tableScrollContainer}>
           <table className={styles.table}>
             <thead>
@@ -274,7 +277,8 @@ export default function AuditLogPage() {
               ) : (
                 logs.map((log) => {
                   const style = getLogStyle(log.action);
-                  const logDate = safeParseDate(log.created_at); // KST 변환됨
+                  // 🟢 여기서 수정된 safeParseDate 함수 호출
+                  const logDate = safeParseDate(log.created_at);
 
                   return (
                     <tr key={log.id} style={{ backgroundColor: style.bg }}>
@@ -288,10 +292,7 @@ export default function AuditLogPage() {
                       <td className={styles.tdAction} style={{ color: style.color }}>
                         {style.label}
                       </td>
-                      <td className={styles.tdDetails}>
-                        {/* ⭐️ [수정] formatLogContent 호출 */}
-                        {formatLogContent(log)}
-                      </td>
+                      <td className={styles.tdDetails}>{formatLogContent(log)}</td>
                     </tr>
                   );
                 })

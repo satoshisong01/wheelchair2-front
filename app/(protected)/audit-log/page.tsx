@@ -246,6 +246,12 @@ export default function AuditLogPage() {
             className={styles.dateInput}
           />
           <button
+            style={{
+              border: 'solid 2px black',
+              padding: '5px',
+              borderRadius: '10px',
+              cursor: 'pointer',
+            }}
             onClick={() => fetchLogs(startDate, endDate)}
             className={styles.searchButton}
             disabled={loading}

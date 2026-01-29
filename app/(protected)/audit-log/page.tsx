@@ -31,22 +31,25 @@ interface AuditLog {
 const safeParseDate = (dateString: string) => {
   if (!dateString) return null;
 
-  // 1. 일단 날짜 객체로 만듭니다.
-  let date = new Date(dateString);
+  // 1. 문자열에 'Z'나 '+' (시차 정보)가 있는지 확인
+  // (서버 환경에서는 보통 'Z'가 붙어서 옵니다)
+  const isISOFormat = dateString.includes('Z') || dateString.includes('+');
 
-  // 파싱 실패시 date-fns 도움 받기
-  if (isNaN(date.getTime())) {
-    date = toDate(dateString);
+  if (isISOFormat) {
+    // [Case A] 서버: 이미 Z가 붙어있음 -> 브라우저가 알아서 한국 시간으로 잘 바꿈
+    // 여기서 9시간을 더하면 '미래'로 가버리므로, 그냥 그대로 씁니다.
+    let date = new Date(dateString);
+    if (isNaN(date.getTime())) date = toDate(dateString);
+    return date;
+  } else {
+    // [Case B] 로컬: Z가 없음 -> 브라우저가 7시를 그냥 7시로 착각함
+    // 그러므로 강제로 9시간을 더해줘서 16시로 맞춰줍니다.
+    let date = new Date(dateString);
+    if (isNaN(date.getTime())) date = toDate(dateString);
+
+    // 9시간 더하기 (밀리초 연산)
+    return new Date(date.getTime() + 9 * 60 * 60 * 1000);
   }
-  if (isNaN(date.getTime())) return null;
-
-  // 2. [강력한 해결책]
-  // 현재 이 date 객체가 몇 시로 인식되든 상관없이,
-  // 무조건 9시간(32,400,000ms)을 더해서 미래로 보내버립니다.
-  // 예: 07:00 -> 16:00
-  const targetTime = date.getTime() + 9 * 60 * 60 * 1000;
-
-  return new Date(targetTime);
 };
 
 const LOG_CONFIG = {

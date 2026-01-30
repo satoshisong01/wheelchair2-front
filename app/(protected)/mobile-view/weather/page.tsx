@@ -12,6 +12,7 @@ import {
   Droplets,
   Thermometer,
   MapPin,
+  Home, // 실내 아이콘 추가
 } from 'lucide-react';
 
 export default function WeatherPage() {
@@ -21,37 +22,42 @@ export default function WeatherPage() {
 
   // 1. 날씨 상태 관리
   const [weather, setWeather] = useState({
-    temp: 0,
+    outdoorTemp: '-', // 🟢 외부 기온 (API)
+    indoorTemp: '-', // 🟢 실내/센서 기온 (DB)
     humidity: 0,
     pressure: 0,
     main: 'Clear',
     desc: '맑음',
-    city: '실시간 위치',
     isWarning: false,
   });
 
-  // 2. 🟢 [수정] 외부 날씨(온도/상태) + 기기 센서(습도/기압) 데이터 결합
+  // 2. 데이터 매핑 (API vs 센서값 분리)
   useEffect(() => {
     if (status) {
       setWeather({
-        // 온도는 외부 날씨 API(outdoor_temp)를 우선하되, 없으면 센서 온도 사용
-        temp:
-          status.outdoor_temp !== undefined
-            ? Number(status.outdoor_temp).toFixed(1)
-            : status.temperature || 0,
+        // 🟢 외부 기온: outdoor_temp가 있으면 사용, 없으면 '-'
+        outdoorTemp:
+          status.outdoor_temp !== undefined ? Number(status.outdoor_temp).toFixed(1) : '-',
 
-        // 🔹 습도와 기압은 휠체어 센서에서 보내주는 실시간 값 사용
+        // 🟢 실내(센서) 기온: temperature 사용
+        indoorTemp: status.temperature ? Number(status.temperature).toFixed(1) : '0.0',
+
         humidity: status.humidity || 0,
         pressure: status.pressure || 1013,
 
         main: status.weather_desc?.includes('비') ? 'Rain' : 'Clear',
         desc: status.weather_desc || '정보 없음',
-        city: '실시간 위치',
-        // 기상 경보 확인
+
         isWarning: ['비', '눈', '소나기'].some((word) => status.weather_desc?.includes(word)),
       });
     }
-  }, [status.outdoor_temp, status.weather_desc, status.humidity, status.pressure]);
+  }, [
+    status.outdoor_temp,
+    status.temperature,
+    status.weather_desc,
+    status.humidity,
+    status.pressure,
+  ]);
 
   const getWeatherIcon = (main: string) => {
     if (weather.desc.includes('비')) return <CloudRain className="w-8 h-8 text-blue-500" />;
@@ -81,36 +87,43 @@ export default function WeatherPage() {
         {/* 3. 메인 그리드 (실시간 환경 정보) */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6">
           <div className="bg-gray-50 px-4 py-2 border-b border-gray-100">
-            <h2 className="text-sm font-bold text-gray-600">현재 주변 환경 (센서 동기화)</h2>
+            <h2 className="text-sm font-bold text-gray-600">실시간 온도 비교</h2>
           </div>
 
           {dataLoading ? (
             <div className="p-8 text-center text-gray-400 text-sm">데이터 수신 중...</div>
           ) : (
             <div className="grid grid-cols-4 divide-x divide-gray-100">
+              {/* 1. 상태 아이콘 */}
               <div className="p-4 flex flex-col items-center justify-center">
-                <span className="text-xs text-gray-400 mb-2">상태</span>
+                <span className="text-xs text-gray-400 mb-2">기상</span>
                 {getWeatherIcon(weather.main)}
               </div>
-              <div className="p-4 flex flex-col items-center justify-center">
-                <span className="text-xs text-gray-400 mb-2">기온</span>
+
+              {/* 2. 외부 기온 (API) */}
+              <div className="p-4 flex flex-col items-center justify-center bg-blue-50 bg-opacity-30">
+                <span className="text-xs text-blue-500 font-bold mb-2">외부</span>
                 <div className="flex items-start">
-                  <span className="text-xl font-bold text-gray-800">{weather.temp}</span>
+                  <span className="text-xl font-bold text-gray-800">{weather.outdoorTemp}</span>
                   <span className="text-xs text-gray-500 mt-0.5">°C</span>
                 </div>
               </div>
+
+              {/* 3. 실내/센서 기온 (DB) - 🟢 추가된 부분 */}
+              <div className="p-4 flex flex-col items-center justify-center bg-orange-50 bg-opacity-30">
+                <span className="text-xs text-orange-500 font-bold mb-2">실내(센서)</span>
+                <div className="flex items-start">
+                  <span className="text-xl font-bold text-gray-800">{weather.indoorTemp}</span>
+                  <span className="text-xs text-gray-500 mt-0.5">°C</span>
+                </div>
+              </div>
+
+              {/* 4. 습도 (기압 대신 습도 배치) */}
               <div className="p-4 flex flex-col items-center justify-center">
                 <span className="text-xs text-gray-400 mb-2">습도</span>
                 <div className="flex items-start">
                   <span className="text-xl font-bold text-gray-800">{weather.humidity}</span>
                   <span className="text-xs text-gray-500 mt-0.5">%</span>
-                </div>
-              </div>
-              <div className="p-4 flex flex-col items-center justify-center">
-                <span className="text-xs text-gray-400 mb-2">기압</span>
-                <div className="flex items-start">
-                  <span className="text-lg font-bold text-gray-800">{weather.pressure}</span>
-                  <span className="text-[10px] text-gray-500 mt-1 ml-0.5">hPa</span>
                 </div>
               </div>
             </div>
@@ -123,28 +136,32 @@ export default function WeatherPage() {
             <MapPin className="w-8 h-8 text-blue-600" />
           </div>
 
-          <h3 className="text-lg font-bold text-gray-800 mb-2">기기 센서 기반 정보</h3>
+          <h3 className="text-lg font-bold text-gray-800 mb-2">환경 데이터 상세</h3>
 
-          <p className="text-gray-500 text-sm mb-6 max-w-[200px] break-keep">
-            휠체어에 탑재된 센서가 측정하는 <strong>실시간 주변 환경</strong> 데이터입니다.
+          <p className="text-gray-500 text-sm mb-6 max-w-[240px] break-keep">
+            <strong>외부 기온</strong>은 기상청 데이터를, <br />
+            <strong>실내 기온</strong>은 휠체어 센서 데이터를 표시합니다.
           </p>
 
           <div className="w-full bg-gray-50 rounded-lg p-4 space-y-3">
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-500 flex items-center">
-                <Thermometer size={14} className="mr-2" /> 외부 날씨
+                <Cloud size={14} className="mr-2" /> 날씨 설명
               </span>
               <span className="font-bold text-gray-700">{weather.desc}</span>
             </div>
+
+            {/* 하단 상세에 기압 정보 추가 (상단에서 빠진 대신) */}
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-500 flex items-center">
-                <Wind size={14} className="mr-2" /> 주변 온도 (센서)
+                <Wind size={14} className="mr-2" /> 대기압
               </span>
-              <span className="font-bold text-gray-700">{status.temperature}°C</span>
+              <span className="font-bold text-gray-700">{weather.pressure} hPa</span>
             </div>
+
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-500 flex items-center">
-                <Droplets size={14} className="mr-2" /> 주변 습도 (센서)
+                <Droplets size={14} className="mr-2" /> 주변 습도
               </span>
               <span className="font-bold text-gray-700">{weather.humidity}%</span>
             </div>

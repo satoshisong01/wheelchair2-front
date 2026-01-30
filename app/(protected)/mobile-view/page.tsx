@@ -160,28 +160,38 @@ export default function MobileViewPage() {
           </div>
         )}
 
-        {/* 🟢 반응형 그리드 적용 */}
-        {/* 모바일: grid-cols-1 (1줄) / PC(md 이상): md:grid-cols-2 (2줄) */}
+        {/* 🟢 반응형 그리드 적용 (수정됨: 가로형 리스트 레이아웃) */}
+        {/* 모바일: 1줄(grid-cols-1), PC: 2줄(grid-cols-2) 유지하되 카드 높이를 줄임 */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
           {menuItems.map((item) => (
             <button
               key={item.id}
               onClick={item.onClick}
               className={`
-                relative p-5 rounded-2xl border text-left transition-all active:scale-95 shadow-sm
-                flex flex-col justify-between 
-                h-32 md:h-40  /* 🟢 모바일: h-32 (작게), PC: h-40 (크게) 자동 조절 */
+                relative px-5 py-4 rounded-2xl border text-left transition-all active:scale-95 shadow-sm
+                flex items-center /* 🟢 가로 정렬 (Row) */
+                w-full h-auto /* 🟢 고정 높이 제거하고 내용물에 맞춤 */
                 ${item.bgColor} ${item.borderColor}
                 ${item.highlight ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}
               `}
             >
-              <div className="flex justify-between items-start">
-                <span className={`font-semibold text-base ${item.textColor}`}>{item.title}</span>
-                {item.icon}
-              </div>
-              <div className="mt-2">
-                <div className={`text-3xl font-bold ${item.textColor}`}>{item.value}</div>
-                <div className={`text-sm mt-1 opacity-80 ${item.textColor}`}>{item.sub}</div>
+              {/* 1. 아이콘 (가장 왼쪽) */}
+              <div className="mr-4 flex-shrink-0">{item.icon}</div>
+
+              {/* 2. 텍스트 영역 (나머지 전체) */}
+              <div className="flex-1 min-w-0">
+                {/* 윗줄: 타이틀과 값(Value)을 한 줄에 배치 */}
+                <div className="flex justify-between items-center mb-0.5">
+                  <span className={`font-bold text-base ${item.textColor} truncate mr-2`}>
+                    {item.title}
+                  </span>
+                  <span className={`text-2xl font-bold ${item.textColor} whitespace-nowrap`}>
+                    {item.value}
+                  </span>
+                </div>
+
+                {/* 아랫줄: 서브 텍스트 */}
+                <div className={`text-xs opacity-80 ${item.textColor} truncate`}>{item.sub}</div>
               </div>
             </button>
           ))}

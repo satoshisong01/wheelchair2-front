@@ -6,13 +6,17 @@ import styles from './layout.module.css';
 import MobileHeader from '../../components/layout/MobileHeader';
 import BottomNavigation from '../../components/layout/BottomNavigation';
 
-export default function ProtectedLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+// ✅ [추가] 방금 만든 브릿지 컴포넌트 임포트
+// (경로는 실제 파일 위치에 맞춰주세요)
+import WebViewBridge from '@/components/common/WebViewBridge';
+
+export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className={styles.container}>
+      {/* ✅ [추가] 여기에 브릿지 컴포넌트를 넣습니다. 
+          화면엔 안 보이고 기능만 작동합니다. */}
+      <WebViewBridge />
+
       {/* 1. PC용 사이드바 (기존 유지) */}
       <div className={styles.sidebarWrapper}>
         <Sidebar />

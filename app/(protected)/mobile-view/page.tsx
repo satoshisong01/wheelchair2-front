@@ -40,7 +40,7 @@ export default function MobileViewPage() {
     status.outdoor_temp !== undefined ? Number(status.outdoor_temp).toFixed(1) : sensorTemp;
   const weatherDesc = status.weather_desc ?? '맑음';
   const postureMaintainTime = status.postureTime ?? '0시간 45분';
-  const ulcerPreventionCount = status.ulcerCount ?? 5;
+  const ulcerPreventionCount = status.ulcer_count ?? status.ulcerCount ?? 0;
 
   const menuItems = [
     {
@@ -109,7 +109,7 @@ export default function MobileViewPage() {
     },
     {
       id: 'ai',
-      title: 'AI 패턴 인식',
+      title: '패턴 인식',
       value: '분석중',
       sub: '주행 습관 분석',
       icon: <BrainCircuit className="w-6 h-6 text-purple-600" />,

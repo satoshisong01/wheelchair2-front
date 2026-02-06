@@ -69,16 +69,12 @@ export default function PosturePage() {
   const router = useRouter();
   const { data: wheelchairData } = useMyWheelchair();
   
-  // 🟢 [핵심 수정] status를 any로 단언하여 snake_case 속성 접근 에러 방지
+  // 🟢 status: 소켓/API 실데이터만 사용 (snake_case·camelCase 모두 지원)
   const status = (wheelchairData?.status || {}) as any;
 
-  // 🧪 [테스트 모드 상태]
-  const [simulatedSeat, setSimulatedSeat] = useState(0);
-
-  // 1. 데이터 매핑 (snake_case와 camelCase 모두 지원)
-  // 값이 없으면 0 (시트 각도는 테스트 값을 기본으로)
+  // 1. 데이터 매핑 — 시트 각도는 휠체어에서 오는 실데이터만 사용
   const valBack = status.angle_back ?? status.angleBack ?? 0;
-  const valSeat = status.angle_seat ?? status.angleSeat ?? simulatedSeat; 
+  const valSeat = status.angle_seat ?? status.angleSeat ?? 0; 
   const valFoot = status.foot_angle ?? status.footAngle ?? 0;
   const valElev = status.elevation_dist ?? status.elevationDist ?? 0;
   
@@ -86,20 +82,28 @@ export default function PosturePage() {
   const valSlopeFr = status.slope_fr ?? status.inclineAngle ?? 0;
   const valSlopeSide = status.slope_side ?? status.incline_side ?? 0;
 
-  // ⏱️ 타이머 로직
+  // ⏱️ 타이머 로직 + DB 카운트 (오늘 욕창 예방 횟수)
   const [timer, setTimer] = useState(0);
-  const [successCount, setSuccessCount] = useState(0);
+  const [displayUlcerCount, setDisplayUlcerCount] = useState<number | null>(null);
   const [isSuccessThisSession, setIsSuccessThisSession] = useState(false);
+
+  // API/소켓에서 받은 오늘 예방 횟수 (초기값)
+  const initialUlcerCount = status.ulcer_count ?? status.ulcerCount ?? 0;
+  const ulcerCount = displayUlcerCount ?? initialUlcerCount;
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    
+
     // 시트 각도(valSeat)가 35도 이상일 때
     if (Number(valSeat) >= 35 && !isSuccessThisSession) {
       interval = setInterval(() => {
         setTimer((prev) => {
-          if (prev >= 119) { // 120초(2분) 달성 시
-            setSuccessCount(c => c + 1);
+          if (prev >= 119) {
+            // 120초(2분) 달성 시 DB에 카운트 반영
+            fetch('/api/posture-success', { method: 'POST' })
+              .then((res) => res.ok && res.json())
+              .then((data) => data?.ulcerCount != null && setDisplayUlcerCount(data.ulcerCount))
+              .catch(() => {});
             setIsSuccessThisSession(true);
             return 120;
           }
@@ -107,7 +111,6 @@ export default function PosturePage() {
         });
       }, 1000);
     } else if (Number(valSeat) < 35) {
-      // 35도 미만으로 내려가면 초기화
       setTimer(0);
       setIsSuccessThisSession(false);
     }
@@ -172,11 +175,19 @@ export default function PosturePage() {
                <span>시트 각도를 35° 이상 올려보세요.</span>
              </div>
           )}
+
+          {/* 오늘 욕창 예방 횟수 (DB 반영) */}
+          {(isSuccessThisSession || Number(ulcerCount) > 0) && (
+            <div className="mt-4 pt-4 border-t border-white/20">
+              <p className="text-center text-white/90 text-sm">오늘 욕창 예방 횟수</p>
+              <p className="text-center text-2xl font-bold text-white mt-1">{Number(ulcerCount)}회</p>
+            </div>
+          )}
         </div>
 
-        {/* 2. 상세 상태 그리드 (6개 항목) */}
+        {/* 2. 상세 상태 그리드 (모바일: 1x6) */}
         <h3 className="text-gray-700 font-bold mb-4 px-1 text-lg">휠체어 상세 상태</h3>
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 gap-4 mb-6">
           
           {/* Row 1: 등받이, 시트 */}
           <MobileStatusCard 
@@ -223,28 +234,6 @@ export default function PosturePage() {
             max="20"
             isDanger={Math.abs(Number(valSlopeSide)) > 5}
           />
-        </div>
-
-        {/* 🛠️ 테스트 컨트롤러 */}
-        <div className="bg-gray-800 rounded-2xl p-4 text-white mt-4">
-          <div className="flex justify-between items-center mb-3">
-            <span className="text-xs font-mono text-gray-400">TEST CONTROLLER</span>
-            <span className="text-2xl font-bold text-yellow-400">{simulatedSeat}°</span>
-          </div>
-          <div className="flex gap-3">
-            <button 
-              onClick={() => setSimulatedSeat(0)}
-              className="px-4 py-3 bg-gray-700 rounded-xl text-sm font-medium"
-            >
-              초기화
-            </button>
-            <button 
-              onClick={() => setSimulatedSeat(prev => prev + 5)}
-              className="flex-1 py-3 bg-indigo-600 rounded-xl text-sm font-bold active:scale-95 transition-transform"
-            >
-              +5° 올리기
-            </button>
-          </div>
         </div>
 
       </div>

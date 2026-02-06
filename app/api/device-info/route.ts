@@ -25,10 +25,11 @@ export async function GET(req: Request) {
 
     const client = await pool.connect();
     try {
-      // 2. wheelchairs(시리얼)와 wheelchair_status(날씨, 설정) 테이블 JOIN 조회
+      // 2. wheelchairs(시리얼)와 wheelchair_status(날씨, 설정, 욕창 예방 횟수) JOIN 조회
       const queryText = `
         SELECT 
           w.device_serial,
+          w.today_success_count,
           ws.outdoor_temp,
           ws.weather_desc,
           ws.humidity,
@@ -39,7 +40,8 @@ export async function GET(req: Request) {
           ws.push_battery,
           ws.push_posture,
           ws.temperature as sensor_temp,
-          ws.current_battery
+          ws.current_battery,
+          COALESCE(ws.ulcer_count, w.today_success_count, 0) AS ulcer_count
         FROM wheelchairs w
         LEFT JOIN wheelchair_status ws ON w.id = ws.wheelchair_id
         WHERE w.id = $1
@@ -53,7 +55,8 @@ export async function GET(req: Request) {
 
       const row = res.rows[0];
 
-      // 프론트엔드 형식에 맞춰 반환
+      // 프론트엔드 형식에 맞춰 반환 (오늘 욕창 예방 횟수 포함)
+      const ulcerCount = row.ulcer_count != null ? Number(row.ulcer_count) : Number(row.today_success_count ?? 0);
       return NextResponse.json({
         serial: row.device_serial,
         status: {
@@ -68,6 +71,8 @@ export async function GET(req: Request) {
           push_posture: row.push_posture,
           temperature: row.sensor_temp,
           current_battery: row.current_battery,
+          ulcer_count: ulcerCount,
+          ulcerCount,
         },
       });
     } finally {

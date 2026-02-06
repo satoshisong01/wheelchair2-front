@@ -84,6 +84,17 @@ export default function BottomNavigation() {
           <span className={styles.label}>감사로그</span>
         </Link>
       )}
+
+      {/* 7. 욕창알림 내역 (Admin, Master) */}
+      {isManager && (
+        <Link
+          href="/ulcer-alerts"
+          className={`${styles.navItem} ${pathname === '/ulcer-alerts' ? styles.active : ''}`}
+        >
+          <span className={styles.icon}>🩹</span>
+          <span className={styles.label}>욕창알림</span>
+        </Link>
+      )}
     </nav>
   );
 }

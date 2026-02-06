@@ -130,6 +130,14 @@ export default function Sidebar() {
                 </Link>
               </li>
             )}
+
+            {isManager && (
+              <li className={pathname === '/ulcer-alerts' ? styles.active : ''}>
+                <Link href="/ulcer-alerts">
+                  <span>🩹</span> 욕창알림 내역
+                </Link>
+              </li>
+            )}
           </>
         )}
       </ul>

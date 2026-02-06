@@ -39,7 +39,16 @@ export default function MobileViewPage() {
   const outdoorTemp =
     status.outdoor_temp !== undefined ? Number(status.outdoor_temp).toFixed(1) : sensorTemp;
   const weatherDesc = status.weather_desc ?? '맑음';
-  const postureMaintainTime = status.postureTime ?? '0시간 45분';
+
+  // 자세 유지 시간: 워커에서 light(분) 또는 postureTime(분)을 보내준다고 가정
+  const rawPostureMinutes = status.light ?? status.postureTime ?? 0;
+  const postureMaintainTime = (() => {
+    const num = Number(rawPostureMinutes);
+    if (!Number.isFinite(num) || num < 0) return '0시간 0분';
+    const hours = Math.floor(num / 60);
+    const minutes = Math.floor(num % 60);
+    return `${hours}시간 ${minutes}분`;
+  })();
   const ulcerPreventionCount = status.ulcer_count ?? status.ulcerCount ?? 0;
 
   const menuItems = [

@@ -25,11 +25,10 @@ export async function GET(req: Request) {
 
     const client = await pool.connect();
     try {
-      // 2. wheelchairs(시리얼)와 wheelchair_status(날씨, 설정, 욕창 예방 횟수) JOIN 조회
+      // 2. wheelchairs + wheelchair_status + posture_daily(오늘 예방 횟수)
       const queryText = `
         SELECT 
           w.device_serial,
-          w.today_success_count,
           ws.outdoor_temp,
           ws.weather_desc,
           ws.humidity,
@@ -41,9 +40,10 @@ export async function GET(req: Request) {
           ws.push_posture,
           ws.temperature as sensor_temp,
           ws.current_battery,
-          COALESCE(ws.ulcer_count, w.today_success_count, 0) AS ulcer_count
+          COALESCE(pd.count, 0) AS ulcer_count
         FROM wheelchairs w
         LEFT JOIN wheelchair_status ws ON w.id = ws.wheelchair_id
+        LEFT JOIN posture_daily pd ON pd.wheelchair_id = w.id AND pd.date = CURRENT_DATE
         WHERE w.id = $1
       `;
 
@@ -55,8 +55,8 @@ export async function GET(req: Request) {
 
       const row = res.rows[0];
 
-      // 프론트엔드 형식에 맞춰 반환 (오늘 욕창 예방 횟수 포함)
-      const ulcerCount = row.ulcer_count != null ? Number(row.ulcer_count) : Number(row.today_success_count ?? 0);
+      // 오늘 예방 횟수: posture_daily에서 오늘 날짜 행만 조회 → 없으면 0
+      const ulcerCount = Number(row.ulcer_count ?? 0);
       return NextResponse.json({
         serial: row.device_serial,
         status: {

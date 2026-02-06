@@ -130,7 +130,8 @@ export default function PosturePage() {
 
       <div className="flex-1 p-5 pb-20 overflow-y-auto">
         
-        {/* 1. 메인: 욕창 예방 진행 상황 (타이머) */}
+        {/* [2달간 비활성] 욕창 예방 활동 카드 (안전 범위·2분 타이머·오늘 예방 횟수) — 6달차부터 푸시+시각 도우미 사용 시 주석 해제 */}
+        {/*
         <div className={`w-full rounded-3xl p-6 mb-8 shadow-md transition-all duration-300
           ${isSuccessThisSession 
             ? 'bg-gradient-to-br from-green-500 to-green-600 text-white'
@@ -154,7 +155,6 @@ export default function PosturePage() {
             </div>
           </div>
 
-          {/* 타이머 바 */}
           {(Number(valSeat) >= 35 || isSuccessThisSession) && (
             <div className="mt-4">
               <div className="w-full bg-black/20 rounded-full h-3">
@@ -176,7 +176,6 @@ export default function PosturePage() {
              </div>
           )}
 
-          {/* 오늘 욕창 예방 횟수 (DB 반영) */}
           {(isSuccessThisSession || Number(ulcerCount) > 0) && (
             <div className="mt-4 pt-4 border-t border-white/20">
               <p className="text-center text-white/90 text-sm">오늘 욕창 예방 횟수</p>
@@ -184,6 +183,7 @@ export default function PosturePage() {
             </div>
           )}
         </div>
+        */}
 
         {/* 2. 상세 상태 그리드 (모바일: 1x6, PC: 2x3) */}
         <h3 className="text-gray-700 font-bold mb-4 px-1 text-lg">휠체어 상세 상태</h3>

@@ -1,7 +1,16 @@
 /**
  * 2분 유지 달성 시 욕창 예방 카운트 증가 API
- * - wheelchairs.today_success_count, last_reset_date (일별 리셋)
- * - wheelchair_status.ulcer_count 동기화 (기기별 표시용)
+ * - posture_daily: 기기당 하루 1행, 같은 날이면 count만 +1 (UPSERT)
+ * - wheelchair_status.ulcer_count 동기화 (화면 표시용)
+ *
+ * DB 테이블 생성 (한 번만 실행):
+ * CREATE TABLE IF NOT EXISTS posture_daily (
+ *   wheelchair_id uuid NOT NULL REFERENCES wheelchairs(id),
+ *   date date NOT NULL,
+ *   count integer NOT NULL DEFAULT 0,
+ *   PRIMARY KEY (wheelchair_id, date)
+ * );
+ * -- wheelchairs.id가 integer면 uuid → integer 로 바꾸세요.
  */
 
 import { NextResponse } from 'next/server';
@@ -29,26 +38,18 @@ export async function POST() {
 
     const client = await pool.connect();
     try {
-      // 1. 오늘 날짜 기준으로 리셋 후 카운트 +1 (wheelchairs)
-      const updateWheelchair = await client.query(
-        `UPDATE wheelchairs
-         SET today_success_count = CASE
-           WHEN last_reset_date IS NULL OR last_reset_date < CURRENT_DATE THEN 1
-           ELSE today_success_count + 1
-         END,
-         last_reset_date = CURRENT_DATE
-         WHERE id = $1
-         RETURNING today_success_count`,
+      // 1. posture_daily: 기기당 하루 1행, 오늘 행이 있으면 count+1, 없으면 (오늘, 1) INSERT
+      const upsert = await client.query(
+        `INSERT INTO posture_daily (wheelchair_id, date, count)
+         VALUES ($1, CURRENT_DATE, 1)
+         ON CONFLICT (wheelchair_id, date) DO UPDATE SET count = posture_daily.count + 1
+         RETURNING count`,
         [wheelchairId]
       );
 
-      if (updateWheelchair.rows.length === 0) {
-        return NextResponse.json({ message: '휠체어를 찾을 수 없습니다.' }, { status: 404 });
-      }
+      const newCount = Number(upsert.rows[0]?.count ?? 0);
 
-      const newCount = Number(updateWheelchair.rows[0].today_success_count);
-
-      // 2. wheelchair_status.ulcer_count 동기화 (기기별 조회용)
+      // 2. wheelchair_status.ulcer_count 동기화 (화면 표시용)
       await client.query(
         `UPDATE wheelchair_status SET ulcer_count = $2 WHERE wheelchair_id = $1`,
         [wheelchairId, newCount]

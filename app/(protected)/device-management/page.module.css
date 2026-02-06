@@ -119,6 +119,28 @@
   margin-top: 4px;
 }
 
+.radioGroup {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.radioLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: normal;
+  margin-bottom: 0;
+}
+
+.radioLabel input[type='radio'] {
+  width: auto;
+  margin: 0;
+  cursor: pointer;
+}
+
 .capsLock {
   color: orange;
   text-align: center;

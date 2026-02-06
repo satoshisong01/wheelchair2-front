@@ -28,6 +28,7 @@ export async function GET(req: NextRequest) {
     const sql = `
             SELECT 
                 w.id, w.device_serial, w.model_name, w.status, w.created_at,
+                w.user_gender, w.user_weight,
                 d.device_id,
                 u.name AS registered_by_name, 
                 u.email AS registered_by_email
@@ -67,7 +68,8 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const { deviceSerial, deviceId, password, modelName } = await req.json();
+  const { deviceSerial, deviceId, password, modelName, userGender, userWeight } =
+    await req.json();
 
   if (!deviceSerial || !deviceId || !password) {
     return NextResponse.json(
@@ -83,16 +85,20 @@ export async function POST(req: NextRequest) {
   try {
     await client.query('BEGIN'); // 트랜잭션 시작
 
-    // 1. Wheelchair 테이블에 새 장치 정보 및 등록자 ID 삽입
+    // 1. Wheelchair 테이블에 새 장치 정보, 등록자 ID, 사용자 성별·몸무게 삽입
     const insertWheelchairSql = `
-            INSERT INTO wheelchairs (device_serial, model_name, registrant_user_id)
-            VALUES ($1, $2, $3)
+            INSERT INTO wheelchairs (device_serial, model_name, registrant_user_id, user_gender, user_weight)
+            VALUES ($1, $2, $3, $4, $5)
             RETURNING id;
         `;
+    const weightNum =
+      userWeight != null && userWeight !== '' ? Number(userWeight) : null;
     const wheelchairResult = await client.query(insertWheelchairSql, [
       deviceSerial,
       modelName || null,
       userId,
+      userGender && (userGender === 'M' || userGender === 'F') ? userGender : null,
+      weightNum,
     ]);
     const wheelchairId = wheelchairResult.rows[0].id;
 

@@ -86,6 +86,32 @@ export default function UlcerAlertsPage() {
     }
   }, [selectedId, fromDate, toDate]);
 
+  const handleExcelDownload = useCallback(() => {
+    if (rows.length === 0) return;
+    const selectedWheelchair = wheelchairs.find((w) => w.id === selectedId);
+    const deviceLabel = selectedWheelchair
+      ? `${selectedWheelchair.device_serial}${selectedWheelchair.modelName ? ` (${selectedWheelchair.modelName})` : ''}`
+      : selectedId || '-';
+    const header = ['날짜', '욕창 방지 횟수 (35° 2분 유지)'];
+    const body = rows.map((r) => [formatDateStr(r.date), `${r.count}회`]);
+    const csvRows = [
+      ['조회 기기', deviceLabel],
+      ['', ''],
+      header,
+      ...body,
+    ].map((row) =>
+      row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+    );
+    const csv = '\uFEFF' + csvRows.join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `욕창알림내역_${deviceLabel.replace(/[/\\?%*:|"]/g, '_')}_${fromDate}_${toDate}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [rows, fromDate, toDate, selectedId, wheelchairs]);
+
   if (status === 'loading' || !session) {
     return <LoadingSpinner />;
   }
@@ -144,6 +170,18 @@ export default function UlcerAlertsPage() {
       </div>
 
       {loading && <div className={styles.loadingText}>조회 중...</div>}
+
+      {!loading && rows.length > 0 && (
+        <div className={styles.downloadSection}>
+          <button
+            type="button"
+            className={styles.downloadButton}
+            onClick={handleExcelDownload}
+          >
+            엑셀 다운로드
+          </button>
+        </div>
+      )}
 
       {!loading && (
         <>

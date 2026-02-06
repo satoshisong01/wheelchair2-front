@@ -44,6 +44,8 @@ export default function DeviceManagementPage() {
     deviceId: '',
     password: '',
     confirmPassword: '',
+    userGender: '' as '' | 'M' | 'F',
+    userWeight: '',
   });
 
   const [isCapsLockOn, setIsCapsLockOn] = useState(false);
@@ -92,6 +94,11 @@ export default function DeviceManagementPage() {
     if (formError) setFormError(null);
   };
 
+  const handleGenderChange = (value: 'M' | 'F') => {
+    setFormState((prev) => ({ ...prev, userGender: value }));
+    if (formError) setFormError(null);
+  };
+
   const checkCapsLock = (
     e: KeyboardEvent<HTMLInputElement> | MouseEvent<HTMLInputElement>
   ) => {
@@ -134,6 +141,8 @@ export default function DeviceManagementPage() {
         deviceId: '',
         password: '',
         confirmPassword: '',
+        userGender: '',
+        userWeight: '',
       });
       fetchDevices();
     } catch (err: any) {
@@ -240,6 +249,49 @@ export default function DeviceManagementPage() {
                   required
                   disabled={isSubmitting}
                   placeholder="예: 휠체어1234"
+                  className={styles.input}
+                />
+              </div>
+              <div className={styles.formGroup}>
+                <label>사용자 성별</label>
+                <div className={styles.radioGroup}>
+                  <label className={styles.radioLabel}>
+                    <input
+                      type="radio"
+                      name="userGender"
+                      value="M"
+                      checked={formState.userGender === 'M'}
+                      onChange={() => handleGenderChange('M')}
+                      disabled={isSubmitting}
+                    />
+                    <span>남성</span>
+                  </label>
+                  <label className={styles.radioLabel}>
+                    <input
+                      type="radio"
+                      name="userGender"
+                      value="F"
+                      checked={formState.userGender === 'F'}
+                      onChange={() => handleGenderChange('F')}
+                      disabled={isSubmitting}
+                    />
+                    <span>여성</span>
+                  </label>
+                </div>
+              </div>
+              <div className={styles.formGroup}>
+                <label htmlFor="userWeight">사용자 몸무게 (kg)</label>
+                <input
+                  id="userWeight"
+                  name="userWeight"
+                  type="number"
+                  min={1}
+                  max={300}
+                  step={0.1}
+                  value={formState.userWeight}
+                  onChange={handleFormChange}
+                  disabled={isSubmitting}
+                  placeholder="예: 65"
                   className={styles.input}
                 />
               </div>

@@ -91,6 +91,29 @@
   margin: 20px 0;
 }
 
+.downloadSection {
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.downloadButton {
+  padding: 8px 20px;
+  border: 2px solid #0d6efd;
+  border-radius: 8px;
+  background: #0d6efd;
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.downloadButton:hover {
+  background: #0b5ed7;
+  border-color: #0b5ed7;
+}
+
 .tableWrap {
   width: 100%;
   overflow-x: auto;
@@ -181,6 +204,14 @@
 @media (max-width: 768px) {
   .container {
     padding: 16px;
+  }
+
+  .downloadSection {
+    justify-content: stretch;
+  }
+
+  .downloadButton {
+    width: 100%;
   }
 
   .filterSection {

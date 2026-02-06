@@ -34,21 +34,14 @@ export default function MobileViewPage() {
   const batteryLevel = status.current_battery ?? 0;
   const isLowBattery = batteryLevel < 20;
   const distanceKm = status.distance ? Number(status.distance).toFixed(1) : '0.0';
-  const seatAngle = status.angleSeat ? Number(status.angleSeat).toFixed(0) : '0';
+  // 시트 각도: snake_case / camelCase 모두 대응
+  const rawSeatAngle = status.angle_seat ?? status.angleSeat ?? 0;
+  const seatAngle = Number(rawSeatAngle) || 0;
   const sensorTemp = status.temperature ? Number(status.temperature).toFixed(1) : '24.0';
   const outdoorTemp =
     status.outdoor_temp !== undefined ? Number(status.outdoor_temp).toFixed(1) : sensorTemp;
   const weatherDesc = status.weather_desc ?? '맑음';
 
-  // 자세 유지 시간: 워커에서 light(분) 또는 postureTime(분)을 보내준다고 가정
-  const rawPostureMinutes = status.light ?? status.postureTime ?? 0;
-  const postureMaintainTime = (() => {
-    const num = Number(rawPostureMinutes);
-    if (!Number.isFinite(num) || num < 0) return '0시간 0분';
-    const hours = Math.floor(num / 60);
-    const minutes = Math.floor(num % 60);
-    return `${hours}시간 ${minutes}분`;
-  })();
   const ulcerPreventionCount = status.ulcer_count ?? status.ulcerCount ?? 0;
 
   const menuItems = [
@@ -81,8 +74,10 @@ export default function MobileViewPage() {
     {
       id: 'posture',
       title: '자세 및 욕창 예방',
-      value: postureMaintainTime,
-      sub: `현재 ${seatAngle}° | 오늘 예방 ${ulcerPreventionCount}회`,
+      // 0시간 0분 대신 오늘 예방 횟수를 메인 값으로 표시
+      value: `예방 ${ulcerPreventionCount}회`,
+      // 서브 텍스트에는 현재 시트 각도만 표시
+      sub: `현재 시트 각도 ${seatAngle.toFixed(0)}°`,
       icon: <Accessibility className="w-6 h-6 text-indigo-600" />,
       bgColor: 'bg-indigo-50',
       borderColor: 'border-indigo-200',

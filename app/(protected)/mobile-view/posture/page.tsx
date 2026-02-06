@@ -185,9 +185,9 @@ export default function PosturePage() {
           )}
         </div>
 
-        {/* 2. 상세 상태 그리드 (모바일: 1x6) */}
+        {/* 2. 상세 상태 그리드 (모바일: 1x6, PC: 2x3) */}
         <h3 className="text-gray-700 font-bold mb-4 px-1 text-lg">휠체어 상세 상태</h3>
-        <div className="grid grid-cols-1 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           
           {/* Row 1: 등받이, 시트 */}
           <MobileStatusCard 

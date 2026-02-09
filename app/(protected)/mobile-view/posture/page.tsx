@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useMyWheelchair } from '../../../hooks/useMyWheelchair';
-import { ChevronLeft, RefreshCw, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 
 // 📦 모바일용 상태 카드 컴포넌트
 const MobileStatusCard = ({
@@ -70,7 +70,7 @@ export default function PosturePage() {
   const { data: wheelchairData } = useMyWheelchair();
   
   // 🟢 status: 소켓/API 실데이터만 사용 (snake_case·camelCase 모두 지원)
-  const status = (wheelchairData?.status || {}) as any;
+  const status = (wheelchairData?.status || {}) as Record<string, unknown>;
 
   // 1. 데이터 매핑 — 시트 각도는 휠체어에서 오는 실데이터만 사용
   const valBack = status.angle_back ?? status.angleBack ?? 0;
@@ -82,37 +82,43 @@ export default function PosturePage() {
   const valSlopeFr = status.slope_fr ?? status.inclineAngle ?? 0;
   const valSlopeSide = status.slope_side ?? status.incline_side ?? 0;
 
-  // ⏱️ 타이머 로직 + DB 카운트 (오늘 욕창 예방 횟수)
+  // ⏱️ 타이머: 시각 전용 (2분 로직·카운트 반영은 서버 worker에서 처리)
   const [timer, setTimer] = useState(0);
-  const [displayUlcerCount, setDisplayUlcerCount] = useState<number | null>(null);
   const [isSuccessThisSession, setIsSuccessThisSession] = useState(false);
+  const prevUlcerCountRef = useRef<number | null>(null);
 
-  // API/소켓에서 받은 오늘 예방 횟수 (초기값)
-  const initialUlcerCount = status.ulcer_count ?? status.ulcerCount ?? 0;
-  const ulcerCount = displayUlcerCount ?? initialUlcerCount;
+  // 서버(소켓)에서 받은 오늘 예방 횟수 — worker가 posture_daily 반영 후 wheelchair_status_update로 전달
+  const ulcerCount = status.ulcer_count ?? status.ulcerCount ?? 0;
 
+  // 서버에서 욕창 예방 카운트가 올라왔을 때 → 성공 상태·타이머 120으로 시각 반영
+  useEffect(() => {
+    const current = Number(ulcerCount);
+    if (prevUlcerCountRef.current === null) {
+      prevUlcerCountRef.current = current;
+      return;
+    }
+    if (current > prevUlcerCountRef.current) {
+      prevUlcerCountRef.current = current;
+      queueMicrotask(() => {
+        setIsSuccessThisSession(true);
+        setTimer(120);
+      });
+    }
+  }, [ulcerCount]);
+
+  // 타이머 시각만: 35° 이상일 때 1초마다 증가, 120에서 멈춤 (API 호출 없음)
   useEffect(() => {
     let interval: NodeJS.Timeout;
 
-    // 시트 각도(valSeat)가 35도 이상일 때
     if (Number(valSeat) >= 35 && !isSuccessThisSession) {
       interval = setInterval(() => {
-        setTimer((prev) => {
-          if (prev >= 119) {
-            // 120초(2분) 달성 시 DB에 카운트 반영
-            fetch('/api/posture-success', { method: 'POST' })
-              .then((res) => res.ok && res.json())
-              .then((data) => data?.ulcerCount != null && setDisplayUlcerCount(data.ulcerCount))
-              .catch(() => {});
-            setIsSuccessThisSession(true);
-            return 120;
-          }
-          return prev + 1;
-        });
+        setTimer((prev) => (prev >= 120 ? 120 : prev + 1));
       }, 1000);
     } else if (Number(valSeat) < 35) {
-      setTimer(0);
-      setIsSuccessThisSession(false);
+      queueMicrotask(() => {
+        setTimer(0);
+        setIsSuccessThisSession(false);
+      });
     }
     return () => clearInterval(interval);
   }, [valSeat, isSuccessThisSession]);
@@ -129,7 +135,29 @@ export default function PosturePage() {
       </header>
 
       <div className="flex-1 p-5 pb-20 overflow-y-auto">
-        
+        {/* 2분 유지 타이머·예방 횟수 (시각 전용 — 카운트 반영은 서버 worker에서 처리) */}
+        {(Number(valSeat) >= 35 || isSuccessThisSession || Number(ulcerCount) > 0) && (
+          <div className="w-full rounded-2xl p-4 mb-6 bg-white border border-gray-100 shadow-sm">
+            <p className="text-sm text-gray-600 mb-2">욕창 예방 (35° 2분 유지)</p>
+            {(Number(valSeat) >= 35 || isSuccessThisSession) && (
+              <div className="mb-2">
+                <div className="w-full bg-gray-100 rounded-full h-2">
+                  <div
+                    className="h-2 rounded-full bg-indigo-500 transition-all duration-300"
+                    style={{ width: `${(timer / 120) * 100}%` }}
+                  />
+                </div>
+                <p className="text-center mt-1 text-sm font-medium text-gray-700">
+                  {Math.floor(timer / 60)}분 {timer % 60}초 {isSuccessThisSession && '✓'}
+                </p>
+              </div>
+            )}
+            {Number(ulcerCount) > 0 && (
+              <p className="text-sm text-gray-500">오늘 예방 횟수: <strong>{Number(ulcerCount)}회</strong></p>
+            )}
+          </div>
+        )}
+
         {/* [2달간 비활성] 욕창 예방 활동 카드 (안전 범위·2분 타이머·오늘 예방 횟수) — 6달차부터 푸시+시각 도우미 사용 시 주석 해제 */}
         {/*
         <div className={`w-full rounded-3xl p-6 mb-8 shadow-md transition-all duration-300

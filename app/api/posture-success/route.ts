@@ -1,5 +1,11 @@
 /**
  * 2분 유지 달성 시 욕창 예방 카운트 증가 API
+ *
+ * ⚠️ 프론트엔드는 더 이상 이 API를 호출하지 않습니다.
+ * 2분 유지 로직·카운트 반영은 서버 worker에서 처리하고,
+ * wheelchair_status_update(ulcer_count)로 클라이언트에 전달합니다.
+ * (이 라우트는 worker에서 호출하거나, 동일 로직을 worker에 두고 사용할 수 있음)
+ *
  * - posture_daily: 기기당 하루 1행, 같은 날이면 count만 +1 (UPSERT)
  * - wheelchair_status.ulcer_count 동기화 (화면 표시용)
  *

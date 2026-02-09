@@ -59,6 +59,16 @@ function AdminPortalContent() {
         <div className={styles.deviceLoginLink}>
           <a href="/">일반 기기 로그인 페이지로 돌아가기</a>
         </div>
+        {/* 안드로이드 앱 다운로드 링크 */}
+        <div className={styles.deviceLoginLink}>
+          <a
+            href="/download/app-release.apk"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            안드로이드 앱(APK) 다운로드
+          </a>
+        </div>
       </div>
     </div>
   );

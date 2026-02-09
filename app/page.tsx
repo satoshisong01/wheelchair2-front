@@ -114,6 +114,19 @@ export default function LandingPage() {
             카카오 로그인 & 회원가입
           </button>
         </div>
+
+        {/* 안드로이드 앱 다운로드 */}
+        <div className="mt-6 text-center">
+          <p className="text-xs text-gray-500 mb-2">
+            안드로이드 기기에서 앱으로 사용하시려면 아래에서 APK를 다운로드하세요.
+          </p>
+          <a
+            href="/download/app-release.apk"
+            className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            안드로이드 앱 다운로드
+          </a>
+        </div>
       </div>
     </div>
   );

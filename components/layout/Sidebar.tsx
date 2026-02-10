@@ -162,7 +162,15 @@ export default function Sidebar() {
 
       <div className={styles.footer}>
         <div className={styles.profile}>
-          <div className={styles.profileIcon}>👤</div>
+          <div className={styles.profileIcon}>
+            <Image
+              src="/wheel.png"
+              alt="프로필"
+              width={24}
+              height={24}
+              style={{ objectFit: 'contain', borderRadius: '50%' }}
+            />
+          </div>
           <span className={styles.profileName}>{displayName}</span>
         </div>
 

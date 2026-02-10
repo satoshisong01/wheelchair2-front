@@ -74,7 +74,7 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background-color: #e5e7eb;
+  /* background-color: #e5e7eb; */
   display: grid;
   place-items: center;
 }

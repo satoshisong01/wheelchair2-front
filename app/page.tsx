@@ -22,7 +22,12 @@ export default function LandingPage() {
     });
 
     if (res?.error) {
-      alert(res.error);
+      // 🔴 수정된 부분: 에러 코드를 확인해서 한글로 변환
+      if (res.error === 'CredentialsSignin') {
+        alert('기기 ID 또는 비밀번호가 일치하지 않습니다.');
+      } else {
+        alert(`로그인 실패: ${res.error}`);
+      }
       setLoading(false);
     } else {
       // 로그인 성공 시 미들웨어가 /device-view 등으로 보냄
@@ -35,12 +40,8 @@ export default function LandingPage() {
       <div className="w-full max-w-md space-y-8 rounded-xl bg-white p-8 shadow-lg">
         {/* 헤더 */}
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900">
-            전동 휠체어 관제 시스템
-          </h1>
-          <p className="mt-2 text-sm text-gray-600">
-            서비스 이용을 위해 로그인해주세요.
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900">전동 휠체어 관제 시스템</h1>
+          <p className="mt-2 text-sm text-gray-600">서비스 이용을 위해 로그인해주세요.</p>
         </div>
 
         {/* 1. 기기 로그인 폼 */}
@@ -104,11 +105,7 @@ export default function LandingPage() {
             onClick={() => router.push('/login')}
             className="flex w-full items-center justify-center rounded-md bg-[#FEE500] px-3 py-2.5 text-sm font-semibold text-[#000000] shadow-sm hover:bg-[#FDD835]"
           >
-            <svg
-              className="mr-2 h-5 w-5"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
+            <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 3c5.523 0 10 4.053 10 9.053 0 2.92-1.536 5.516-3.927 7.156.241 1.25.962 4.095 1.002 4.295a.394.394 0 0 1-.397.464c-.066 0-.13-.016-.188-.047-.323-.172-3.867-2.61-4.48-3.023-.65.09-1.32.14-2.01.14-5.523 0-10-4.053-10-9.053C2 7.053 6.477 3 12 3z" />
             </svg>
             카카오 로그인 & 회원가입

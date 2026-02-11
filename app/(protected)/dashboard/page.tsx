@@ -1,5 +1,5 @@
 // 경로: app/(protected)/dashboard/page.tsx
-// 📝 설명: 소켓 데이터 병합 + 위험 상황만 소리/진동 알림 (성공은 무음)
+// 📝 설명: USER 권한 추가 + 알람 시 소리/팝업 자동 실행 + 소켓 데이터 병합
 
 'use client';
 
@@ -44,26 +44,35 @@ export default function DashboardPage() {
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
 
-  // 🔊 [기능 추가] 소리 및 진동 실행 함수
+  // 🔊 소리 및 진동 실행 함수
   const triggerAlertSound = () => {
     try {
       const audio = new Audio('/sounds/alarm.mp3');
-      audio.play().catch((err) => console.warn('🔊 소리 재생 차단됨:', err));
+      const playPromise = audio.play();
+
+      if (playPromise !== undefined) {
+        playPromise.catch((err) => {
+          console.warn('🔊 자동 재생 차단됨 (페이지 클릭 필요):', err);
+        });
+      }
 
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
-        navigator.vibrate([500, 200, 500]); // 징- 징-
+        navigator.vibrate([500, 200, 500]);
       }
     } catch (e) {
       console.error(e);
     }
   };
 
+  // ✅ 권한 체크 함수 (ADMIN, MASTER, USER 모두 허용)
+  const isAuthorized = () => {
+    const role = session?.user?.role;
+    return role === 'ADMIN' || role === 'MASTER' || role === 'USER';
+  };
+
   // 1. 초기 데이터 로드
   useEffect(() => {
-    if (
-      status === 'authenticated' &&
-      (session?.user?.role === 'ADMIN' || session?.user?.role === 'MASTER')
-    ) {
+    if (status === 'authenticated' && isAuthorized()) {
       const fetchWheelchairs = async () => {
         try {
           const res = await fetch(`/api/wheelchairs?t=${Date.now()}`);
@@ -87,10 +96,7 @@ export default function DashboardPage() {
 
   // 2. Socket.IO 연결
   useEffect(() => {
-    if (
-      status === 'authenticated' &&
-      (session?.user?.role === 'ADMIN' || session?.user?.role === 'MASTER')
-    ) {
+    if (status === 'authenticated' && isAuthorized()) {
       console.log('🔌 [Dashboard] 소켓 연결 시도:', SOCKET_SERVER_URL);
 
       const socket = io(SOCKET_SERVER_URL, {
@@ -103,7 +109,7 @@ export default function DashboardPage() {
         console.log('✅ [Dashboard] 소켓 연결 성공!');
       });
 
-      // 🟢 데이터 병합 로직 (기존 유지)
+      // 데이터 병합 로직
       socket.on('wheelchair_status_update', (payload: any) => {
         setWheelchairs((prevList) =>
           prevList.map((wc) => {
@@ -133,29 +139,27 @@ export default function DashboardPage() {
         );
       });
 
-      // 🔴 [핵심 로직] 알람 수신 시 소리 제어 (Whitelist)
+      // 🔴 알람 수신 시 -> 소리 울리고 + 팝업 띄우기
       socket.on('new_alarm', (newAlarmData: Alarm) => {
         console.log('🚨 [Dashboard] 알람 수신:', newAlarmData);
         setAlarms((prevAlarms) => [newAlarmData, ...prevAlarms]);
 
         const type = (newAlarmData.alarmType || '').toUpperCase();
 
-        // 🔊 소리를 울릴 '위험' 키워드 목록
-        const SOUND_KEYWORDS = [
-          'FALL', // 낙상
-          'ROLLOVER', // 전복
-          'OBSTACLE', // 장애물
-          'SLOPE', // 경사
-          'LOW_VOLTAGE', // 저전압
-          'POSTURE_ADVICE', // 자세 권고 (이건 알림 필요)
-          'WARNING',
-          'CRITICAL',
-          'EMERGENCY',
-        ];
+        const CRITICAL_KEYWORDS = ['FALL', 'ROLLOVER', 'CRITICAL', 'EMERGENCY', 'WARNING'];
+        const ALERT_KEYWORDS = ['OBSTACLE', 'SLOPE', 'LOW_VOLTAGE', 'POSTURE_ADVICE'];
 
-        // 💡 POSTURE_COMPLETE(성공)는 목록에 없으므로 소리가 안 납니다.
+        // 🔊 소리 재생 (성공 메시지는 제외됨)
+        const SOUND_KEYWORDS = [...CRITICAL_KEYWORDS, ...ALERT_KEYWORDS];
         if (SOUND_KEYWORDS.some((k) => type.includes(k))) {
           triggerAlertSound();
+        }
+
+        // 🚨 팝업 자동 열기
+        if (CRITICAL_KEYWORDS.some((k) => type.includes(k))) {
+          setIsWarningModalOpen(true);
+        } else if (ALERT_KEYWORDS.some((k) => type.includes(k))) {
+          setIsAlertModalOpen(true);
         }
       });
 
@@ -166,11 +170,11 @@ export default function DashboardPage() {
   }, [status, session]);
 
   if (status === 'loading') return <LoadingSpinner />;
-  if (
-    status !== 'authenticated' ||
-    (session?.user?.role !== 'ADMIN' && session?.user?.role !== 'MASTER')
-  )
-    return null;
+
+  // ⛔ 권한 없음 처리 (USER도 통과하도록 수정됨)
+  if (status !== 'authenticated' || !isAuthorized()) {
+    return null; // 또는 <div>접근 권한이 없습니다.</div>
+  }
 
   // --- 핸들러 ---
   const handleWheelchairSelect = (e: any, wheelchair: DashboardWheelchair) => {

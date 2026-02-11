@@ -22,12 +22,24 @@ export default function LandingPage() {
     });
 
     if (res?.error) {
-      // 🔴 수정된 부분: 에러 코드를 확인해서 한글로 변환
+      let errorMessage = `로그인 실패: ${res.error}`;
       if (res.error === 'CredentialsSignin') {
-        alert('기기 ID 또는 비밀번호가 일치하지 않습니다.');
-      } else {
-        alert(`로그인 실패: ${res.error}`);
+        errorMessage = '기기 ID 또는 비밀번호가 일치하지 않습니다.';
       }
+
+      // 👇 [수정] 앱 환경이면 앱에게 부탁하고, 아니면 그냥 alert 띄우기
+      if (typeof window !== 'undefined' && (window as any).ReactNativeWebView) {
+        (window as any).ReactNativeWebView.postMessage(
+          JSON.stringify({
+            type: 'ALERT',
+            title: '로그인 실패',
+            message: errorMessage,
+          }),
+        );
+      } else {
+        alert(errorMessage); // PC 브라우저용 백업
+      }
+
       setLoading(false);
     } else {
       // 로그인 성공 시 미들웨어가 /device-view 등으로 보냄

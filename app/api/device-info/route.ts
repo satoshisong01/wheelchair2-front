@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/authOptions';
 import { Pool } from 'pg';
 
@@ -9,88 +9,101 @@ const pool = new Pool({
 });
 
 export async function GET(req: Request) {
+  let client;
   try {
+    // 1. 세션 및 권한 확인
     const session = await getServerSession(authOptions);
 
-    // 1. 세션 및 기기 사용자 여부 확인
     if (!session || !session.user || (session.user as any).role !== 'DEVICE_USER') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
     const user = session.user as any;
-    const wheelchairId = user.wheelchairId;
-    // device_auths 테이블의 PK(id) 또는 식별자(email/kakao_id)를 가져옵니다.
-    // authOptions에서 session.user.id에 device_auths의 id를 넣어줬다고 가정합니다.
-    const userId = user.id || user.email;
+    const wheelchairId = user.wheelchairId; // 기기 고유 ID (UUID)
+    const userId = user.id || user.email; // 사용자 계정 식별자
 
     if (!wheelchairId) {
       return NextResponse.json({ message: '기기 정보가 없습니다.' }, { status: 404 });
     }
 
-    const client = await pool.connect();
-    try {
-      // 2. wheelchairs + device_auths(내 설정값) + wheelchair_status(기기 상태) + posture_daily
-      // 🟢 변경점: ws.push_* 대신 da.push_* (내 설정)를 가져옵니다.
-      const queryText = `
-        SELECT 
-          w.device_serial,
-          ws.outdoor_temp,
-          ws.weather_desc,
-          ws.humidity,
-          ws.pressure,
-          ws.distance,
-          ws.runtime,
-          ws.temperature as sensor_temp,
-          ws.current_battery,
-          da.push_emergency,  -- 🟢 내 계정의 긴급 알림 설정
-          da.push_battery,    -- 🟢 내 계정의 배터리 알림 설정
-          da.push_posture,    -- 🟢 내 계정의 자세 알림 설정
-          COALESCE(pd.count, 0) AS ulcer_count
-        FROM wheelchairs w
-        JOIN device_auths da ON w.id = da.wheelchair_id -- 사용자와 연결 확인
-        LEFT JOIN wheelchair_status ws ON w.id = ws.wheelchair_id
-        LEFT JOIN posture_daily pd ON pd.wheelchair_id = w.id AND pd.date = CURRENT_DATE
-        WHERE w.id = $1 AND da.id = $2
-      `;
+    client = await pool.connect();
 
-      // $2 자리에 userId를 넣어 내 설정을 조회합니다.
-      const res = await client.query(queryText, [wheelchairId, userId]);
+    // 2. 휠체어 기본 정보 및 실시간 상태(날씨, 배터리, 설정값 등) 조회
+    const deviceInfoQuery = `
+      SELECT 
+        w.device_serial,
+        ws.outdoor_temp,
+        ws.weather_desc,
+        ws.humidity,
+        ws.pressure,
+        ws.distance,
+        ws.runtime,
+        ws.temperature as sensor_temp,
+        ws.current_battery,
+        da.push_emergency,
+        da.push_battery,
+        da.push_posture,
+        COALESCE(pd.count, 0) AS ulcer_count
+      FROM wheelchairs w
+      JOIN device_auths da ON w.id = da.wheelchair_id
+      LEFT JOIN wheelchair_status ws ON w.id = ws.wheelchair_id
+      LEFT JOIN posture_daily pd ON pd.wheelchair_id = w.id AND pd.date = CURRENT_DATE
+      WHERE w.id = $1 AND da.id = $2
+    `;
 
-      if (res.rows.length === 0) {
-        return NextResponse.json({ serial: null, status: null });
-      }
+    const deviceRes = await client.query(deviceInfoQuery, [wheelchairId, userId]);
 
-      const row = res.rows[0];
-
-      // 오늘 예방 횟수
-      const ulcerCount = Number(row.ulcer_count ?? 0);
-
-      return NextResponse.json({
-        serial: row.device_serial,
-        status: {
-          distance: row.distance,
-          runtime: row.runtime,
-          outdoor_temp: row.outdoor_temp,
-          weather_desc: row.weather_desc,
-          humidity: row.humidity,
-          pressure: row.pressure,
-
-          // 🟢 DB(device_auths)에서 가져온 내 설정값 반환
-          push_emergency: row.push_emergency,
-          push_battery: row.push_battery,
-          push_posture: row.push_posture,
-
-          temperature: row.sensor_temp,
-          current_battery: row.current_battery,
-          ulcer_count: ulcerCount,
-          ulcerCount,
-        },
-      });
-    } finally {
-      client.release();
+    if (deviceRes.rows.length === 0) {
+      return NextResponse.json({ serial: null, status: null, alarms: [] });
     }
+
+    const row = deviceRes.rows[0];
+
+    // 3. 해당 기기(wheelchair_id)의 최근 알람 내역 20건 조회
+    // 확인된 컬럼명 반영: id, alarm_type, alarm_condition, is_read, alarm_time, alarm_status, is_resolved
+    const alarmQuery = `
+      SELECT 
+        id, 
+        alarm_type, 
+        alarm_condition, 
+        is_read, 
+        alarm_time, 
+        alarm_status, 
+        is_resolved 
+      FROM alarms 
+      WHERE wheelchair_id = $1 
+      ORDER BY alarm_time DESC 
+      LIMIT 100
+    `;
+
+    const alarmRes = await client.query(alarmQuery, [wheelchairId]);
+
+    // 4. 데이터 정제 및 최종 반환
+    return NextResponse.json({
+      serial: row.device_serial,
+      alarms: alarmRes.rows, // DB에서 조회한 실제 알람 리스트
+      status: {
+        distance: row.distance,
+        runtime: row.runtime,
+        outdoor_temp: row.outdoor_temp,
+        weather_desc: row.weather_desc,
+        humidity: row.humidity,
+        pressure: row.pressure,
+        // 알림 설정값
+        push_emergency: row.push_emergency,
+        push_battery: row.push_battery,
+        push_posture: row.push_posture,
+        // 센서 및 통계 데이터
+        temperature: row.sensor_temp,
+        current_battery: row.current_battery,
+        ulcer_count: Number(row.ulcer_count ?? 0),
+        ulcerCount: Number(row.ulcer_count ?? 0),
+      },
+    });
   } catch (error) {
-    console.error('기기 정보 조회 에러:', error);
+    console.error('🚨 [API] 기기 정보 조회 에러:', error);
     return NextResponse.json({ message: 'Server Error' }, { status: 500 });
+  } finally {
+    if (client) client.release();
   }
 }

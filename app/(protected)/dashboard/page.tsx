@@ -1,5 +1,5 @@
 // 경로: app/(protected)/dashboard/page.tsx
-// 📝 설명: Alarm 타입의 wheelchairId를 string으로 명시하여 타입 에러 해결 및 소켓 데이터 병합 로직 개선
+// 📝 설명: 소켓 데이터 병합 + 위험 상황만 소리/진동 알림 (성공은 무음)
 
 'use client';
 
@@ -11,7 +11,7 @@ import MapView from '@/components/maps/MapView';
 import AlertList from '@/components/common/AlertList';
 import BatteryStatus from '@/components/common/BatteryStatus';
 import styles from './page.module.css';
-import { DashboardWheelchair } from '@/types/wheelchair'; // Alarm import 제거 (여기서 재정의)
+import { DashboardWheelchair } from '@/types/wheelchair';
 import EventModal from '../../../components/common/EventModal';
 import { DashboardSummaryCards } from './components/DashboardSummaryCards';
 import { WheelchairInfoModal } from './components/WheelchairInfoModal';
@@ -19,18 +19,17 @@ import LoadingSpinner from '../../../components/ui/LoadingSpinner';
 
 const SOCKET_SERVER_URL = 'https://broker.firstcorea.com:8080';
 
-// ⭐️ [수정] Alarm 타입 재정의 (wheelchairId를 string으로 확정)
 type Alarm = {
   id: number | string;
-  wheelchairId: string; // 🚨 number -> string 변경 (UUID 호환)
+  wheelchairId: string;
   alarmType: string;
   message?: string;
   alarmCondition?: string;
   alarmTime?: Date | string;
-  alarmStatus?: string; // AlertList가 허용하도록 추가
-  statusId?: number; // AlertList가 허용하도록 추가
+  alarmStatus?: string;
+  statusId?: number;
   deviceSerial?: string;
-  [key: string]: any; // 유연성 확보
+  [key: string]: any;
 };
 
 export default function DashboardPage() {
@@ -44,6 +43,20 @@ export default function DashboardPage() {
   const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
+
+  // 🔊 [기능 추가] 소리 및 진동 실행 함수
+  const triggerAlertSound = () => {
+    try {
+      const audio = new Audio('/sounds/alarm.mp3');
+      audio.play().catch((err) => console.warn('🔊 소리 재생 차단됨:', err));
+
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate([500, 200, 500]); // 징- 징-
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   // 1. 초기 데이터 로드
   useEffect(() => {
@@ -90,7 +103,7 @@ export default function DashboardPage() {
         console.log('✅ [Dashboard] 소켓 연결 성공!');
       });
 
-      // ⭐️ [수정됨] 들어온 모든 데이터를 병합하여 상태 업데이트
+      // 🟢 데이터 병합 로직 (기존 유지)
       socket.on('wheelchair_status_update', (payload: any) => {
         setWheelchairs((prevList) =>
           prevList.map((wc) => {
@@ -101,10 +114,8 @@ export default function DashboardPage() {
               return {
                 ...wc,
                 status: {
-                  ...wc.status, // 1. 기존 상태 유지
-                  ...payload, // 2. [수정됨] 들어온 모든 데이터 병합 (각도, 시간 포함)
-
-                  // 3. 필드명 매핑이 필요한 경우에만 아래처럼 명시 (payload 키 이름이 DB 컬럼과 다를 때)
+                  ...wc.status,
+                  ...payload,
                   current_battery:
                     payload.batteryPercent ?? payload.current_battery ?? wc.status?.current_battery,
                   current_speed: payload.speed ?? payload.current_speed ?? wc.status?.current_speed,
@@ -112,7 +123,6 @@ export default function DashboardPage() {
                   voltage: payload.voltage ?? wc.status?.voltage,
                   latitude: payload.latitude ?? wc.status?.latitude,
                   longitude: payload.longitude ?? wc.status?.longitude,
-
                   is_connected: true,
                   last_seen: new Date().toISOString(),
                 } as any,
@@ -123,12 +133,32 @@ export default function DashboardPage() {
         );
       });
 
+      // 🔴 [핵심 로직] 알람 수신 시 소리 제어 (Whitelist)
       socket.on('new_alarm', (newAlarmData: Alarm) => {
         console.log('🚨 [Dashboard] 알람 수신:', newAlarmData);
         setAlarms((prevAlarms) => [newAlarmData, ...prevAlarms]);
+
+        const type = (newAlarmData.alarmType || '').toUpperCase();
+
+        // 🔊 소리를 울릴 '위험' 키워드 목록
+        const SOUND_KEYWORDS = [
+          'FALL', // 낙상
+          'ROLLOVER', // 전복
+          'OBSTACLE', // 장애물
+          'SLOPE', // 경사
+          'LOW_VOLTAGE', // 저전압
+          'POSTURE_ADVICE', // 자세 권고 (이건 알림 필요)
+          'WARNING',
+          'CRITICAL',
+          'EMERGENCY',
+        ];
+
+        // 💡 POSTURE_COMPLETE(성공)는 목록에 없으므로 소리가 안 납니다.
+        if (SOUND_KEYWORDS.some((k) => type.includes(k))) {
+          triggerAlertSound();
+        }
       });
 
-      // ⭐️ [핵심 수정] 화살표 함수에 중괄호 {}를 쳐서 return void로 만듦
       return () => {
         socket.disconnect();
       };
@@ -151,9 +181,8 @@ export default function DashboardPage() {
 
   const handleAlarmClick = (alarm: Alarm) => {
     const type = (alarm.alarmType || '').toUpperCase();
-    const CRITICAL_KEYWORDS = ['FALL', 'CRITICAL', 'EMERGENCY', 'WARNING'];
+    const CRITICAL_KEYWORDS = ['FALL', 'CRITICAL', 'EMERGENCY', 'WARNING', 'ROLLOVER'];
 
-    // 알람 ID와 일치하는 휠체어 찾기
     const targetWc = wheelchairs.find((w) => String(w.id) === String(alarm.wheelchairId));
     if (targetWc) setSelectedWheelchair(targetWc);
 
@@ -170,7 +199,7 @@ export default function DashboardPage() {
     router.push(`/wheelchair-info?id=${selectedWheelchair.id}`);
   };
 
-  const CRITICAL_KEYWORDS = ['FALL', 'CRITICAL', 'EMERGENCY', 'WARNING', 'FATAL'];
+  const CRITICAL_KEYWORDS = ['FALL', 'CRITICAL', 'EMERGENCY', 'WARNING', 'FATAL', 'ROLLOVER'];
 
   return (
     <div className={styles.container}>
@@ -185,8 +214,6 @@ export default function DashboardPage() {
           <MapView
             wheelchairs={wheelchairs}
             selectedWheelchair={selectedWheelchair}
-            // 🚨 [FIX] MapView가 인자 1개(wheelchair)만 받으므로,
-            // handleWheelchairSelect에 null 이벤트와 휠체어 객체를 전달하도록 감싸줍니다.
             onSelectWheelchair={(wc) => handleWheelchairSelect(null, wc)}
           />
         </div>

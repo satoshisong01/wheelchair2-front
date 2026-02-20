@@ -2,10 +2,7 @@
 
 import { NextResponse, NextRequest } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
-import {
-  TimestreamQueryClient,
-  QueryCommand,
-} from '@aws-sdk/client-timestream-query';
+import { TimestreamQueryClient, QueryCommand } from '@aws-sdk/client-timestream-query';
 
 // [LOG 1] 파일 시작
 console.log('--- [START] AI Dashboard API Route Load (Full Logic) ---');
@@ -25,9 +22,7 @@ const genAI = new GoogleGenAI({ apiKey: API_KEY });
 
 // [LOG 2] 전역 설정 완료
 console.log(
-  `[LOG 2] Global Config Loaded. API Key Variable Loaded: ${
-    API_KEY ? '✅ YES' : '❌ NO'
-  }`
+  `[LOG 2] Global Config Loaded. API Key Variable Loaded: ${API_KEY ? '✅ YES' : '❌ NO'}`,
 );
 
 export async function POST(request: NextRequest) {
@@ -40,22 +35,16 @@ export async function POST(request: NextRequest) {
 
     if (!question) {
       console.log('[LOG FAIL A] No question provided.');
-      return NextResponse.json(
-        { message: '질문이 없습니다.' },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: '질문이 없습니다.' }, { status: 400 });
     }
 
     if (!API_KEY) {
-      console.error(
-        '[LOG FAIL B] CRITICAL: API key is empty! Check .env.local.'
-      );
+      console.error('[LOG FAIL B] CRITICAL: API key is empty! Check .env.local.');
       return NextResponse.json(
         {
-          message:
-            'AI 서비스 키가 .env.local에 설정되지 않았거나 로드되지 않았습니다.',
+          message: 'AI 서비스 키가 .env.local에 설정되지 않았거나 로드되지 않았습니다.',
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -75,7 +64,7 @@ export async function POST(request: NextRequest) {
       
       [Measure Names & Metrics]
       1. Battery Level: measure_name = 'battery_percent' (Unit: %)
-      2. Speed: measure_name = 'speed' (Unit: km/h or m/s)
+      2. Speed: measure_name = 'speed' (Unit: m/h or m/s)
       3. Distance: measure_name = 'distance' (Unit: meter)
 
       [SQL Rules for Timestream]
@@ -107,17 +96,14 @@ export async function POST(request: NextRequest) {
 
     if (generatedSql.trim().length === 0) {
       // SQL을 생성해야 하는데, 빈 응답이 온 경우
-      console.error(
-        '[LOG FAIL D] Gemini returned empty response or invalid content.'
-      );
+      console.error('[LOG FAIL D] Gemini returned empty response or invalid content.');
       return NextResponse.json(
         {
-          message:
-            'Gemini가 데이터베이스 질문과 무관한 요청에는 SQL을 생성할 수 없습니다.',
+          message: 'Gemini가 데이터베이스 질문과 무관한 요청에는 SQL을 생성할 수 없습니다.',
           sql: null,
           data: [],
         },
-        { status: 200 } // 500 대신 200으로 처리하여 클라이언트 에러 알림 방지
+        { status: 200 }, // 500 대신 200으로 처리하여 클라이언트 에러 알림 방지
       );
     } // ⭐️⭐️ [수정 2] String() 함수를 사용하여 replace 호출 전에 문자열임을 보장합니다. ⭐️⭐️
 
@@ -133,12 +119,11 @@ export async function POST(request: NextRequest) {
       console.log('[LOG FAIL C] Security check failed: Not a SELECT query.');
       return NextResponse.json(
         {
-          message:
-            '생성된 쿼리가 SELECT 문이 아니거나, 데이터베이스 질문이 아닙니다.',
+          message: '생성된 쿼리가 SELECT 문이 아니거나, 데이터베이스 질문이 아닙니다.',
           sql: generatedSql, // 생성된 쿼리도 같이 반환
           data: [],
         },
-        { status: 200 }
+        { status: 200 },
       );
     } // 6. SQL 실행 (Timestream)
 
@@ -179,7 +164,7 @@ export async function POST(request: NextRequest) {
         sql: null,
         data: [],
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

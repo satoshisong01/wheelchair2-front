@@ -45,7 +45,7 @@ export default function MobileViewPage() {
   // --- 데이터 가공 ---
   const batteryLevel = status.current_battery ?? 0;
   const isLowBattery = batteryLevel < 20;
-  const distanceKm = status.distance ? Number(status.distance).toFixed(1) : '0.0';
+  const distanceM = status.distance ? Number(status.distance).toFixed(1) : '0.0';
   const rawSeatAngle = status.angle_seat ?? status.angleSeat ?? 0;
   const seatAngle = Number(rawSeatAngle) || 0;
   const sensorTemp = status.temperature ? Number(status.temperature).toFixed(1) : '24.0';
@@ -75,7 +75,7 @@ export default function MobileViewPage() {
     {
       id: 'location',
       title: '위치 및 거리',
-      value: `${distanceKm} km`,
+      value: `${distanceM} m`,
       sub: '오늘 이동 거리',
       icon: <MapPin className="w-6 h-6 text-green-600" />,
       bgColor: 'bg-green-50',

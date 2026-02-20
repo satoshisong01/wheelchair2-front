@@ -14,7 +14,7 @@ export default function LocationPage() {
   // 1. 위치 데이터
   const lat = status.latitude ? Number(status.latitude) : 37.566826;
   const lng = status.longitude ? Number(status.longitude) : 126.9786567;
-  const distanceKm = status.distance ? Number(status.distance).toFixed(1) : '0.0';
+  const distanceM = status.distance ? Number(status.distance).toFixed(1) : '0.0';
 
   // 주소 상태
   const [address, setAddress] = useState('위치 정보 수신 중...');
@@ -154,7 +154,7 @@ export default function LocationPage() {
               오늘 이동 거리
             </h3>
             <div className="text-3xl font-bold text-gray-900">
-              {distanceKm} <span className="text-lg font-normal text-gray-500">km</span>
+              {distanceM} <span className="text-lg font-normal text-gray-500">m</span>
             </div>
           </div>
           

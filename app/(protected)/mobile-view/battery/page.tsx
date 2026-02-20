@@ -200,7 +200,7 @@ export default function BatteryPage() {
               </span>
               <div className="flex items-end">
                 <span className="text-xl font-bold text-gray-900">{estDistance}</span>
-                <span className="text-xs text-gray-500 ml-1 mb-1">km</span>
+                <span className="text-xs text-gray-500 ml-1 mb-1">m</span>
               </div>
             </div>
             <div className="flex-1 bg-white p-4 rounded-2xl shadow-sm border border-indigo-100 ring-1 ring-indigo-50">

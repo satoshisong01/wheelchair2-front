@@ -916,7 +916,7 @@
     font-size: 0.95rem;
   }
 
-  /* 2. 숫자 값 (95%, 0.0km) 완전 검정색으로 */
+  /* 2. 숫자 값 (95%, 0.0m) 완전 검정색으로 */
   .batteryValue,
   .drivingValue {
     color: #000 !important;

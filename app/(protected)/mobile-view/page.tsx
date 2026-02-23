@@ -62,8 +62,12 @@ export default function MobileViewPage() {
   const slopeSide = status.slope_side ?? status.incline_side ?? 0;
 
   // 표시 이름: "Device-xxx" → "xxx"
-  const rawName = wheelchairData?.nickname || (session?.user as { name?: string })?.name || '사용자';
-  const displayName = String(rawName).replace(/^Device-/i, '').trim() || '사용자';
+  const rawName =
+    wheelchairData?.nickname || (session?.user as { name?: string })?.name || '사용자';
+  const displayName =
+    String(rawName)
+      .replace(/^Device-/i, '')
+      .trim() || '사용자';
 
   const menuItems = [
     {
@@ -200,9 +204,8 @@ export default function MobileViewPage() {
           {menuItems.map((item) => {
             const isSlope = 'isSlopeCard' in item && item.isSlopeCard;
             const className = `
-              relative px-4 py-3 rounded-xl border text-left transition-all shadow-sm flex items-center w-full h-auto
+              relative px-4 py-2 rounded-xl border text-left transition-all shadow-sm flex items-center w-full h-auto
               ${item.bgColor} ${item.borderColor}
-              ${item.highlight ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}
               ${isSlope ? '' : 'active:scale-95 cursor-pointer'}
             `;
             const content = (
@@ -213,11 +216,15 @@ export default function MobileViewPage() {
                     <span className={`font-semibold text-sm ${item.textColor} truncate`}>
                       {item.title}
                     </span>
-                    <span className={`text-lg font-bold ${item.textColor} whitespace-nowrap flex-shrink-0`}>
+                    <span
+                      className={`text-lg font-bold ${item.textColor} whitespace-nowrap flex-shrink-0`}
+                    >
                       {item.value}
                     </span>
                   </div>
-                  <div className={`text-[11px] opacity-80 ${item.textColor} truncate`}>{item.sub}</div>
+                  <div className={`text-[11px] opacity-80 ${item.textColor} truncate`}>
+                    {item.sub}
+                  </div>
                 </div>
               </>
             );
@@ -226,12 +233,7 @@ export default function MobileViewPage() {
                 {content}
               </div>
             ) : (
-              <button
-                key={item.id}
-                type="button"
-                onClick={item.onClick}
-                className={className}
-              >
+              <button key={item.id} type="button" onClick={item.onClick} className={className}>
                 {content}
               </button>
             );

@@ -42,14 +42,14 @@ const MobileStatusCard = ({
       </span>
     </div>
 
-    {/* 2. 이미지 (크게!) */}
-    <div className="relative w-full h-20 my-3 flex items-center justify-center">
+    {/* 2. 이미지 (크게 표시) */}
+    <div className="relative w-full h-28 my-3 flex items-center justify-center">
       {imageUrl && (
         <Image
           src={imageUrl}
           alt={title}
-          width={80} 
-          height={80}
+          width={160}
+          height={160}
           className="object-contain opacity-90"
           priority
         />
@@ -78,10 +78,6 @@ export default function PosturePage() {
   const valFoot = status.foot_angle ?? status.footAngle ?? 0;
   const valElev = status.elevation_dist ?? status.elevationDist ?? 0;
   
-  // 경사도 (DB 컬럼명에 따라 다를 수 있어 안전하게 처리)
-  const valSlopeFr = status.slope_fr ?? status.inclineAngle ?? 0;
-  const valSlopeSide = status.slope_side ?? status.incline_side ?? 0;
-
   // ⏱️ 타이머: 시각 전용 (2분 로직·카운트 반영은 서버 worker에서 처리)
   const [timer, setTimer] = useState(0);
   const [isSuccessThisSession, setIsSuccessThisSession] = useState(false);
@@ -245,22 +241,6 @@ export default function PosturePage() {
             value={Number(valElev).toFixed(1)}
             max="30"
             unit="cm"
-          />
-
-          {/* Row 3: 전후방, 측면 */}
-          <MobileStatusCard 
-            title="전후방 경사"
-            imageUrl="/icons/secondtab/front back tilt.svg"
-            value={Number(valSlopeFr).toFixed(1)}
-            max="20"
-            isDanger={Math.abs(Number(valSlopeFr)) > 10}
-          />
-          <MobileStatusCard 
-            title="측면 경사"
-            imageUrl="/icons/secondtab/side tilt.svg"
-            value={Number(valSlopeSide).toFixed(1)}
-            max="20"
-            isDanger={Math.abs(Number(valSlopeSide)) > 5}
           />
         </div>
 

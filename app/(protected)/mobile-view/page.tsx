@@ -15,6 +15,7 @@ import {
   Bell,
   BrainCircuit,
   AlertTriangle,
+  Gauge,
 } from 'lucide-react';
 
 export default function MobileViewPage() {
@@ -56,6 +57,14 @@ export default function MobileViewPage() {
   // 욕창 예방 횟수는 긍정 신호를 포함한 전체 성공 횟수를 표시
   const ulcerPreventionCount = status.ulcer_count ?? status.ulcerCount ?? 0;
 
+  // 전후방·측면 경사 (메인 화면 실시간 카드용)
+  const slopeFr = status.slope_fr ?? status.inclineAngle ?? 0;
+  const slopeSide = status.slope_side ?? status.incline_side ?? 0;
+
+  // 표시 이름: "Device-xxx" → "xxx"
+  const rawName = wheelchairData?.nickname || (session?.user as { name?: string })?.name || '사용자';
+  const displayName = String(rawName).replace(/^Device-/i, '').trim() || '사용자';
+
   const menuItems = [
     {
       id: 'battery',
@@ -82,6 +91,17 @@ export default function MobileViewPage() {
       borderColor: 'border-green-100',
       textColor: 'text-green-900',
       onClick: () => router.push('/mobile-view/location'),
+    },
+    {
+      id: 'slope',
+      title: '전후방·측면 경사',
+      value: `${Number(slopeFr).toFixed(1)}° / ${Number(slopeSide).toFixed(1)}°`,
+      sub: '실시간 경사도',
+      icon: <Gauge className="w-5 h-5 text-amber-600" />,
+      bgColor: 'bg-amber-50',
+      borderColor: 'border-amber-200',
+      textColor: 'text-amber-900',
+      isSlopeCard: true,
     },
     {
       id: 'posture',
@@ -139,18 +159,16 @@ export default function MobileViewPage() {
     <div
       className={`min-h-screen flex flex-col pb-6 transition-colors duration-500 ${hasAlarms ? 'bg-red-50' : 'bg-gray-50'}`}
     >
-      {/* 상단 헤더 */}
+      {/* 상단 헤더 — 패딩 최소화 */}
       <header
-        className={`px-6 py-8 shadow-sm rounded-b-3xl mb-4 z-10 transition-colors duration-500 ${hasAlarms ? 'bg-red-500' : 'bg-white'}`}
+        className={`px-6 py-2 shadow-sm rounded-b-3xl mb-2 z-10 transition-colors duration-500 ${hasAlarms ? 'bg-red-500' : 'bg-white'}`}
       >
         <div className="flex justify-between items-center">
           <div>
-            <h1 className={`text-2xl font-bold ${hasAlarms ? 'text-white' : 'text-gray-800'}`}>
-              {hasAlarms
-                ? '🚨 경고 발생!'
-                : `${wheelchairData?.nickname || session?.user?.name || '사용자'}님 👋`}
+            <h1 className={`text-xl font-bold ${hasAlarms ? 'text-white' : 'text-gray-800'}`}>
+              {hasAlarms ? '🚨 경고 발생!' : `${displayName}님 👋`}
             </h1>
-            <p className={`text-base mt-1 ${hasAlarms ? 'text-red-100' : 'text-gray-500'}`}>
+            <p className={`text-sm mt-0.5 ${hasAlarms ? 'text-red-100' : 'text-gray-500'}`}>
               {hasAlarms
                 ? '휠체어 상태를 확인하세요'
                 : loading
@@ -179,31 +197,45 @@ export default function MobileViewPage() {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 mb-6">
-          {menuItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={item.onClick}
-              className={`
-                relative px-4 py-3 rounded-xl border text-left transition-all active:scale-95 shadow-sm flex items-center w-full h-auto 
-                cursor-pointer 
-                ${item.bgColor} ${item.borderColor} 
-                ${item.highlight ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}
-              `}
-            >
-              <div className="mr-3 flex-shrink-0 [&>svg]:w-5 [&>svg]:h-5">{item.icon}</div>
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-center gap-2 mb-0.5">
-                  <span className={`font-semibold text-sm ${item.textColor} truncate`}>
-                    {item.title}
-                  </span>
-                  <span className={`text-lg font-bold ${item.textColor} whitespace-nowrap flex-shrink-0`}>
-                    {item.value}
-                  </span>
+          {menuItems.map((item) => {
+            const isSlope = 'isSlopeCard' in item && item.isSlopeCard;
+            const className = `
+              relative px-4 py-3 rounded-xl border text-left transition-all shadow-sm flex items-center w-full h-auto
+              ${item.bgColor} ${item.borderColor}
+              ${item.highlight ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}
+              ${isSlope ? '' : 'active:scale-95 cursor-pointer'}
+            `;
+            const content = (
+              <>
+                <div className="mr-3 flex-shrink-0 [&>svg]:w-5 [&>svg]:h-5">{item.icon}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-center gap-2 mb-0.5">
+                    <span className={`font-semibold text-sm ${item.textColor} truncate`}>
+                      {item.title}
+                    </span>
+                    <span className={`text-lg font-bold ${item.textColor} whitespace-nowrap flex-shrink-0`}>
+                      {item.value}
+                    </span>
+                  </div>
+                  <div className={`text-[11px] opacity-80 ${item.textColor} truncate`}>{item.sub}</div>
                 </div>
-                <div className={`text-[11px] opacity-80 ${item.textColor} truncate`}>{item.sub}</div>
+              </>
+            );
+            return isSlope ? (
+              <div key={item.id} className={className}>
+                {content}
               </div>
-            </button>
-          ))}
+            ) : (
+              <button
+                key={item.id}
+                type="button"
+                onClick={item.onClick}
+                className={className}
+              >
+                {content}
+              </button>
+            );
+          })}
         </div>
         <div className="h-6"></div>
       </div>

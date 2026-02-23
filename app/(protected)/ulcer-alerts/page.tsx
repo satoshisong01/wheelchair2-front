@@ -17,6 +17,14 @@ interface UlcerDayRow {
   count: number;
 }
 
+/** 전체 조회 시: 기기별·날짜별 행 */
+interface UlcerFullRow {
+  wheelchair_id: string;
+  device_serial: string;
+  date: string;
+  count: number;
+}
+
 function formatDateStr(d: string) {
   if (!d) return '-';
   // API에서 "2025-03-15" 또는 "2025-03-15T00:00:00.000Z" 형태로 올 수 있음
@@ -42,6 +50,7 @@ export default function UlcerAlertsPage() {
   );
   const [toDate, setToDate] = useState<string>(today.toISOString().slice(0, 10));
   const [rows, setRows] = useState<UlcerDayRow[]>([]);
+  const [fullRows, setFullRows] = useState<UlcerFullRow[]>([]);
   const [loading, setLoading] = useState(false);
 
   const fetchWheelchairs = useCallback(async () => {
@@ -68,6 +77,7 @@ export default function UlcerAlertsPage() {
   const handleSearch = useCallback(async () => {
     if (!selectedId || !fromDate || !toDate) return;
     setLoading(true);
+    setFullRows([]);
     try {
       const params = new URLSearchParams({
         wheelchairId: selectedId,
@@ -86,7 +96,51 @@ export default function UlcerAlertsPage() {
     }
   }, [selectedId, fromDate, toDate]);
 
+  const handleFullSearch = useCallback(async () => {
+    if (!fromDate || !toDate) return;
+    setLoading(true);
+    setRows([]);
+    try {
+      const params = new URLSearchParams({
+        wheelchairId: 'ALL',
+        from: fromDate,
+        to: toDate,
+      });
+      const res = await fetch(`/api/admin/ulcer-history?${params}`);
+      if (!res.ok) throw new Error('전체 조회 실패');
+      const data = await res.json();
+      setFullRows(Array.isArray(data) ? data : []);
+    } catch (e) {
+      console.error(e);
+      setFullRows([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [fromDate, toDate]);
+
   const handleExcelDownload = useCallback(() => {
+    if (fullRows.length > 0) {
+      // 전체 조회 결과: 기기 | 날짜 | 횟수
+      const header = ['기기', '날짜', '욕창 방지 횟수 (35° 2분 유지)'];
+      const body = fullRows.map((r) => [r.device_serial, formatDateStr(r.date), `${r.count}회`]);
+      const csvRows = [
+        ['전체 조회', `${fromDate} ~ ${toDate}`],
+        ['', '', ''],
+        header,
+        ...body,
+      ].map((row) =>
+        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+      );
+      const csv = '\uFEFF' + csvRows.join('\r\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `욕창알림내역_전체_${fromDate}_${toDate}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
     if (rows.length === 0) return;
     const selectedWheelchair = wheelchairs.find((w) => w.id === selectedId);
     const deviceLabel = selectedWheelchair
@@ -110,7 +164,7 @@ export default function UlcerAlertsPage() {
     a.download = `욕창알림내역_${deviceLabel.replace(/[/\\?%*:|"]/g, '_')}_${fromDate}_${toDate}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [rows, fromDate, toDate, selectedId, wheelchairs]);
+  }, [rows, fullRows, fromDate, toDate, selectedId, wheelchairs]);
 
   if (status === 'loading' || !session) {
     return <LoadingSpinner />;
@@ -167,11 +221,19 @@ export default function UlcerAlertsPage() {
         >
           검색
         </button>
+        <button
+          type="button"
+          className={styles.searchButton}
+          onClick={handleFullSearch}
+          disabled={loading || !fromDate || !toDate}
+        >
+          전체 조회
+        </button>
       </div>
 
       {loading && <div className={styles.loadingText}>조회 중...</div>}
 
-      {!loading && rows.length > 0 && (
+      {!loading && (rows.length > 0 || fullRows.length > 0) && (
         <div className={styles.downloadSection}>
           <button
             type="button"
@@ -185,45 +247,74 @@ export default function UlcerAlertsPage() {
 
       {!loading && (
         <>
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th className={styles.thDate}>날짜</th>
-                  <th className={styles.thCount}>욕창 방지 횟수 (35° 2분 유지)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.length === 0 ? (
+          {/* 전체 조회 결과: 기기 | 날짜 | 횟수 */}
+          {fullRows.length > 0 && (
+            <div className={styles.tableWrap}>
+              <table className={styles.table}>
+                <thead>
                   <tr>
-                    <td colSpan={2} className={styles.emptyCell}>
-                      선택한 기간에 기록이 없습니다.
-                    </td>
+                    <th className={styles.thDate}>기기</th>
+                    <th className={styles.thDate}>날짜</th>
+                    <th className={styles.thCount}>욕창 방지 횟수 (35° 2분 유지)</th>
                   </tr>
-                ) : (
-                  rows.map((r) => (
-                    <tr key={r.date}>
+                </thead>
+                <tbody>
+                  {fullRows.map((r) => (
+                    <tr key={`${r.wheelchair_id}-${r.date}`}>
+                      <td className={styles.tdDate}>{r.device_serial}</td>
                       <td className={styles.tdDate}>{formatDateStr(r.date)}</td>
                       <td className={styles.tdCount}>{r.count}회</td>
                     </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* 단일 기기 조회 결과 */}
+          {fullRows.length === 0 && (
+            <>
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th className={styles.thDate}>날짜</th>
+                      <th className={styles.thCount}>욕창 방지 횟수 (35° 2분 유지)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.length === 0 ? (
+                      <tr>
+                        <td colSpan={2} className={styles.emptyCell}>
+                          기기를 선택하고 검색하거나, 전체 조회를 눌러주세요.
+                        </td>
+                      </tr>
+                    ) : (
+                      rows.map((r) => (
+                        <tr key={r.date}>
+                          <td className={styles.tdDate}>{formatDateStr(r.date)}</td>
+                          <td className={styles.tdCount}>{r.count}회</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className={styles.cardList}>
+                {rows.length === 0 ? (
+                  <div className={styles.emptyCell}>선택한 기간에 기록이 없습니다.</div>
+                ) : (
+                  rows.map((r) => (
+                    <div key={r.date} className={styles.cardItem}>
+                      <span className={styles.cardDate}>{formatDateStr(r.date)}</span>
+                      <span className={styles.cardCount}>{r.count}회</span>
+                    </div>
                   ))
                 )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className={styles.cardList}>
-            {rows.length === 0 ? (
-              <div className={styles.emptyCell}>선택한 기간에 기록이 없습니다.</div>
-            ) : (
-              rows.map((r) => (
-                <div key={r.date} className={styles.cardItem}>
-                  <span className={styles.cardDate}>{formatDateStr(r.date)}</span>
-                  <span className={styles.cardCount}>{r.count}회</span>
-                </div>
-              ))
-            )}
-          </div>
+              </div>
+            </>
+          )}
         </>
       )}
     </div>

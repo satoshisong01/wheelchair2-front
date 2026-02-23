@@ -4,6 +4,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { signOut, useSession } from 'next-auth/react';
+import { LogOut } from 'lucide-react';
 import styles from './MobileHeader.module.css';
 
 export default function MobileHeader() {
@@ -43,17 +44,13 @@ export default function MobileHeader() {
       <div className={styles.actions}>
         {/* 로그아웃 버튼 */}
         <button
-          style={{
-            border: '2px solid black',
-            borderRadius: '5px',
-            fontWeight: 'bold',
-            marginRight: '10px',
-          }}
           className={`${styles.iconBtn} ${styles.logoutBtn}`}
           onClick={handleLogout}
           aria-label="로그아웃"
+          title="로그아웃"
         >
-          logout🚪
+          <LogOut className="w-5 h-5 flex-shrink-0" aria-hidden />
+          <span className="text-xs font-semibold ml-1 whitespace-nowrap">로그아웃</span>
         </button>
 
         {/* 권한에 따라 아이콘 변경 */}

@@ -53,8 +53,14 @@
   border-radius: 50%;
 }
 
-/* ⭐️ [추가] 로그아웃 버튼 전용 스타일 */
+/* 로그아웃 버튼: 작은 화면에서도 잘리지 않도록 아이콘+짧은 텍스트, 작은 크기 */
 .logoutBtn {
-  /* margin-right: 5px; */
-  font-size: 1.2rem;
+  font-size: 0.75rem;
+  padding: 4px 8px;
+  border: 1px solid #333;
+  border-radius: 6px;
+  gap: 2px;
+}
+.logoutBtn span {
+  font-size: inherit;
 }

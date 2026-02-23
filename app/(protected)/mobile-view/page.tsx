@@ -64,7 +64,7 @@ export default function MobileViewPage() {
       sub: isLowBattery ? '충전 필요!' : '주행 가능',
       icon: (
         <Battery
-          className={`w-6 h-6 ${batteryLevel === 0 ? 'text-gray-400' : isLowBattery ? 'text-red-600' : 'text-blue-600'}`}
+          className={`w-5 h-5 ${batteryLevel === 0 ? 'text-gray-400' : isLowBattery ? 'text-red-600' : 'text-blue-600'}`}
         />
       ),
       bgColor: batteryLevel === 0 ? 'bg-gray-50' : isLowBattery ? 'bg-red-50' : 'bg-blue-50',
@@ -77,7 +77,7 @@ export default function MobileViewPage() {
       title: '위치 및 거리',
       value: `${distanceM} m`,
       sub: '오늘 이동 거리',
-      icon: <MapPin className="w-6 h-6 text-green-600" />,
+      icon: <MapPin className="w-5 h-5 text-green-600" />,
       bgColor: 'bg-green-50',
       borderColor: 'border-green-100',
       textColor: 'text-green-900',
@@ -85,10 +85,10 @@ export default function MobileViewPage() {
     },
     {
       id: 'posture',
-      title: '자세 및 욕창 예방',
+      title: '자세·욕창 예방',
       value: `예방 ${ulcerPreventionCount}회`,
       sub: `현재 시트 각도 ${seatAngle.toFixed(0)}°`,
-      icon: <Accessibility className="w-6 h-6 text-indigo-600" />,
+      icon: <Accessibility className="w-5 h-5 text-indigo-600" />,
       bgColor: 'bg-indigo-50',
       borderColor: 'border-indigo-200',
       textColor: 'text-indigo-900',
@@ -100,7 +100,7 @@ export default function MobileViewPage() {
       title: '외부 날씨 정보',
       value: `${outdoorTemp}°C`,
       sub: `현재 상태: ${weatherDesc}`,
-      icon: <CloudSun className="w-6 h-6 text-orange-600" />,
+      icon: <CloudSun className="w-5 h-5 text-orange-600" />,
       bgColor: 'bg-orange-50',
       borderColor: 'border-orange-100',
       textColor: 'text-orange-900',
@@ -114,7 +114,7 @@ export default function MobileViewPage() {
       sub: hasAlarms ? '확인 필요' : '최근 경고 없음',
       icon: (
         <Bell
-          className={`w-6 h-6 ${hasAlarms ? 'text-red-600 animate-bounce' : 'text-gray-600'}`}
+          className={`w-5 h-5 ${hasAlarms ? 'text-red-600 animate-bounce' : 'text-gray-600'}`}
         />
       ),
       bgColor: hasAlarms ? 'bg-red-100' : 'bg-gray-50',
@@ -127,7 +127,7 @@ export default function MobileViewPage() {
       title: '패턴 인식',
       value: '분석중',
       sub: '주행 습관 분석',
-      icon: <BrainCircuit className="w-6 h-6 text-purple-600" />,
+      icon: <BrainCircuit className="w-5 h-5 text-purple-600" />,
       bgColor: 'bg-purple-50',
       borderColor: 'border-purple-100',
       textColor: 'text-purple-900',
@@ -178,29 +178,29 @@ export default function MobileViewPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 mb-6">
           {menuItems.map((item) => (
             <button
               key={item.id}
               onClick={item.onClick}
               className={`
-                relative px-5 py-4 rounded-2xl border text-left transition-all active:scale-95 shadow-sm flex items-center w-full h-auto 
+                relative px-4 py-3 rounded-xl border text-left transition-all active:scale-95 shadow-sm flex items-center w-full h-auto 
                 cursor-pointer 
                 ${item.bgColor} ${item.borderColor} 
                 ${item.highlight ? 'ring-2 ring-indigo-400 ring-offset-1' : ''}
               `}
             >
-              <div className="mr-4 flex-shrink-0">{item.icon}</div>
+              <div className="mr-3 flex-shrink-0 [&>svg]:w-5 [&>svg]:h-5">{item.icon}</div>
               <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-center mb-0.5">
-                  <span className={`font-bold text-base ${item.textColor} truncate mr-2`}>
+                <div className="flex justify-between items-center gap-2 mb-0.5">
+                  <span className={`font-semibold text-sm ${item.textColor} truncate`}>
                     {item.title}
                   </span>
-                  <span className={`text-2xl font-bold ${item.textColor} whitespace-nowrap`}>
+                  <span className={`text-lg font-bold ${item.textColor} whitespace-nowrap flex-shrink-0`}>
                     {item.value}
                   </span>
                 </div>
-                <div className={`text-xs opacity-80 ${item.textColor} truncate`}>{item.sub}</div>
+                <div className={`text-[11px] opacity-80 ${item.textColor} truncate`}>{item.sub}</div>
               </div>
             </button>
           ))}

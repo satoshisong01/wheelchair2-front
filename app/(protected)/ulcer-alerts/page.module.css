@@ -181,6 +181,44 @@
   gap: 10px;
 }
 
+/* 전체 조회 결과용 카드 (모바일에서만 표시) */
+.cardListFull {
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cardItemFull {
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.cardItemFull span {
+  font-size: 14px;
+}
+
+.cardDevice {
+  font-weight: 600;
+  color: #111;
+  flex-basis: 100%;
+}
+
+.cardDateFull {
+  color: #555;
+}
+
+.cardCountFull {
+  font-weight: 700;
+  color: #0d6efd;
+  margin-left: auto;
+}
+
 .cardItem {
   background: #fff;
   border: 1px solid #eee;
@@ -240,6 +278,10 @@
   }
 
   .cardList {
+    display: flex;
+  }
+
+  .cardListFull {
     display: flex;
   }
 

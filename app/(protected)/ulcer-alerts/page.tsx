@@ -247,28 +247,39 @@ export default function UlcerAlertsPage() {
 
       {!loading && (
         <>
-          {/* 전체 조회 결과: 기기 | 날짜 | 횟수 */}
+          {/* 전체 조회 결과: 기기 | 날짜 | 횟수 — PC는 테이블, 모바일은 카드 */}
           {fullRows.length > 0 && (
-            <div className={styles.tableWrap}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th className={styles.thDate}>기기</th>
-                    <th className={styles.thDate}>날짜</th>
-                    <th className={styles.thCount}>욕창 방지 횟수 (35° 2분 유지)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {fullRows.map((r) => (
-                    <tr key={`${r.wheelchair_id}-${r.date}`}>
-                      <td className={styles.tdDate}>{r.device_serial}</td>
-                      <td className={styles.tdDate}>{formatDateStr(r.date)}</td>
-                      <td className={styles.tdCount}>{r.count}회</td>
+            <>
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th className={styles.thDate}>기기</th>
+                      <th className={styles.thDate}>날짜</th>
+                      <th className={styles.thCount}>욕창 방지 횟수 (35° 2분 유지)</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {fullRows.map((r) => (
+                      <tr key={`${r.wheelchair_id}-${r.date}`}>
+                        <td className={styles.tdDate}>{r.device_serial}</td>
+                        <td className={styles.tdDate}>{formatDateStr(r.date)}</td>
+                        <td className={styles.tdCount}>{r.count}회</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className={styles.cardListFull}>
+                {fullRows.map((r) => (
+                  <div key={`${r.wheelchair_id}-${r.date}`} className={styles.cardItemFull}>
+                    <span className={styles.cardDevice}>{r.device_serial}</span>
+                    <span className={styles.cardDateFull}>{formatDateStr(r.date)}</span>
+                    <span className={styles.cardCountFull}>{r.count}회</span>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
 
           {/* 단일 기기 조회 결과 */}

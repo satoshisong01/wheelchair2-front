@@ -221,7 +221,10 @@ export default function DashboardPage() {
             onSelectWheelchair={(wc) => handleWheelchairSelect(null, wc)}
           />
         </div>
-        <DashboardSummaryCards wheelchairs={wheelchairs} />
+        <DashboardSummaryCards
+            wheelchairs={wheelchairs}
+            onSelectWheelchair={(wc) => router.push(`/wheelchair-info?id=${wc.id}`)}
+          />
       </div>
 
       <div className={styles.bottomRow}>

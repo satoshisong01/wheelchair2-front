@@ -1,14 +1,17 @@
 // 경로: app/(protected)/dashboard/components/DashboardSummaryCards.tsx
-// 📝 설명: DB 컬럼명(current) 반영, 30초 통신 없으면 OFF→대기 반영 (DrivingInfoPanel과 동일 기준)
+// 📝 설명: DB 컬럼명(current) 반영, 30초 통신 없으면 OFF→대기 반영, 카드 클릭 시 상태별 휠체어 리스트 모달
 
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
 import { DashboardWheelchair } from '@/types/wheelchair';
 import styles from '../page.module.css';
 
 /** 30초간 통신 없으면 OFF로 간주 (DrivingInfoPanel과 동일) */
 const DISCONNECT_THRESHOLD_MS = 30 * 1000;
+
+type StateKey = 'idle' | 'operating' | 'charging' | 'fall' | 'breakdown' | 'obstacle';
 
 const alertIcons = {
   normal: '/icons/dashboard/lamp-gray.svg',
@@ -25,9 +28,12 @@ function isDataFresh(w: DashboardWheelchair): boolean {
 
 export function DashboardSummaryCards({
   wheelchairs,
+  onSelectWheelchair,
 }: {
   wheelchairs: DashboardWheelchair[];
+  onSelectWheelchair?: (wc: DashboardWheelchair) => void;
 }) {
+  const [modalState, setModalState] = useState<{ open: boolean; stateKey: StateKey; title: string; count: number } | null>(null);
   // 30초 통신 없으면 해당 기기는 운행/충전이 아니라 대기로 집계
 
   // 1. 운행 중: 데이터가 신선하고, 속도가 0.1 이상일 때
@@ -53,65 +59,50 @@ export function DashboardSummaryCards({
     return speed <= 0.1 && current <= 0;
   });
 
-  // 4. 알람 카운트 (API나 소켓에서 받은 alarms 배열 길이를 사용하는 것이 정확하나, 여기서는 일단 0 처리)
-  // (실제 알람 연동은 page.tsx에서 alarms state를 prop으로 받아와야 정확함. 현재는 구조 유지)
   const stats = {
     operating: operatingWCs.length,
     charging: chargingWCs.length,
     idle: idleWCs.length,
-    fall: 0, // page.tsx에서 계산해서 넘겨주는 구조로 추후 개선 권장
+    fall: 0,
     obstacle: 0,
   };
 
-  const summaryData = [
-    {
-      title: '대기',
-      value: stats.idle,
-      unit: '대',
-      alertType: 'normal',
-      iconUrl: '/icons/dashboard/wheelchair02.svg',
-    },
-    {
-      title: '운행',
-      value: stats.operating,
-      unit: '대',
-      alertType: 'operating',
-      iconUrl: '/icons/dashboard/wheelchair03.svg',
-    },
-    {
-      title: '충전',
-      value: stats.charging,
-      unit: '대',
-      alertType: 'normal',
-      iconUrl: '/icons/dashboard/battery-line.svg',
-    },
-    {
-      title: '낙상 위험',
-      value: stats.fall,
-      unit: '대',
-      alertType: stats.fall > 0 ? 'danger' : 'normal',
-      iconUrl: '/icons/dashboard/dangers.svg',
-    },
-    {
-      title: '고장',
-      value: 0,
-      unit: '대',
-      alertType: 'danger',
-      iconUrl: '/icons/dashboard/breakdown.svg',
-    },
-    {
-      title: '장애물 감지',
-      value: stats.obstacle,
-      unit: '대',
-      alertType: stats.obstacle > 0 ? 'danger' : 'normal',
-      iconUrl: '/icons/dashboard/obstacle.svg',
-    },
+  const listByState: Record<StateKey, DashboardWheelchair[]> = {
+    idle: idleWCs,
+    operating: operatingWCs,
+    charging: chargingWCs,
+    fall: [],
+    breakdown: [],
+    obstacle: [],
+  };
+
+  const summaryData: { stateKey: StateKey; title: string; value: number; unit: string; alertType: string; iconUrl: string }[] = [
+    { stateKey: 'idle', title: '대기', value: stats.idle, unit: '대', alertType: 'normal', iconUrl: '/icons/dashboard/wheelchair02.svg' },
+    { stateKey: 'operating', title: '운행', value: stats.operating, unit: '대', alertType: 'operating', iconUrl: '/icons/dashboard/wheelchair03.svg' },
+    { stateKey: 'charging', title: '충전', value: stats.charging, unit: '대', alertType: 'normal', iconUrl: '/icons/dashboard/battery-line.svg' },
+    { stateKey: 'fall', title: '낙상 위험', value: stats.fall, unit: '대', alertType: stats.fall > 0 ? 'danger' : 'normal', iconUrl: '/icons/dashboard/dangers.svg' },
+    { stateKey: 'breakdown', title: '고장', value: 0, unit: '대', alertType: 'danger', iconUrl: '/icons/dashboard/breakdown.svg' },
+    { stateKey: 'obstacle', title: '장애물 감지', value: stats.obstacle, unit: '대', alertType: stats.obstacle > 0 ? 'danger' : 'normal', iconUrl: '/icons/dashboard/obstacle.svg' },
   ];
+
+  const openModal = (stateKey: StateKey, title: string, count: number) => {
+    setModalState({ open: true, stateKey, title, count });
+  };
+
+  const list = modalState ? listByState[modalState.stateKey] : [];
 
   return (
     <div className={styles.summarySection}>
       {summaryData.map((item) => (
-        <div key={item.title} className={styles.summaryCard}>
+        <div
+          key={item.title}
+          className={styles.summaryCard}
+          role="button"
+          tabIndex={0}
+          onClick={() => openModal(item.stateKey, item.title, item.value)}
+          onKeyDown={(e) => e.key === 'Enter' && openModal(item.stateKey, item.title, item.value)}
+          style={{ cursor: 'pointer' }}
+        >
           <div className={styles.contentLeft}>
             <div className={styles.titleRow}>
               <div className={styles.summaryCardTitle}>{item.title}</div>
@@ -141,6 +132,51 @@ export function DashboardSummaryCards({
           </div>
         </div>
       ))}
+
+      {/* 상태별 휠체어 리스트 모달 */}
+      {modalState?.open && (
+        <div className={styles.modalBackdrop} onClick={() => setModalState(null)}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <div className={styles.modalHeader}>
+              <h3>{modalState.title} ({modalState.count}대)</h3>
+              <button type="button" onClick={() => setModalState(null)} className={styles.modalCloseButton} aria-label="닫기">
+                &times;
+              </button>
+            </div>
+            <div className={styles.modalBody} style={{ maxHeight: 360, overflowY: 'auto' }}>
+              {list.length === 0 ? (
+                <p className={styles.stateListEmpty}>해당 상태의 휠체어가 없습니다.</p>
+              ) : (
+                <ul className={styles.stateList}>
+                  {list.map((wc) => (
+                    <li
+                      key={wc.id}
+                      className={styles.stateListItem}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => {
+                        onSelectWheelchair?.(wc);
+                        setModalState(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          onSelectWheelchair?.(wc);
+                          setModalState(null);
+                        }
+                      }}
+                    >
+                      <span className={styles.stateListSerial}>
+                        {wc.device_serial ?? (wc as { deviceSerial?: string }).deviceSerial ?? `ID ${String(wc.id).slice(0, 8)}`}
+                      </span>
+                      <span className={styles.stateListArrow}>→</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

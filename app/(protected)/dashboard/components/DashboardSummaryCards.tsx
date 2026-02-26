@@ -20,7 +20,9 @@ const alertIcons = {
 };
 
 function isDataFresh(w: DashboardWheelchair): boolean {
-  const lastSeen = (w.status as { last_seen?: string; lastSeen?: string })?.last_seen ?? (w.status as { last_seen?: string; lastSeen?: string })?.lastSeen;
+  const lastSeen =
+    (w.status as { last_seen?: string; lastSeen?: string })?.last_seen ??
+    (w.status as { last_seen?: string; lastSeen?: string })?.lastSeen;
   if (!lastSeen) return false;
   const diff = Date.now() - new Date(lastSeen).getTime();
   return diff < DISCONNECT_THRESHOLD_MS;
@@ -33,7 +35,12 @@ export function DashboardSummaryCards({
   wheelchairs: DashboardWheelchair[];
   onSelectWheelchair?: (wc: DashboardWheelchair) => void;
 }) {
-  const [modalState, setModalState] = useState<{ open: boolean; stateKey: StateKey; title: string; count: number } | null>(null);
+  const [modalState, setModalState] = useState<{
+    open: boolean;
+    stateKey: StateKey;
+    title: string;
+    count: number;
+  } | null>(null);
   // 30초 통신 없으면 해당 기기는 운행/충전이 아니라 대기로 집계
 
   // 1. 운행 중: 데이터가 신선하고, 속도가 0.1 이상일 때
@@ -76,13 +83,62 @@ export function DashboardSummaryCards({
     obstacle: [],
   };
 
-  const summaryData: { stateKey: StateKey; title: string; value: number; unit: string; alertType: string; iconUrl: string }[] = [
-    { stateKey: 'idle', title: '대기', value: stats.idle, unit: '대', alertType: 'normal', iconUrl: '/icons/dashboard/wheelchair02.svg' },
-    { stateKey: 'operating', title: '운행', value: stats.operating, unit: '대', alertType: 'operating', iconUrl: '/icons/dashboard/wheelchair03.svg' },
-    { stateKey: 'charging', title: '충전', value: stats.charging, unit: '대', alertType: 'normal', iconUrl: '/icons/dashboard/battery-line.svg' },
-    { stateKey: 'fall', title: '낙상 위험', value: stats.fall, unit: '대', alertType: stats.fall > 0 ? 'danger' : 'normal', iconUrl: '/icons/dashboard/dangers.svg' },
-    { stateKey: 'breakdown', title: '고장', value: 0, unit: '대', alertType: 'danger', iconUrl: '/icons/dashboard/breakdown.svg' },
-    { stateKey: 'obstacle', title: '장애물 감지', value: stats.obstacle, unit: '대', alertType: stats.obstacle > 0 ? 'danger' : 'normal', iconUrl: '/icons/dashboard/obstacle.svg' },
+  const summaryData: {
+    stateKey: StateKey;
+    title: string;
+    value: number;
+    unit: string;
+    alertType: string;
+    iconUrl: string;
+  }[] = [
+    {
+      stateKey: 'idle',
+      title: '대기',
+      value: stats.idle,
+      unit: '대',
+      alertType: 'normal',
+      iconUrl: '/icons/dashboard/wheelchair02.svg',
+    },
+    {
+      stateKey: 'operating',
+      title: '운행',
+      value: stats.operating,
+      unit: '대',
+      alertType: 'operating',
+      iconUrl: '/icons/dashboard/wheelchair03.svg',
+    },
+    {
+      stateKey: 'charging',
+      title: '충전',
+      value: stats.charging,
+      unit: '대',
+      alertType: 'normal',
+      iconUrl: '/icons/dashboard/battery-line.svg',
+    },
+    {
+      stateKey: 'fall',
+      title: '낙상 위험',
+      value: stats.fall,
+      unit: '대',
+      alertType: stats.fall > 0 ? 'danger' : 'normal',
+      iconUrl: '/icons/dashboard/dangers.svg',
+    },
+    {
+      stateKey: 'breakdown',
+      title: '통신 에러',
+      value: 0,
+      unit: '대',
+      alertType: 'danger',
+      iconUrl: '/icons/dashboard/breakdown.svg',
+    },
+    {
+      stateKey: 'obstacle',
+      title: '장애물 감지',
+      value: stats.obstacle,
+      unit: '대',
+      alertType: stats.obstacle > 0 ? 'danger' : 'normal',
+      iconUrl: '/icons/dashboard/obstacle.svg',
+    },
   ];
 
   const openModal = (stateKey: StateKey, title: string, count: number) => {
@@ -107,10 +163,7 @@ export function DashboardSummaryCards({
             <div className={styles.titleRow}>
               <div className={styles.summaryCardTitle}>{item.title}</div>
               <Image
-                src={
-                  alertIcons[item.alertType as keyof typeof alertIcons] ||
-                  alertIcons.normal
-                }
+                src={alertIcons[item.alertType as keyof typeof alertIcons] || alertIcons.normal}
                 alt={`${item.title} 상태`}
                 width={20}
                 height={20}
@@ -136,10 +189,21 @@ export function DashboardSummaryCards({
       {/* 상태별 휠체어 리스트 모달 */}
       {modalState?.open && (
         <div className={styles.modalBackdrop} onClick={() => setModalState(null)}>
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
+          <div
+            className={styles.modalContent}
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: 420 }}
+          >
             <div className={styles.modalHeader}>
-              <h3>{modalState.title} ({modalState.count}대)</h3>
-              <button type="button" onClick={() => setModalState(null)} className={styles.modalCloseButton} aria-label="닫기">
+              <h3>
+                {modalState.title} ({modalState.count}대)
+              </h3>
+              <button
+                type="button"
+                onClick={() => setModalState(null)}
+                className={styles.modalCloseButton}
+                aria-label="닫기"
+              >
                 &times;
               </button>
             </div>
@@ -166,7 +230,9 @@ export function DashboardSummaryCards({
                       }}
                     >
                       <span className={styles.stateListSerial}>
-                        {wc.device_serial ?? (wc as { deviceSerial?: string }).deviceSerial ?? `ID ${String(wc.id).slice(0, 8)}`}
+                        {wc.device_serial ??
+                          (wc as { deviceSerial?: string }).deviceSerial ??
+                          `ID ${String(wc.id).slice(0, 8)}`}
                       </span>
                       <span className={styles.stateListArrow}>→</span>
                     </li>

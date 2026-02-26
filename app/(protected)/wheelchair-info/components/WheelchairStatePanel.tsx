@@ -14,11 +14,11 @@ const ALL_STATES = [
   { key: 'idle', label: '대기', iconUrl: '/icons/dashboard/wheelchair02.svg', type: 'status' },
   { key: 'charging', label: '충전', iconUrl: '/icons/dashboard/battery-line.svg', type: 'status' },
   { key: 'operating', label: '운행', iconUrl: '/icons/dashboard/wheelchair03.svg', type: 'status' },
-  { key: 'error', label: '고장', iconUrl: '/icons/dashboard/breakdown.svg', type: 'alert' },
+  { key: 'error', label: '통신 에러', iconUrl: '/icons/dashboard/breakdown.svg', type: 'alert' },
   { key: 'fall', label: '낙상 위험', iconUrl: '/icons/dashboard/dangers.svg', type: 'alert' },
   {
     key: 'obstacle',
-    label: '장애물 감지',
+    label: '장애물감지',
     iconUrl: '/icons/dashboard/obstacle.svg',
     type: 'alert',
   },

@@ -90,28 +90,62 @@ export function useMyWheelchair() {
       console.log('✅ [Mobile Hook] 소켓 연결 성공!');
     });
 
+    const myWheelchairId = (session.user as any)?.wheelchairId;
+
     // 3. 실시간 주행 상태 데이터 업데이트
     socketInstance.on('wheelchair_status_update', (update: any) => {
-      // 🟢 camelCase로 온 경사/각도 필드를 snake_case와 함께 매핑
-      const mappedUpdate = {
-        ...update,
-        angle_back: update.angleBack ?? update.angle_back,
-        angle_seat: update.angleSeat ?? update.angle_seat,
-        foot_angle: update.footAngle ?? update.foot_angle,
-        elevation_dist: update.elevationDist ?? update.elevation_dist,
-        slope_fr: update.slopeFr ?? update.slope_fr,
-        slope_side: update.slopeSide ?? update.slope_side,
-      };
+      // 내 휠체어가 아닌 업데이트는 무시
+      if (
+        myWheelchairId &&
+        String(update.wheelchairId || update.wheelchair_id) !== String(myWheelchairId)
+      ) {
+        return;
+      }
 
+      // 🟢 camelCase로 온 경사/각도 필드를 snake_case와 함께 매핑
       setData((prev) => {
         if (!prev) return prev;
+
+        const prevStatus = prev.status || {};
+        const nextStatus: any = { ...prevStatus };
+
+        const assign = (key: string, value: any) => {
+          if (value !== null && value !== undefined) {
+            nextStatus[key] = value;
+          }
+        };
+
+        // 1) 배터리 / 속도 / 전압 / 전류
+        assign('current_battery', update.batteryPercent ?? update.current_battery);
+        assign('current_speed', update.speed ?? update.current_speed);
+        assign('voltage', update.voltage);
+        assign('current', update.current);
+
+        // 2) 주행 데이터
+        assign('runtime', update.runtime);
+        assign('distance', update.distance);
+
+        // 3) 자세/각도
+        assign('angle_back', update.angleBack ?? update.angle_back);
+        assign('angle_seat', update.angleSeat ?? update.angle_seat);
+        assign('foot_angle', update.footAngle ?? update.foot_angle);
+        assign('elevation_dist', update.elevationDist ?? update.elevation_dist);
+        assign('slope_fr', update.slopeFr ?? update.slope_fr);
+        assign('slope_side', update.slopeSide ?? update.slope_side);
+
+        // 4) 환경 / GPS
+        assign('latitude', update.latitude);
+        assign('longitude', update.longitude);
+        assign('temperature', update.temperature);
+        assign('humidity', update.humidity);
+        assign('pressure', update.pressure);
+
+        // 5) 메타
+        nextStatus.last_seen = new Date().toISOString();
+
         return {
           ...prev,
-          status: {
-            ...(prev.status || {}),
-            ...mappedUpdate,
-            last_seen: new Date().toISOString(),
-          },
+          status: nextStatus,
         } as DashboardWheelchair;
       });
     });

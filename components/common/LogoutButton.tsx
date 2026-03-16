@@ -9,6 +9,17 @@ export default function LogoutButton() {
   const router = useRouter();
 
   const handleLogout = async () => {
+    // 앱(WebView) 환경에 LOGOUT 신호 전달
+    try {
+      if ((window as any).ReactNativeWebView) {
+        (window as any).ReactNativeWebView.postMessage(
+          JSON.stringify({ type: 'LOGOUT' }),
+        );
+      }
+    } catch (e) {
+      console.error('LOGOUT postMessage 실패:', e);
+    }
+
     await signOut({ redirect: false });
     router.push('/login');
     signOut({ callbackUrl: '/login' });

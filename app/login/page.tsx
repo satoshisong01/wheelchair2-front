@@ -51,6 +51,19 @@ export default function LoginPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
+  // 🟢 앱(WebView) 환경에서 세션 만료를 알려주고 싶을 때 사용
+  useEffect(() => {
+    try {
+      if ((window as any).ReactNativeWebView) {
+        (window as any).ReactNativeWebView.postMessage(
+          JSON.stringify({ type: 'SESSION_EXPIRED' }),
+        );
+      }
+    } catch (e) {
+      console.error('SESSION_EXPIRED postMessage 실패:', e);
+    }
+  }, []);
+
   useEffect(() => {
     // ⭐️ [FIX] 인증되면 무조건 login 페이지를 떠나 root('/')로 이동합니다.
     // 미들웨어가 /welcome, /pending 등으로 최종 경로를 결정합니다.

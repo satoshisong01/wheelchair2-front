@@ -26,6 +26,24 @@ export default function MobileViewPage() {
 
   const status = (wheelchairData?.status || {}) as any;
 
+  // 🟢 앱(WebView) 환경일 때 로그인 성공 정보 전달
+  useEffect(() => {
+    if (!(window as any).ReactNativeWebView) return;
+    if (!session || !wheelchairData) return;
+
+    try {
+      (window as any).ReactNativeWebView.postMessage(
+        JSON.stringify({
+          type: 'LOGIN_SUCCESS',
+          userId: (session.user as any).id,
+          wheelchairId: (session.user as any).wheelchairId || wheelchairData.id,
+        }),
+      );
+    } catch (e) {
+      console.error('LOGIN_SUCCESS postMessage 실패:', e);
+    }
+  }, [session, wheelchairData]);
+
   // ⭐️ [핵심 수정] 미확인 알람 중 '긍정 신호(성공/완료)'를 제외하고 실제 경고 갯수만 계산
   const unresolveWarningAlarms = alarms.filter((a) => {
     const type = (a.alarmType || a.alarm_type || '').toUpperCase();

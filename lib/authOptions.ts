@@ -71,7 +71,7 @@ export const authOptions: NextAuthOptions = {
   ],
   session: {
     strategy: 'jwt',
-    maxAge: 5 * 24 * 60 * 60, // 5일
+    maxAge: 3 * 24 * 60 * 60, // 3일
   },
   events: {
     // ⭐️ [핵심 수정 2] 로그아웃 이벤트에 DEVICE_USER 로그 추가

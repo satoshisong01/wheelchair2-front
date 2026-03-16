@@ -15,6 +15,17 @@ export default function MobileHeader() {
   const handleLogout = async () => {
     if (!confirm('정말 로그아웃 하시겠습니까?')) return;
 
+    // 앱(WebView) 환경에 LOGOUT 신호 전달
+    try {
+      if ((window as any).ReactNativeWebView) {
+        (window as any).ReactNativeWebView.postMessage(
+          JSON.stringify({ type: 'LOGOUT' }),
+        );
+      }
+    } catch (e) {
+      console.error('LOGOUT postMessage 실패:', e);
+    }
+
     try {
       localStorage.clear();
       sessionStorage.clear();

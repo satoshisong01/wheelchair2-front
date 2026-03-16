@@ -28,7 +28,7 @@ export async function GET(req: Request) {
 
     client = await pool.connect();
 
-    // 2. 휠체어 기본 정보 및 실시간 상태(날씨, 배터리, 설정값 등) 조회
+    // 2. 휠체어 기본 정보 및 실시간 상태(날씨, 배터리, 설정값, 마지막 자세 각도 등) 조회
     const deviceInfoQuery = `
       SELECT 
         w.device_serial,
@@ -40,6 +40,12 @@ export async function GET(req: Request) {
         ws.runtime,
         ws.temperature as sensor_temp,
         ws.current_battery,
+        ws.angle_back,
+        ws.angle_seat,
+        ws.foot_angle,
+        ws.elevation_dist,
+        ws.slope_fr,
+        ws.slope_side,
         da.push_emergency,
         da.push_battery,
         da.push_posture,
@@ -98,6 +104,13 @@ export async function GET(req: Request) {
         current_battery: row.current_battery,
         ulcer_count: Number(row.ulcer_count ?? 0),
         ulcerCount: Number(row.ulcer_count ?? 0),
+        // 마지막 저장된 자세/각도 정보 (휠체어가 운행 중이 아니어도 유지)
+        angle_back: row.angle_back,
+        angle_seat: row.angle_seat,
+        foot_angle: row.foot_angle,
+        elevation_dist: row.elevation_dist,
+        slope_fr: row.slope_fr,
+        slope_side: row.slope_side,
       },
     });
   } catch (error) {

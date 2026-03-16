@@ -92,13 +92,24 @@ export function useMyWheelchair() {
 
     // 3. 실시간 주행 상태 데이터 업데이트
     socketInstance.on('wheelchair_status_update', (update: any) => {
+      // 🟢 camelCase로 온 경사/각도 필드를 snake_case와 함께 매핑
+      const mappedUpdate = {
+        ...update,
+        angle_back: update.angleBack ?? update.angle_back,
+        angle_seat: update.angleSeat ?? update.angle_seat,
+        foot_angle: update.footAngle ?? update.foot_angle,
+        elevation_dist: update.elevationDist ?? update.elevation_dist,
+        slope_fr: update.slopeFr ?? update.slope_fr,
+        slope_side: update.slopeSide ?? update.slope_side,
+      };
+
       setData((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
           status: {
             ...(prev.status || {}),
-            ...update,
+            ...mappedUpdate,
             last_seen: new Date().toISOString(),
           },
         } as DashboardWheelchair;

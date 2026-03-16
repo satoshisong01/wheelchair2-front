@@ -231,10 +231,18 @@ export default function MobileViewPage() {
                   ? '데이터 로딩 중...'
                   : '오늘도 안전한 주행 되세요!'}
             </p>
-          <p className="text-xs mt-1">
-            전원:{' '}
+          <p className="text-xs mt-1 flex items-center gap-1">
+            <span className={hasAlarms ? 'text-red-100' : 'text-gray-500'}>전원:</span>
             <span
-              className={isPowerOn ? 'text-green-600 font-semibold' : 'text-red-500 font-semibold'}
+              className={
+                hasAlarms
+                  ? isPowerOn
+                    ? 'text-lime-200 font-semibold'
+                    : 'text-yellow-100 font-semibold'
+                  : isPowerOn
+                    ? 'text-green-600 font-semibold'
+                    : 'text-red-500 font-semibold'
+              }
             >
               {isPowerOn ? 'ON' : 'OFF'}
             </span>

@@ -141,6 +141,7 @@ export function useMyWheelchair() {
         assign('pressure', update.pressure);
 
         // 5) 메타
+        nextStatus.is_connected = true;
         nextStatus.last_seen = new Date().toISOString();
 
         return {

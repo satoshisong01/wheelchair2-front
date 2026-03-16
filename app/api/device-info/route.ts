@@ -46,6 +46,8 @@ export async function GET(req: Request) {
         ws.elevation_dist,
         ws.slope_fr,
         ws.slope_side,
+        ws.is_connected,
+        ws.last_seen,
         da.push_emergency,
         da.push_battery,
         da.push_posture,
@@ -104,6 +106,9 @@ export async function GET(req: Request) {
         current_battery: row.current_battery,
         ulcer_count: Number(row.ulcer_count ?? 0),
         ulcerCount: Number(row.ulcer_count ?? 0),
+        // 연결 상태 및 마지막 통신 시간
+        is_connected: row.is_connected,
+        last_seen: row.last_seen,
         // 마지막 저장된 자세/각도 정보 (휠체어가 운행 중이 아니어도 유지)
         angle_back: row.angle_back,
         angle_seat: row.angle_seat,

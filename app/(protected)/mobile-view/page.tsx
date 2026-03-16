@@ -26,6 +26,11 @@ export default function MobileViewPage() {
 
   const status = (wheelchairData?.status || {}) as any;
 
+  // 🔽 추가: 전원 ON/OFF 판정을 위한 상태
+  const DISCONNECT_THRESHOLD_MS = 30 * 1000;
+  const [isDataFresh, setIsDataFresh] = React.useState(true);
+  const lastSeen = status.last_seen;
+
   // 🟢 앱(WebView) 환경일 때 로그인 성공 정보 전달
   useEffect(() => {
     if (!(window as any).ReactNativeWebView) return;
@@ -43,6 +48,31 @@ export default function MobileViewPage() {
       console.error('LOGIN_SUCCESS postMessage 실패:', e);
     }
   }, [session, wheelchairData]);
+
+  // 30초 동안 상태 업데이트가 없으면 OFF로 간주
+  // 단, 초기 로딩(loading=true)일 때는 OFF로 깜빡이지 않도록 그대로 유지
+  useEffect(() => {
+    const checkFreshness = () => {
+      if (loading) {
+        // 서버에서 최근 last_seen을 받아오기 전까지는
+        // 일단 "켜져 있다"고 가정해서 ON 상태를 유지
+        setIsDataFresh(true);
+        return;
+      }
+
+      if (!lastSeen) {
+        setIsDataFresh(false);
+        return;
+      }
+
+      const diff = Date.now() - new Date(lastSeen).getTime();
+      setIsDataFresh(diff < DISCONNECT_THRESHOLD_MS);
+    };
+
+    checkFreshness();
+    const timer = setInterval(checkFreshness, 1000);
+    return () => clearInterval(timer);
+  }, [lastSeen, loading]);
 
   // ⭐️ [핵심 수정] 미확인 알람 중 '긍정 신호(성공/완료)'를 제외하고 실제 경고 갯수만 계산
   const unresolveWarningAlarms = alarms.filter((a) => {
@@ -62,6 +92,10 @@ export default function MobileViewPage() {
   }, [latestAlarm]);
 
   // --- 데이터 가공 ---
+  // PC 대시보드(`wheelchair-info`)와 동일하게, is_connected 값이 명시되지 않았을 때는
+  // 기본값을 true로 두고, 실제 ON/OFF 판정은 last_seen + 30초 기준으로 결정
+  const isConnectedRaw = status.is_connected ?? status.isConnected ?? true;
+  const isPowerOn = isDataFresh && isConnectedRaw;
   const batteryLevel = status.current_battery ?? 0;
   const isLowBattery = batteryLevel < 20;
   const distanceM = status.distance ? Number(status.distance).toFixed(1) : '0.0';
@@ -197,6 +231,14 @@ export default function MobileViewPage() {
                   ? '데이터 로딩 중...'
                   : '오늘도 안전한 주행 되세요!'}
             </p>
+          <p className="text-xs mt-1">
+            전원:{' '}
+            <span
+              className={isPowerOn ? 'text-green-600 font-semibold' : 'text-red-500 font-semibold'}
+            >
+              {isPowerOn ? 'ON' : 'OFF'}
+            </span>
+          </p>
           </div>
         </div>
       </header>

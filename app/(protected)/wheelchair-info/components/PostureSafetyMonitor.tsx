@@ -2,10 +2,13 @@
 
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface MonitorProps {
   wheelchairId: string;
+  // 서버(worker)가 E_PCA 감지 시 내보내는 알람(POSTURE_ADVICE) 발생 시각
+  // 이 값이 들어온 순간부터 "장시간 같은 자세" 타이머를 시작합니다.
+  postureAdviceAt?: string | Date | null;
   status: {
     current_speed: number;
     last_seen?: string | Date; // 🟢 마지막 통신 시간 필드 추가
@@ -15,7 +18,7 @@ interface MonitorProps {
     elevation_dist?: number;
     slope_fr?: number;
     slope_side?: number;
-    [key: string]: any;
+    [key: string]: unknown;
   } | null;
 }
 
@@ -26,7 +29,11 @@ const WARNING_DELAY_MS = 2 * 60 * 60 * 1000;
 // 🟢 통신 두절 판단 기준 (30초 동안 새 데이터 없으면 멈춘 것으로 간주)
 const DISCONNECT_THRESHOLD_MS = 30 * 1000;
 
-export default function PostureSafetyMonitor({ status, wheelchairId }: MonitorProps) {
+export default function PostureSafetyMonitor({
+  status,
+  wheelchairId,
+  postureAdviceAt,
+}: MonitorProps) {
   const [showAlarm, setShowAlarm] = useState(false);
   const [audioUnlocked, setAudioUnlocked] = useState(false);
 
@@ -34,9 +41,49 @@ export default function PostureSafetyMonitor({ status, wheelchairId }: MonitorPr
   const STORAGE_KEY = `posture_last_change_${wheelchairId}`;
 
   const latestStatusRef = useRef(status);
-  const lastChangeTime = useRef<number>(Date.now());
-  const prevStatus = useRef<any>(null);
+  const lastChangeTime = useRef<number>(0);
+  const prevStatus = useRef<MonitorProps['status']>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const isArmed = postureAdviceAt != null;
+  const COOLDOWN_MS = 30_000; // 짧은 시간에 POSTURE_ADVICE가 반복될 때 중복 팝업 방지
+  const lastShownAtRef = useRef<number>(0);
+
+  const updateLastChangeTime = useCallback(() => {
+    const now = Date.now();
+    lastChangeTime.current = now;
+    localStorage.setItem(STORAGE_KEY, now.toString());
+  }, [STORAGE_KEY]);
+
+  const stopAlarm = useCallback(() => {
+    setShowAlarm(false);
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    updateLastChangeTime();
+  }, [updateLastChangeTime]);
+
+  const triggerAlarm = useCallback(() => {
+    setShowAlarm((prev) => {
+      if (!prev) {
+        console.log('🚨 알람 발동!');
+        audioRef.current?.play().catch(() => {});
+        return true;
+      }
+      return prev;
+    });
+  }, []);
+
+  const stopRequestedRef = useRef(false);
+  const requestStopAlarm = useCallback(() => {
+    if (stopRequestedRef.current) return;
+    stopRequestedRef.current = true;
+    setTimeout(() => {
+      stopRequestedRef.current = false;
+      stopAlarm();
+    }, 0);
+  }, [stopAlarm]);
 
   // 1. 오디오 초기화
   useEffect(() => {
@@ -76,10 +123,23 @@ export default function PostureSafetyMonitor({ status, wheelchairId }: MonitorPr
   // 3. 상태 감지 및 시간 저장
   useEffect(() => {
     if (!status) return;
+    // POSTURE_ADVICE 알람 모드에서는 자세 변화 감지에 의해 알람을 끄지 않습니다.
+    if (postureAdviceAt) return;
     latestStatusRef.current = status;
 
     if (!prevStatus.current) {
       prevStatus.current = status;
+
+      // E_PCA(POSTURE_ADVICE)가 이미 감지된 상태라면, 타이머 기준을 로컬스토리지 대신 이벤트 시각으로 맞춥니다.
+      if (postureAdviceAt) {
+        const ts = new Date(postureAdviceAt).getTime();
+        if (Number.isFinite(ts)) {
+          lastChangeTime.current = ts;
+          localStorage.setItem(STORAGE_KEY, ts.toString());
+        }
+        return;
+      }
+
       const savedTime = localStorage.getItem(STORAGE_KEY);
       if (savedTime) {
         const parsedTime = parseInt(savedTime, 10);
@@ -112,78 +172,33 @@ export default function PostureSafetyMonitor({ status, wheelchairId }: MonitorPr
       console.log('🔄 자세 변경됨 -> 타이머 리셋');
       prevStatus.current = status;
       updateLastChangeTime();
-      if (showAlarm) stopAlarm();
+      if (showAlarm) requestStopAlarm();
     }
-  }, [status, showAlarm, STORAGE_KEY]);
+  }, [
+    status,
+    showAlarm,
+    STORAGE_KEY,
+    stopAlarm,
+    updateLastChangeTime,
+    requestStopAlarm,
+    postureAdviceAt,
+  ]);
 
-  const updateLastChangeTime = () => {
-    const now = Date.now();
-    lastChangeTime.current = now;
-    localStorage.setItem(STORAGE_KEY, now.toString());
-  };
-
-  // 4. 타이머 체크 (핵심 수정 부분)
+  // 3-0. E_PCA(POSTURE_ADVICE) 이벤트가 들어오면 타이머 시작점 갱신
   useEffect(() => {
-    const timer = setInterval(() => {
-      const currentStatus = latestStatusRef.current;
-      if (!currentStatus) return;
+    if (!postureAdviceAt) return;
 
-      const now = Date.now();
+    const now = Date.now();
+    if (showAlarm) return;
+    if (now - lastShownAtRef.current < COOLDOWN_MS) return;
 
-      // 🟢 (1) 데이터 신선도 체크
-      // last_seen이 없거나, 현재 시간과 차이가 30초 이상 나면 '오래된 데이터'
-      let isDataFresh = true;
-      if (currentStatus.last_seen) {
-        const lastSeenTime = new Date(currentStatus.last_seen).getTime();
-        if (now - lastSeenTime > DISCONNECT_THRESHOLD_MS) {
-          isDataFresh = false;
-        }
-      }
+    lastShownAtRef.current = now;
+    triggerAlarm();
+  }, [postureAdviceAt, showAlarm, triggerAlarm, COOLDOWN_MS]);
 
-      // 🟢 (2) 운행 중 판단: "속도 > 0" AND "데이터가 신선함"
-      const isSpeeding = (currentStatus.current_speed || 0) > 0;
-      const isDriving = isSpeeding && isDataFresh;
-
-      if (isDriving) {
-        const elapsed = now - lastChangeTime.current;
-        if (elapsed > WARNING_DELAY_MS) {
-          triggerAlarm();
-        }
-      } else {
-        // 운행 중이 아니거나 통신이 끊기면 -> 타이머 계속 리셋 (알람 방지)
-
-        // 디버깅용 로그 (테스트 할 때만 주석 해제)
-        // if (!isDataFresh && isSpeeding) console.log("⚠️ 통신 끊김: 속도는 있지만 데이터가 오래됨");
-
-        updateLastChangeTime();
-        if (showAlarm) stopAlarm(); // 혹시 켜져있으면 끔
-      }
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [STORAGE_KEY, showAlarm]);
+  // 4. 타이머 체크: POSTURE_ADVICE 즉시 팝업으로 대체되어 비활성화합니다.
 
   // --- 알람 제어 ---
-  const triggerAlarm = () => {
-    setShowAlarm((prev) => {
-      if (!prev) {
-        console.log('🚨 알람 발동!');
-        audioRef.current?.play().catch(() => {});
-        return true;
-      }
-      return prev;
-    });
-  };
-
-  const stopAlarm = () => {
-    setShowAlarm(false);
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
-    updateLastChangeTime();
-  };
-
   if (!showAlarm) return null;
 
   return (
@@ -193,15 +208,13 @@ export default function PostureSafetyMonitor({ status, wheelchairId }: MonitorPr
           <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
             <span className="text-2xl">🚨</span>
           </div>
-          <h3 className="text-lg font-bold text-gray-900 mb-2">장시간 같은 자세 경고</h3>
+          <h3 className="text-lg font-bold text-gray-900 mb-2">욕창 예방 안내</h3>
           <p className="text-sm text-gray-500 mb-6">
             {!audioUnlocked && (
               <span className="text-red-500 font-bold block mb-1">
                 (소리를 들으려면 화면을 클릭하세요)
               </span>
             )}
-            운행 중 2시간 동안 자세 변경이 감지되지 않았습니다.
-            <br />
             욕창 예방을 위해 자세를 조절해주세요!
           </p>
           <button

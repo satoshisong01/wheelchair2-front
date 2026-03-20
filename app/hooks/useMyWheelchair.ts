@@ -125,6 +125,10 @@ export function useMyWheelchair() {
         assign('runtime', update.runtime);
         assign('distance', update.distance);
 
+        // 2-0) 욕창 예방 카운트 (POSTURE_COMPLETE에서 증가)
+        assign('ulcer_count', update.ulcerCount ?? update.ulcer_count);
+        assign('ulcerCount', update.ulcerCount ?? update.ulcer_count);
+
         // 3) 자세/각도
         assign('angle_back', update.angleBack ?? update.angle_back);
         assign('angle_seat', update.angleSeat ?? update.angle_seat);

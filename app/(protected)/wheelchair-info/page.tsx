@@ -63,6 +63,7 @@ function WheelchairInfoContent() {
   const [allWheelchairs, setAllWheelchairs] = useState<DashboardWheelchair[]>([]);
   const [detailData, setDetailData] = useState<WheelchairDetailData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [postureAdviceAt, setPostureAdviceAt] = useState<Date | null>(null);
 
   const socketRef = useRef<Socket | null>(null);
   const currentIdRef = useRef<string | null>(null);
@@ -118,6 +119,9 @@ function WheelchairInfoContent() {
               console.error('알람 로딩 실패', e);
             }
 
+            // POSTURE_ADVICE는 "수신 시점"에만 팝업을 띄우도록 합니다.
+            setPostureAdviceAt(null);
+
             setDetailData({
               ...selectedWc,
               alarms: fetchedAlarms,
@@ -139,6 +143,7 @@ function WheelchairInfoContent() {
     const selected = allWheelchairs.find((wc) => String(wc.id) === String(id));
     if (selected) {
       currentIdRef.current = String(id);
+      setPostureAdviceAt(null);
 
       let fetchedAlarms: any[] = [];
       try {
@@ -157,6 +162,9 @@ function WheelchairInfoContent() {
           );
         }
       } catch (e) {}
+
+      // POSTURE_ADVICE는 소켓 수신 시점에만 팝업을 띄웁니다.
+      setPostureAdviceAt(null);
 
       setDetailData({
         ...selected,
@@ -208,6 +216,9 @@ function WheelchairInfoContent() {
               runtime: payload.runtime ?? prev.status.runtime, // 주행 시간
               distance: payload.distance ?? prev.status.distance, // 주행 거리
 
+              // 2-0. 욕창 예방 카운트 (POSTURE_COMPLETE에서 증가)
+              ulcer_count: payload.ulcerCount ?? payload.ulcer_count,
+
               // 3. 장기 데이터 (CW/lt)
               // ⭐️ Worker는 'light'로 보내므로 payload.light를 받아서 status.light에 저장
               light: payload.light ?? prev.status.light,
@@ -246,6 +257,15 @@ function WheelchairInfoContent() {
         currentTargetId &&
         String(newAlarm.wheelchairId || newAlarm.wheelchair_id) === String(currentTargetId)
       ) {
+        const type = (newAlarm.alarmType || newAlarm.alarm_type || '').toUpperCase();
+
+        // E_PCA 감지 시 바로 팝업(POSTURE_ADVICE) 트리거
+        if (type === 'POSTURE_ADVICE') {
+          setPostureAdviceAt(
+            newAlarm.alarmTime ? new Date(newAlarm.alarmTime) : new Date(),
+          );
+        }
+
         setDetailData((prev) => (prev ? { ...prev, alarms: [newAlarm, ...prev.alarms] } : null));
       }
     });
@@ -271,7 +291,13 @@ function WheelchairInfoContent() {
 
   return (
     <div className={styles.container}>
-      {detailData && <PostureSafetyMonitor status={detailData.status} wheelchairId={String(detailData.id)}/>}
+      {detailData && (
+        <PostureSafetyMonitor
+          status={detailData.status}
+          wheelchairId={String(detailData.id)}
+          postureAdviceAt={postureAdviceAt}
+        />
+      )}
       <InfoBar
         wc={detailData}
         allWheelchairs={allWheelchairs}

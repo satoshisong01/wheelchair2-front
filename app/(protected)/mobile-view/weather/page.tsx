@@ -102,7 +102,9 @@ export default function WeatherPage() {
 
               {/* 2. 외부 기온 (API) */}
               <div className="p-4 flex flex-col items-center justify-center bg-blue-50 bg-opacity-30">
-                <span className="text-xs text-blue-500 font-bold mb-2">외부</span>
+                <span className="h-8 flex items-center text-xs text-blue-500 font-bold mb-1">
+                  외부
+                </span>
                 <div className="flex items-start">
                   <span className="text-xl font-bold text-gray-800">{weather.outdoorTemp}</span>
                   <span className="text-xs text-gray-500 mt-0.5">°C</span>
@@ -111,7 +113,10 @@ export default function WeatherPage() {
 
               {/* 3. 실내/센서 기온 (DB) - 🟢 추가된 부분 */}
               <div className="p-4 flex flex-col items-center justify-center bg-orange-50 bg-opacity-30">
-                <span className="text-xs text-orange-500 font-bold mb-2">실내(센서)</span>
+                <span className="h-8 flex flex-col items-center justify-center text-[11px] leading-tight text-orange-500 font-bold mb-1">
+                  <span>실내</span>
+                  <span>센서</span>
+                </span>
                 <div className="flex items-start">
                   <span className="text-xl font-bold text-gray-800">{weather.indoorTemp}</span>
                   <span className="text-xs text-gray-500 mt-0.5">°C</span>
@@ -120,7 +125,7 @@ export default function WeatherPage() {
 
               {/* 4. 습도 (기압 대신 습도 배치) */}
               <div className="p-4 flex flex-col items-center justify-center">
-                <span className="text-xs text-gray-400 mb-2">습도</span>
+                <span className="h-8 flex items-center text-xs text-gray-400 mb-1">습도</span>
                 <div className="flex items-start">
                   <span className="text-xl font-bold text-gray-800">{weather.humidity}</span>
                   <span className="text-xs text-gray-500 mt-0.5">%</span>

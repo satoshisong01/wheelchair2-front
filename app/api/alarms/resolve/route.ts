@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     if (!session || !session.user)
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
-    const { alarmId, all } = await req.json();
+    const { alarmId, all, resolvePostureAdvice } = await req.json();
     const wheelchairId = (session.user as any).wheelchairId;
 
     const client = await pool.connect();
@@ -23,6 +23,14 @@ export async function POST(req: Request) {
         // 전체 확인 처리
         await client.query(
           'UPDATE alarms SET is_resolved = true WHERE wheelchair_id = $1 AND is_resolved = false',
+          [wheelchairId],
+        );
+      } else if (resolvePostureAdvice) {
+        // 욕창 예방 완료(POSTURE_COMPLETE에 해당하는 ulcer_count 증가) 시 자세 권고만 일괄 확인
+        await client.query(
+          `UPDATE alarms SET is_resolved = true
+           WHERE wheelchair_id = $1 AND is_resolved = false
+           AND UPPER(TRIM(COALESCE(alarm_type, ''))) = 'POSTURE_ADVICE'`,
           [wheelchairId],
         );
       } else {

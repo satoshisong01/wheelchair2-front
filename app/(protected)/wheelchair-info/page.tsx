@@ -67,6 +67,8 @@ function WheelchairInfoContent() {
 
   const socketRef = useRef<Socket | null>(null);
   const currentIdRef = useRef<string | null>(null);
+  /** 선택 휠체어별 ulcer_count 추적 — 증가 시 POSTURE_ADVICE 해소·팝업 종료 */
+  const prevUlcerCountForAdviceRef = useRef<number | null>(null);
 
   const userRole = (session?.user?.role as string) || '';
   const isManager = userRole === 'ADMIN' || userRole === 'MASTER';
@@ -92,12 +94,13 @@ function WheelchairInfoContent() {
         }
 
         if (targetId) {
-          currentIdRef.current = String(targetId);
+            currentIdRef.current = String(targetId);
           const selectedWc = list.find(
             (wc: any) => String(wc.id) === String(targetId),
           ) as WheelchairDetailData;
 
           if (selectedWc) {
+            prevUlcerCountForAdviceRef.current = null;
             let fetchedAlarms: any[] = [];
             try {
               // 3. 알람 가져오기
@@ -143,6 +146,7 @@ function WheelchairInfoContent() {
     const selected = allWheelchairs.find((wc) => String(wc.id) === String(id));
     if (selected) {
       currentIdRef.current = String(id);
+      prevUlcerCountForAdviceRef.current = null;
       setPostureAdviceAt(null);
 
       let fetchedAlarms: any[] = [];
@@ -173,6 +177,66 @@ function WheelchairInfoContent() {
       } as WheelchairDetailData);
     }
   };
+
+  const sessionWheelchairId = (session?.user as any)?.wheelchairId;
+
+  // 욕창 예방 카운트(POSTURE_COMPLETE) 증가 시: 자세 권고 팝업 종료 + 본인 기기면 POSTURE_ADVICE 알람 확인 처리
+  useEffect(() => {
+    if (!detailData) return;
+    const n = Number(
+      detailData.status?.ulcer_count ?? detailData.status?.ulcerCount ?? NaN,
+    );
+    if (!Number.isFinite(n)) return;
+
+    const prev = prevUlcerCountForAdviceRef.current;
+    if (prev === null) {
+      prevUlcerCountForAdviceRef.current = n;
+      return;
+    }
+    if (n <= prev) {
+      prevUlcerCountForAdviceRef.current = n;
+      return;
+    }
+
+    prevUlcerCountForAdviceRef.current = n;
+    setPostureAdviceAt(null);
+
+    if (sessionWheelchairId && String(sessionWheelchairId) === String(detailData.id)) {
+      let cancelled = false;
+      (async () => {
+        try {
+          const res = await fetch('/api/alarms/resolve', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ resolvePostureAdvice: true }),
+          });
+          if (cancelled || !res.ok) return;
+          setDetailData((prevData) => {
+            if (!prevData) return null;
+            return {
+              ...prevData,
+              alarms: prevData.alarms.map((a: any) => {
+                const t = (a.alarmType || a.alarm_type || '').toUpperCase();
+                return t === 'POSTURE_ADVICE' && !a.is_resolved
+                  ? { ...a, is_resolved: true }
+                  : a;
+              }),
+            };
+          });
+        } catch (e) {
+          console.error('POSTURE_ADVICE 자동 확인 처리 실패:', e);
+        }
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }
+  }, [
+    detailData?.id,
+    detailData?.status?.ulcer_count,
+    detailData?.status?.ulcerCount,
+    sessionWheelchairId,
+  ]);
 
   // 3. 소켓 연결 및 데이터 수신
   useEffect(() => {

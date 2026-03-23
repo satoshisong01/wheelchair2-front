@@ -1,7 +1,7 @@
 // 경로: app/hooks/useMyWheelchair.ts
 // 📝 설명: 주행 데이터 + 알람(DB & 실시간 소켓) 통합 관리 훅
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { io, Socket } from 'socket.io-client';
 import { DashboardWheelchair } from '@/types/wheelchair';
@@ -34,6 +34,9 @@ export function useMyWheelchair() {
 
   // 🚨 [핵심] 알람 목록 (DB 데이터 + 실시간 누적)
   const [alarms, setAlarms] = useState<Alarm[]>([]);
+
+  /** 욕창 예방 완료(서버 ulcer_count 증가) 직전 값 — 증가 시 POSTURE_ADVICE 알람을 자동 확인 처리 */
+  const prevUlcerCountRef = useRef<number | null>(null);
 
   // 🔊 소리 및 진동 실행 함수
   const triggerMobileAlert = () => {
@@ -188,6 +191,51 @@ export function useMyWheelchair() {
       socketInstance.disconnect();
     };
   }, [session]);
+
+  // POSTURE_COMPLETE에 해당하는 ulcer_count 증가 시, POSTURE_ADVICE는 수동 확인과 동일하게 처리
+  useEffect(() => {
+    const st = data?.status as { ulcerCount?: number; ulcer_count?: number } | undefined;
+    const n = Number(st?.ulcerCount ?? st?.ulcer_count ?? NaN);
+    if (!Number.isFinite(n)) return;
+
+    const prev = prevUlcerCountRef.current;
+    if (prev === null) {
+      prevUlcerCountRef.current = n;
+      return;
+    }
+    if (n <= prev) {
+      prevUlcerCountRef.current = n;
+      return;
+    }
+
+    prevUlcerCountRef.current = n;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/alarms/resolve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ resolvePostureAdvice: true }),
+        });
+        if (cancelled || !res.ok) return;
+        setAlarms((prevAlarms) =>
+          prevAlarms.map((a) => {
+            const t = (a.alarmType || a.alarm_type || '').toUpperCase();
+            return t === 'POSTURE_ADVICE' && !a.is_resolved ? { ...a, is_resolved: true } : a;
+          }),
+        );
+        setLatestAlarm((la) => {
+          const t = (la?.alarmType || la?.alarm_type || '').toUpperCase();
+          return t === 'POSTURE_ADVICE' ? null : la;
+        });
+      } catch (e) {
+        console.error('POSTURE_ADVICE 자동 확인 처리 실패:', e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [data?.status]);
 
   return {
     data,

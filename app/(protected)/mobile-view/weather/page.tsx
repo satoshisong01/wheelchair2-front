@@ -115,7 +115,6 @@ export default function WeatherPage() {
               <div className="p-4 flex flex-col items-center justify-center bg-orange-50 bg-opacity-30">
                 <span className="h-8 flex flex-col items-center justify-center text-[11px] leading-tight text-orange-500 font-bold mb-1">
                   <span>실내</span>
-                  <span>센서</span>
                 </span>
                 <div className="flex items-start">
                   <span className="text-xl font-bold text-gray-800">{weather.indoorTemp}</span>

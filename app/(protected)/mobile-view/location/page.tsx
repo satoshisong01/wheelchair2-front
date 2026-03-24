@@ -39,33 +39,35 @@ export default function LocationPage() {
     setScriptReloadKey((prev) => prev + 1);
   };
 
-  // 2. 지도 초기화 함수
-  const initializeMap = () => {
-    // window.kakao가 없으면 중단
-    if (!window.kakao || !mapContainerRef.current) return;
+  // 2. 지도 초기화 함수 — lat/lng를 인자로 받아 stale closure 방지
+  const initializeMap = (currentLat: number, currentLng: number) => {
+    if (!mapContainerRef.current) return;
+
+    // 스크립트 캐시로 window.kakao가 이미 있을 수 있으므로 직접 확인
+    if (!window.kakao?.maps) return;
 
     window.kakao.maps.load(() => {
-      const location = new window.kakao.maps.LatLng(lat, lng);
-      
+      // 이미 맵이 초기화됐다면 중복 생성 방지
+      if (mapRef.current) return;
+
+      const location = new window.kakao.maps.LatLng(currentLat, currentLng);
+
       const options = {
         center: location,
-        level: 4, 
+        level: 4,
       };
 
       const map = new window.kakao.maps.Map(mapContainerRef.current, options);
       mapRef.current = map;
       setIsMapReady(true);
 
-      // ✅ [수정 1] title 속성 필수 추가 (기존 타입 준수)
       const marker = new window.kakao.maps.Marker({
         position: location,
         map: map,
-        title: '내 휠체어 위치' 
+        title: '내 휠체어 위치'
       });
       markerRef.current = marker;
 
-      // ✅ [수정 2] services 타입 에러 회피 (as any 사용)
-      // 기존 타입에는 services가 없으므로 any로 캐스팅해서 접근
       const kakaoMaps = window.kakao.maps as any;
 
       if (kakaoMaps.services) {
@@ -74,30 +76,36 @@ export default function LocationPage() {
           if (status === kakaoMaps.services.Status.OK) {
              setAddress(result[0].address.address_name);
           } else {
-             setAddress(`위도: ${lat.toFixed(4)}, 경도: ${lng.toFixed(4)}`);
+             setAddress(`위도: ${currentLat.toFixed(4)}, 경도: ${currentLng.toFixed(4)}`);
           }
         };
-        geocoder.coord2Address(lng, lat, callback);
+        geocoder.coord2Address(currentLng, currentLat, callback);
       } else {
-        // 라이브러리 로드 실패 시 좌표만 표시
-        setAddress(`위도: ${lat.toFixed(4)}, 경도: ${lng.toFixed(4)}`);
+        setAddress(`위도: ${currentLat.toFixed(4)}, 경도: ${currentLng.toFixed(4)}`);
       }
     });
   };
 
   // 3. 스크립트 로드 완료 시 초기화
   useEffect(() => {
-    if (isScriptLoaded) {
-      setIsMapReady(false);
-      initializeMap();
-    }
-  }, [isScriptLoaded]);
+    if (!isScriptLoaded) return;
+    setIsMapReady(false);
+    initializeMap(lat, lng);
+
+    // 스크립트 onLoad 후에도 kakao.maps.load 콜백이 지연될 수 있으므로 보험 재시도
+    const fallback = setTimeout(() => {
+      if (!mapRef.current && window.kakao?.maps) {
+        initializeMap(lat, lng);
+      }
+    }, 1000);
+
+    return () => clearTimeout(fallback);
+  }, [isScriptLoaded, scriptReloadKey]);
 
   useEffect(() => {
     if (!isScriptLoaded || isMapReady) return;
 
     const timer = setTimeout(() => {
-      // 스크립트는 로드됐지만 맵 객체가 준비되지 않으면 자동 재시도
       if (!mapRef.current) {
         if (mapRetryCount < 2) {
           retryMapLoad();

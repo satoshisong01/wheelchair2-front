@@ -38,6 +38,12 @@ export function useMyWheelchair() {
   /** 욕창 예방 완료(서버 ulcer_count 증가) 직전 값 — 증가 시 POSTURE_ADVICE 알람을 자동 확인 처리 */
   const prevUlcerCountRef = useRef<number | null>(null);
 
+  /** 알림 설정의 최신값을 소켓 콜백에서 참조하기 위한 ref */
+  const dataRef = useRef(data);
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
+
   // 🔊 소리 및 진동 실행 함수
   const triggerMobileAlert = () => {
     try {
@@ -174,7 +180,20 @@ export function useMyWheelchair() {
         'POSTURE_ADVICE',
       ];
 
-      if (DANGER_KEYWORDS.some((k) => type.includes(k))) {
+      // 🔇 알림 설정에 따라 소리 재생 여부 결정
+      const pushSettings = (dataRef.current?.status as any) || {};
+      const isBatteryAlarm = type.includes('LOW_VOLTAGE');
+      const isPostureAlarm = type.includes('POSTURE');
+      // 배터리·욕창이 아닌 나머지는 긴급 알림으로 분류
+      const isEmergencyAlarm = !isBatteryAlarm && !isPostureAlarm;
+
+      const shouldPlaySound =
+        DANGER_KEYWORDS.some((k) => type.includes(k)) &&
+        !(isBatteryAlarm && pushSettings.push_battery === false) &&
+        !(isPostureAlarm && pushSettings.push_posture === false) &&
+        !(isEmergencyAlarm && pushSettings.push_emergency === false);
+
+      if (shouldPlaySound) {
         triggerMobileAlert();
       }
 

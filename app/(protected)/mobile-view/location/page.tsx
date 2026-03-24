@@ -26,6 +26,18 @@ export default function LocationPage() {
   
   // 스크립트 로드 상태
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
+  const [scriptReloadKey, setScriptReloadKey] = useState(0);
+  const [mapRetryCount, setMapRetryCount] = useState(0);
+  const [isMapReady, setIsMapReady] = useState(false);
+
+  const retryMapLoad = () => {
+    mapRef.current = null;
+    markerRef.current = null;
+    setIsMapReady(false);
+    setIsScriptLoaded(false);
+    setMapRetryCount((prev) => prev + 1);
+    setScriptReloadKey((prev) => prev + 1);
+  };
 
   // 2. 지도 초기화 함수
   const initializeMap = () => {
@@ -42,6 +54,7 @@ export default function LocationPage() {
 
       const map = new window.kakao.maps.Map(mapContainerRef.current, options);
       mapRef.current = map;
+      setIsMapReady(true);
 
       // ✅ [수정 1] title 속성 필수 추가 (기존 타입 준수)
       const marker = new window.kakao.maps.Marker({
@@ -75,9 +88,27 @@ export default function LocationPage() {
   // 3. 스크립트 로드 완료 시 초기화
   useEffect(() => {
     if (isScriptLoaded) {
+      setIsMapReady(false);
       initializeMap();
     }
   }, [isScriptLoaded]);
+
+  useEffect(() => {
+    if (!isScriptLoaded || isMapReady) return;
+
+    const timer = setTimeout(() => {
+      // 스크립트는 로드됐지만 맵 객체가 준비되지 않으면 자동 재시도
+      if (!mapRef.current) {
+        if (mapRetryCount < 2) {
+          retryMapLoad();
+        } else {
+          setAddress('지도 로딩이 지연되고 있습니다. 아래 버튼으로 다시 시도해주세요.');
+        }
+      }
+    }, 3000);
+
+    return () => clearTimeout(timer);
+  }, [isScriptLoaded, isMapReady, mapRetryCount]);
 
   // 4. 실시간 위치 업데이트
   useEffect(() => {
@@ -105,8 +136,13 @@ export default function LocationPage() {
       
       {/* 1. 카카오맵 스크립트 로드 */}
       <Script
+        key={scriptReloadKey}
         src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY}&autoload=false&libraries=services`}
         onLoad={() => setIsScriptLoaded(true)}
+        onError={() => {
+          if (mapRetryCount < 2) retryMapLoad();
+          else setAddress('지도 스크립트 로드에 실패했습니다. 네트워크를 확인 후 다시 시도해주세요.');
+        }}
         strategy="afterInteractive"
       />
 
@@ -122,9 +158,20 @@ export default function LocationPage() {
 
       {/* 3. 지도 영역 */}
       <div ref={mapContainerRef} className="w-full h-[65vh] bg-gray-100 relative">
-        {!isScriptLoaded && (
+        {(!isScriptLoaded || !isMapReady) && (
           <div className="absolute inset-0 flex items-center justify-center text-gray-400">
             지도 로딩 중...
+          </div>
+        )}
+        {isScriptLoaded && !isMapReady && mapRetryCount >= 2 && (
+          <div className="absolute inset-x-0 bottom-4 flex justify-center">
+            <button
+              type="button"
+              onClick={retryMapLoad}
+              className="px-4 py-2 rounded-full bg-white/95 text-sm text-indigo-600 border border-indigo-200 shadow-sm active:scale-95"
+            >
+              지도 다시 불러오기
+            </button>
           </div>
         )}
       </div>

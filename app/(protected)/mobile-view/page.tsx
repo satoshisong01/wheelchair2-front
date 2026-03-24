@@ -164,6 +164,7 @@ export default function MobileViewPage() {
       title: '자세·욕창 예방',
       value: `예방 ${ulcerPreventionCount}회`,
       sub: `현재 시트 각도 ${seatAngle.toFixed(0)}°`,
+      subClassName: 'text-[13px] font-semibold',
       icon: <Accessibility className="w-5 h-5 text-indigo-600" />,
       bgColor: 'bg-indigo-50',
       borderColor: 'border-indigo-200',
@@ -290,7 +291,9 @@ export default function MobileViewPage() {
                       {item.value}
                     </span>
                   </div>
-                  <div className={`text-[11px] opacity-80 ${item.textColor} truncate`}>
+                  <div
+                    className={`${item.subClassName || 'text-[11px]'} opacity-80 ${item.textColor} truncate`}
+                  >
                     {item.sub}
                   </div>
                 </div>

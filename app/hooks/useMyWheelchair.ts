@@ -45,12 +45,12 @@ export function useMyWheelchair() {
   }, [data]);
 
   // 🔊 소리 및 진동 실행 함수
-  const triggerMobileAlert = () => {
+  const triggerMobileAlert = (sound: 'alarm' | 'ding' = 'alarm') => {
     try {
-      const audio = new Audio('/sounds/alarm.mp3');
+      const audio = new Audio(`/sounds/${sound}.mp3`);
       audio.play().catch((err) => console.warn('🔊 자동 재생 차단됨:', err));
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
-        navigator.vibrate([500, 200, 500]);
+        navigator.vibrate(sound === 'ding' ? [300] : [500, 200, 500]);
       }
     } catch (e) {
       console.error('알림 효과 오류:', e);
@@ -193,8 +193,13 @@ export function useMyWheelchair() {
         !(isPostureAlarm && pushSettings.push_posture === false) &&
         !(isEmergencyAlarm && pushSettings.push_emergency === false);
 
-      if (shouldPlaySound) {
-        triggerMobileAlert();
+      // 🔔 욕창 예방 완료(COMPLETE) → ding 소리 재생
+      const isComplete = type.includes('COMPLETE') || type.includes('SUCCESS');
+
+      if (isComplete) {
+        triggerMobileAlert('ding');
+      } else if (shouldPlaySound) {
+        triggerMobileAlert('alarm');
       }
 
       // ⭐️ 최신 알람으로 설정 (팝업용)

@@ -292,7 +292,7 @@ export default function MobileViewPage() {
                     </span>
                   </div>
                   <div
-                    className={`${item.subClassName || 'text-[11px]'} opacity-80 ${item.textColor} truncate`}
+                    className={`${item.subClassName || 'text-[16px] font-bold'} opacity-80 ${item.textColor} truncate`}
                   >
                     {item.sub}
                   </div>

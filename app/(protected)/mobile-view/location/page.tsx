@@ -163,21 +163,36 @@ export default function LocationPage() {
     }
   }, [hasRealLocation, isMapReady, lat, lng]);
 
+  // 지도 로딩 실패 자동 감지 → 자동 새로고침 (최대 5회, 이후 수동 안내)
   useEffect(() => {
-    if (!isScriptLoaded || isMapReady) return;
+    if (isMapReady) return; // 지도 정상 → 할 일 없음
+    if (loading) return;    // 데이터 로딩 중 → 아직 판단 불가
 
     const timer = setTimeout(() => {
-      if (!mapRef.current) {
-        if (mapRetryCount < 2) {
-          retryMapLoad();
+      if (mapRef.current) return; // 이미 성공
+
+      if (mapRetryCount < 5) {
+        console.log(`🔄 지도 자동 새로고침 시도 (${mapRetryCount + 1}/5)`);
+        // handleRefreshMap과 동일한 로직
+        mapRef.current = null;
+        markerRef.current = null;
+        dataLoadedRef.current = false;
+        setIsMapReady(false);
+        setMapRetryCount((prev) => prev + 1);
+
+        if (window.kakao?.maps) {
+          setIsScriptLoaded(true);
         } else {
-          setAddress('지도 로딩이 지연되고 있습니다. 새로고침 버튼을 눌러주세요.');
+          setIsScriptLoaded(false);
         }
+        setScriptReloadKey((prev) => prev + 1);
+      } else {
+        setAddress('지도 로딩에 실패했습니다. 새로고침 버튼을 눌러주세요.');
       }
-    }, 3000);
+    }, 2000);
 
     return () => clearTimeout(timer);
-  }, [isScriptLoaded, isMapReady, mapRetryCount, retryMapLoad]);
+  }, [isMapReady, loading, mapRetryCount]);
 
   // 4. 실시간 위치 업데이트
   useEffect(() => {

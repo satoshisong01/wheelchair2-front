@@ -48,10 +48,6 @@ export default function LocationPage() {
   const handleRefreshMap = useCallback(() => {
     setIsRefreshing(true);
 
-    // 기존 지도 DOM 내용 제거
-    if (mapContainerRef.current) {
-      mapContainerRef.current.innerHTML = '';
-    }
     mapRef.current = null;
     markerRef.current = null;
     dataLoadedRef.current = false;

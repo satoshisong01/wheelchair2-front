@@ -47,13 +47,27 @@ export default function LocationPage() {
   // 지도 전체 새로고침 (모바일 흰화면 대응)
   const handleRefreshMap = useCallback(() => {
     setIsRefreshing(true);
+
+    // 기존 지도 DOM 내용 제거
+    if (mapContainerRef.current) {
+      mapContainerRef.current.innerHTML = '';
+    }
     mapRef.current = null;
     markerRef.current = null;
     dataLoadedRef.current = false;
     setIsMapReady(false);
-    setIsScriptLoaded(false);
     setMapRetryCount(0);
-    setScriptReloadKey((prev) => prev + 1);
+
+    // kakao SDK가 이미 로드되어 있으면 스크립트 재로드 없이 바로 지도 재생성
+    if (window.kakao?.maps) {
+      setIsScriptLoaded(true);
+      // 상태 업데이트 후 다음 렌더에서 initializeMap이 호출되도록 key만 변경
+      setScriptReloadKey((prev) => prev + 1);
+    } else {
+      setIsScriptLoaded(false);
+      setScriptReloadKey((prev) => prev + 1);
+    }
+
     setTimeout(() => setIsRefreshing(false), 1000);
   }, []);
 
@@ -62,8 +76,9 @@ export default function LocationPage() {
     if (!mapContainerRef.current) return;
     if (!window.kakao?.maps) return;
 
-    window.kakao.maps.load(() => {
+    const createMap = () => {
       if (mapRef.current) return;
+      if (!mapContainerRef.current) return;
 
       const location = new window.kakao.maps.LatLng(currentLat, currentLng);
 
@@ -98,7 +113,18 @@ export default function LocationPage() {
       } else {
         setAddress(`위도: ${currentLat.toFixed(4)}, 경도: ${currentLng.toFixed(4)}`);
       }
-    });
+    };
+
+    // kakao.maps.LatLng가 이미 사용 가능하면 load 콜백 없이 바로 실행
+    try {
+      if (window.kakao.maps.LatLng) {
+        createMap();
+        return;
+      }
+    } catch (_) {
+      // LatLng 접근 불가 → 아직 로드 안 됨
+    }
+    window.kakao.maps.load(createMap);
   }, []);
 
   // 3. 스크립트 로드 완료 + 데이터 준비 시 초기화

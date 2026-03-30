@@ -46,6 +46,8 @@ export async function GET(req: Request) {
         ws.elevation_dist,
         ws.slope_fr,
         ws.slope_side,
+        ws.latitude,
+        ws.longitude,
         ws.is_connected,
         ws.last_seen,
         da.push_emergency,
@@ -106,6 +108,9 @@ export async function GET(req: Request) {
         current_battery: row.current_battery,
         ulcer_count: Number(row.ulcer_count ?? 0),
         ulcerCount: Number(row.ulcer_count ?? 0),
+        // GPS 좌표
+        latitude: row.latitude,
+        longitude: row.longitude,
         // 연결 상태 및 마지막 통신 시간
         is_connected: row.is_connected,
         last_seen: row.last_seen,

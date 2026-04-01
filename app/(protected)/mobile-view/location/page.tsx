@@ -16,6 +16,10 @@ export default function LocationPage() {
   const lat = hasRealLocation ? Number(status.latitude) : 37.566826;
   const lng = hasRealLocation ? Number(status.longitude) : 126.9786567;
   const distanceM = status.distance ? Number(status.distance).toFixed(1) : '0.0';
+  const totalDistanceRaw = status.total_distance ? Number(status.total_distance) : 0;
+  const totalDistanceKm = totalDistanceRaw >= 1000
+    ? `${(totalDistanceRaw / 1000).toFixed(1)} km`
+    : `${totalDistanceRaw.toFixed(1)} m`;
 
   // 주소 상태
   const [address, setAddress] = useState('위치 정보 수신 중...');
@@ -310,6 +314,16 @@ export default function LocationPage() {
           >
             <Locate className="w-6 h-6" />
           </button>
+        </div>
+
+        <div className="bg-indigo-50 rounded-2xl p-5 border border-indigo-100 mt-3">
+          <h3 className="text-indigo-500 text-sm font-medium mb-1 flex items-center">
+            <Navigation className="w-4 h-4 mr-1" />
+            총 이동 거리
+          </h3>
+          <div className="text-2xl font-bold text-indigo-900">
+            {totalDistanceKm}
+          </div>
         </div>
 
       </div>

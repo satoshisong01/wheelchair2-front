@@ -18,10 +18,13 @@ export const TopRightPanel = ({ wc }: Props) => {
   // 주행거리
   const distance = wc?.status?.distance ?? 0;
 
+  // 총 주행거리
+  const totalDistance = wc?.status?.total_distance ?? 0;
+
   // 마지막 수신 시간 (DB값 없으면 현재 시간)
-  const lastUpdate = wc?.status?.last_seen
-    ? new Date(wc.status.last_seen).toLocaleString()
-    : new Date().toLocaleString();
+  const lastSeenDate = wc?.status?.last_seen ? new Date(wc.status.last_seen) : new Date();
+  const lastUpdateDate = lastSeenDate.toLocaleDateString('ko-KR');
+  const lastUpdateTime = lastSeenDate.toLocaleTimeString('ko-KR');
 
   const formatBattery = (val: any) => {
     const num = Number(val);
@@ -45,7 +48,9 @@ export const TopRightPanel = ({ wc }: Props) => {
           {/* 수정한 변수 사용 */}
           <strong>{formatBattery(battery)}%</strong>
         </p>
-        <p className={styles.batteryTimestamp}>{lastUpdate}</p>
+        <p className={styles.batteryTimestamp} style={{ textAlign: 'center' }}>
+          {lastUpdateDate}<br />{lastUpdateTime}
+        </p>
       </div>
 
       {/* 주행 거리 */}
@@ -67,6 +72,15 @@ export const TopRightPanel = ({ wc }: Props) => {
             })}
           </strong>{' '}
           m
+        </p>
+        <p className={styles.drivingTitle} style={{ marginTop: '8px', fontSize: '12px' }}>총 주행거리</p>
+        <p className={styles.drivingValue}>
+          <strong>
+            {totalDistance >= 1000
+              ? `${(totalDistance / 1000).toFixed(1)}`
+              : Number(totalDistance).toFixed(1)}
+          </strong>{' '}
+          {totalDistance >= 1000 ? 'km' : 'm'}
         </p>
       </div>
     </div>

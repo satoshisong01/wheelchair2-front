@@ -34,6 +34,7 @@ export interface WheelchairStatus {
   pressure?: number | null;
   inclineAngle?: number | null;
   distance?: number | null;
+  total_distance?: number | null;
   runtime?: number | null;
   angleBack?: number | null;
   angleSeat?: number | null;

@@ -45,7 +45,7 @@ export function useMyWheelchair() {
   }, [data]);
 
   // 🔊 소리 및 진동 실행 함수
-  const triggerMobileAlert = (sound: 'alarm' | 'ding' = 'alarm') => {
+  const triggerMobileAlert = (sound: 'alarm' | 'ding' | 'chair' = 'alarm') => {
     try {
       const audio = new Audio(`/sounds/${sound}.mp3`);
       audio.play().catch((err) => console.warn('🔊 자동 재생 차단됨:', err));
@@ -198,6 +198,8 @@ export function useMyWheelchair() {
 
       if (isComplete) {
         triggerMobileAlert('ding');
+      } else if (type.includes('POSTURE_ADVICE')) {
+        triggerMobileAlert('chair');
       } else if (shouldPlaySound) {
         triggerMobileAlert('alarm');
       }

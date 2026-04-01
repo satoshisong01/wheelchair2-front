@@ -45,9 +45,9 @@ export default function DashboardPage() {
   const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
 
   // 🔊 소리 및 진동 실행 함수
-  const triggerAlertSound = () => {
+  const triggerAlertSound = (soundFile: string = 'alarm') => {
     try {
-      const audio = new Audio('/sounds/alarm.mp3');
+      const audio = new Audio(`/sounds/${soundFile}.mp3`);
       const playPromise = audio.play();
 
       if (playPromise !== undefined) {
@@ -151,7 +151,9 @@ export default function DashboardPage() {
 
         // 🔊 소리 재생 (성공 메시지는 제외됨)
         const SOUND_KEYWORDS = [...CRITICAL_KEYWORDS, ...ALERT_KEYWORDS];
-        if (SOUND_KEYWORDS.some((k) => type.includes(k))) {
+        if (type.includes('POSTURE_ADVICE')) {
+          triggerAlertSound('chair');
+        } else if (SOUND_KEYWORDS.some((k) => type.includes(k))) {
           triggerAlertSound();
         }
 

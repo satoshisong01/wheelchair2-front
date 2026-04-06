@@ -133,6 +133,7 @@ export function useMyWheelchair() {
         // 2) 주행 데이터
         assign('runtime', update.runtime);
         assign('distance', update.distance);
+        assign('total_distance', update.total_distance);
 
         // 2-0) 욕창 예방 카운트 (POSTURE_COMPLETE에서 증가)
         assign('ulcer_count', update.ulcerCount ?? update.ulcer_count);

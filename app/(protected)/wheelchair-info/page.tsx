@@ -278,7 +278,8 @@ function WheelchairInfoContent() {
 
               // 2. 주행 데이터 (CW/st)
               runtime: payload.runtime ?? prev.status.runtime, // 주행 시간
-              distance: payload.distance ?? prev.status.distance, // 주행 거리
+              distance: payload.distance ?? prev.status.distance, // 일일 거리 (DB 누적값)
+              total_distance: payload.total_distance ?? prev.status.total_distance, // 총 거리
 
               // 2-0. 욕창 예방 카운트 (POSTURE_COMPLETE에서 증가)
               ulcer_count: payload.ulcerCount ?? payload.ulcer_count,

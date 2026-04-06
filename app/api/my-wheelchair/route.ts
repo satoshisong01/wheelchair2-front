@@ -52,7 +52,8 @@ export async function GET(request: Request) {
           s.current_battery, s.current_speed, s.voltage, s.current,
           s.latitude, s.longitude, s.is_connected, s.last_seen,
           s.temperature, s.humidity, s.angle_back, s.angle_seat,
-          s.incline_angle, s.foot_angle, s.runtime, s.distance, s.total_distance
+          s.incline_angle, s.foot_angle, s.runtime, s.distance, s.total_distance,
+          s.posture_time, s.operating_time
         FROM wheelchairs w
         LEFT JOIN wheelchair_status s ON w.id = s.wheelchair_id
         WHERE w.id = $1

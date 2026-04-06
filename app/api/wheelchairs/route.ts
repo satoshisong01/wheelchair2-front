@@ -104,8 +104,6 @@ export async function GET() {
         slope_fr: row.slope_fr,
         slope_side: row.slope_side,
 
-        light: row.light,
-        operating_time: row.operating_time,
       },
 
       registrant: null,

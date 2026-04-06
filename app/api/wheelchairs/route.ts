@@ -34,6 +34,7 @@ export async function GET() {
         s.current,
         s.runtime,
         s.distance,
+        s.total_distance,
         s.is_connected,
         s.last_seen,
         
@@ -78,6 +79,7 @@ export async function GET() {
         current: row.current ?? 0,
         runtime: row.runtime ?? 0,
         distance: row.distance ?? 0,
+        total_distance: row.total_distance ?? 0,
         is_connected: row.is_connected ?? false,
         last_seen: row.last_seen,
 

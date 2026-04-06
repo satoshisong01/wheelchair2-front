@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/jungm/Desktop/projects/worker/**)"
+    ],
+    "additionalDirectories": [
+      "C:\\Users\\jungm\\Desktop\\projects\\worker"
+    ]
+  }
+}

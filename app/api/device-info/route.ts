@@ -37,6 +37,7 @@ export async function GET(req: Request) {
         ws.humidity,
         ws.pressure,
         ws.distance,
+        ws.total_distance,
         ws.runtime,
         ws.temperature as sensor_temp,
         ws.current_battery,
@@ -94,6 +95,7 @@ export async function GET(req: Request) {
       alarms: alarmRes.rows, // DB에서 조회한 실제 알람 리스트
       status: {
         distance: row.distance,
+        total_distance: row.total_distance,
         runtime: row.runtime,
         outdoor_temp: row.outdoor_temp,
         weather_desc: row.weather_desc,

@@ -135,6 +135,10 @@ export function useMyWheelchair() {
         assign('distance', update.distance);
         assign('total_distance', update.total_distance);
 
+        // 2-1) 자세 유지 시간 / 휠체어 사용 시간
+        assign('posture_time', update.postureTime ?? update.posture_time);
+        assign('operating_time', update.operatingTime ?? update.operating_time);
+
         // 2-0) 욕창 예방 카운트 (POSTURE_COMPLETE에서 증가)
         assign('ulcer_count', update.ulcerCount ?? update.ulcer_count);
         assign('ulcerCount', update.ulcerCount ?? update.ulcer_count);

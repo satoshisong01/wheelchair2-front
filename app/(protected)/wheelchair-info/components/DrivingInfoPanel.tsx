@@ -49,7 +49,7 @@ export const DrivingInfoPanel = ({ wc }: { wc: DashboardWheelchair | null }) => 
   // 4. 데이터 매핑 (끊겨도 유지할 항목들)
   const distance = status.distance ?? 0;
   const operatingTime = status.operating_time ?? status.operatingTime ?? 0;
-  const postureTime = status.light ?? 0;
+  const postureTime = status.posture_time ?? status.postureTime ?? 0;
   const runtime = status.runtime ?? 0;
 
   const formatTime = (minutes: number) => {

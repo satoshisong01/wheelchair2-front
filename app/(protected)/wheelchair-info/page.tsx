@@ -285,11 +285,8 @@ function WheelchairInfoContent() {
               ulcer_count: payload.ulcerCount ?? payload.ulcer_count,
 
               // 3. 장기 데이터 (CW/lt)
-              // ⭐️ Worker는 'light'로 보내므로 payload.light를 받아서 status.light에 저장
-              light: payload.light ?? prev.status.light,
-              // DrivingInfoPanel 등에서 posture_time을 쓴다면 light 값으로 동기화
-              posture_time: payload.light ?? prev.status.posture_time,
-              operating_time: payload.operatingTime ?? prev.status.operating_time,
+              posture_time: payload.postureTime ?? payload.posture_time ?? prev.status.posture_time,
+              operating_time: payload.operatingTime ?? payload.operating_time ?? prev.status.operating_time,
 
               // 4. GPS 및 환경
               latitude: payload.latitude ?? prev.status.latitude,

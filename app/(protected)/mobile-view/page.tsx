@@ -315,12 +315,26 @@ export default function MobileViewPage() {
                 </div>
               </>
             );
-            return isSlope ? (
-              <div key={item.id} className={className}>
-                {content}
-              </div>
-            ) : (
-              <button key={item.id} type="button" onClick={item.onClick} className={className}>
+            if (isSlope) {
+              return (
+                <div key={item.id} className={className}>
+                  {content}
+                </div>
+              );
+            }
+            let touchStartY = 0;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onTouchStart={(e) => { touchStartY = e.touches[0].clientY; }}
+                onTouchEnd={(e) => {
+                  const diff = Math.abs(e.changedTouches[0].clientY - touchStartY);
+                  if (diff < 10 && item.onClick) item.onClick();
+                }}
+                onClick={item.onClick}
+                className={className}
+              >
                 {content}
               </button>
             );

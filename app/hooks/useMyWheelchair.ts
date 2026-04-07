@@ -44,11 +44,10 @@ export function useMyWheelchair() {
     dataRef.current = data;
   }, [data]);
 
-  // 🔊 Audio를 미리 생성해두고 재사용 (브라우저 autoplay 정책 대응)
+  // 🔊 Audio 미리 생성 + 무음 unlock
   const audioMapRef = useRef<Record<string, HTMLAudioElement>>({});
   const audioUnlockedRef = useRef(false);
 
-  // Audio 객체 미리 생성
   useEffect(() => {
     if (typeof window === 'undefined') return;
     ['alarm', 'ding', 'chair'].forEach((name) => {
@@ -56,15 +55,25 @@ export function useMyWheelchair() {
         audioMapRef.current[name] = new Audio(`/sounds/${name}.mp3`);
       }
     });
-  }, []);
-
-  // 사용자 터치/클릭 시 audio unlock (모바일 autoplay 정책 해제)
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
     const unlock = () => {
       if (audioUnlockedRef.current) return;
+      // AudioContext unlock
+      try {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const buffer = ctx.createBuffer(1, 1, 22050);
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        source.start(0);
+      } catch (_) {}
+      // Audio 객체도 무음 unlock
       Object.values(audioMapRef.current).forEach((audio) => {
-        audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(() => {});
+        audio.volume = 0;
+        audio.play().then(() => {
+          audio.pause();
+          audio.currentTime = 0;
+          audio.volume = 1.0;
+        }).catch(() => { audio.volume = 1.0; });
       });
       audioUnlockedRef.current = true;
     };
@@ -81,6 +90,7 @@ export function useMyWheelchair() {
       const audio = audioMapRef.current[sound];
       if (audio) {
         audio.currentTime = 0;
+        audio.volume = 1.0;
         audio.play().catch((err) => console.warn('🔊 자동 재생 차단됨:', err));
       }
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
@@ -243,9 +253,9 @@ export function useMyWheelchair() {
         triggerMobileAlert('alarm');
       }
 
-      // ⭐️ 최신 알람으로 설정 (팝업용) — 5초 후 자동 닫기
-      setLatestAlarm(newAlarm);
-      setTimeout(() => setLatestAlarm(null), 5000);
+      // ⭐️ 최신 알람으로 설정 (팝업용) — 타임스탬프 추가로 같은 알람도 새 객체로 인식
+      setLatestAlarm({ ...newAlarm, _receivedAt: Date.now() });
+      setTimeout(() => setLatestAlarm(null), 10000);
 
       // ⭐️ 전체 알람 목록 맨 앞에 추가 (누적 카운트 및 리스트 연동용)
       setAlarms((prev) => [newAlarm, ...prev]);

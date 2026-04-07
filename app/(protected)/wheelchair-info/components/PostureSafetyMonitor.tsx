@@ -102,14 +102,21 @@ export default function PostureSafetyMonitor({
   useEffect(() => {
     const unlockAudio = () => {
       if (audioRef.current && !audioUnlocked) {
+        // unlock 시 볼륨 0으로 해서 소리 안 나게 처리
+        audioRef.current.volume = 0;
         audioRef.current
           .play()
           .then(() => {
             audioRef.current?.pause();
-            audioRef.current!.currentTime = 0;
+            if (audioRef.current) {
+              audioRef.current.currentTime = 0;
+              audioRef.current.volume = 1.0;
+            }
             setAudioUnlocked(true);
           })
-          .catch(() => {});
+          .catch(() => {
+            if (audioRef.current) audioRef.current.volume = 1.0;
+          });
       }
     };
     window.addEventListener('click', unlockAudio);

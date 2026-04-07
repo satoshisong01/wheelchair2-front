@@ -157,7 +157,6 @@ export default function PosturePage() {
             자세유지시간: <strong>{phtHours > 0 ? `${phtHours}시간 ${phtMinutes}분` : `${phtMinutes}분`}</strong>
           </p>
         </div>
-        )}
 
         {/* [2달간 비활성] 욕창 예방 활동 카드 (안전 범위·2분 타이머·오늘 예방 횟수) — 6달차부터 푸시+시각 도우미 사용 시 주석 해제 */}
         {/*

@@ -68,7 +68,13 @@ export default function PostureSafetyMonitor({
     setShowAlarm((prev) => {
       if (!prev) {
         console.log('🚨 알람 발동!');
-        audioRef.current?.play().catch(() => {});
+        // 알람 발동 시에만 audio 생성 및 재생
+        if (!audioRef.current) {
+          audioRef.current = new Audio('/sounds/alarm.mp3');
+          audioRef.current.loop = true;
+          audioRef.current.volume = 1.0;
+        }
+        audioRef.current.play().catch(() => {});
         return true;
       }
       return prev;
@@ -85,42 +91,23 @@ export default function PostureSafetyMonitor({
     }, 0);
   }, [stopAlarm]);
 
-  // 1. 오디오 초기화
-  useEffect(() => {
-    audioRef.current = new Audio('/sounds/alarm.mp3');
-    audioRef.current.loop = true;
-    audioRef.current.volume = 1.0;
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-    };
-  }, []);
-
-  // 2. 오디오 잠금 해제
+  // 1. 오디오 초기화 (알람 발동 시에만 생성)
+  // 2. 오디오 잠금 해제 — 무음 AudioContext로 unlock (소리 안 남)
   useEffect(() => {
     const unlockAudio = () => {
-      if (audioRef.current && !audioUnlocked) {
-        // unlock 시 볼륨 0으로 해서 소리 안 나게 처리
-        audioRef.current.volume = 0;
-        audioRef.current
-          .play()
-          .then(() => {
-            audioRef.current?.pause();
-            if (audioRef.current) {
-              audioRef.current.currentTime = 0;
-              audioRef.current.volume = 1.0;
-            }
-            setAudioUnlocked(true);
-          })
-          .catch(() => {
-            if (audioRef.current) audioRef.current.volume = 1.0;
-          });
-      }
+      if (audioUnlocked) return;
+      try {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const buffer = ctx.createBuffer(1, 1, 22050);
+        const source = ctx.createBufferSource();
+        source.buffer = buffer;
+        source.connect(ctx.destination);
+        source.start(0);
+        setAudioUnlocked(true);
+      } catch (_) {}
     };
-    window.addEventListener('click', unlockAudio);
-    window.addEventListener('touchstart', unlockAudio);
+    window.addEventListener('click', unlockAudio, { once: true });
+    window.addEventListener('touchstart', unlockAudio, { once: true });
     return () => {
       window.removeEventListener('click', unlockAudio);
       window.removeEventListener('touchstart', unlockAudio);

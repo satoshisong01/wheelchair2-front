@@ -230,11 +230,11 @@ export default function MobileViewPage() {
 
   return (
     <div
-      className={`h-screen flex flex-col overflow-hidden transition-colors duration-500 ${hasAlarms ? 'bg-red-50' : 'bg-gray-50'}`}
+      className={`fixed inset-0 flex flex-col overflow-hidden transition-colors duration-500 ${hasAlarms ? 'bg-red-50' : 'bg-gray-50'}`}
     >
       {/* 상단 헤더 — 패딩 최소화 */}
       <header
-        className={`px-6 py-2 shadow-sm rounded-b-3xl mb-2 z-10 transition-colors duration-500 ${hasAlarms ? 'bg-red-500' : 'bg-white'}`}
+        className={`px-6 py-1 shadow-sm rounded-b-3xl mb-1 z-10 transition-colors duration-500 ${hasAlarms ? 'bg-red-500' : 'bg-white'}`}
       >
         <div className="flex justify-between items-center">
           <div>
@@ -268,14 +268,14 @@ export default function MobileViewPage() {
         </div>
       </header>
 
-      <div className="flex-1 px-4 overflow-hidden">
-        {/* 미확인 경고 알람이 있을 때만 띠지 노출 */}
+      <div className="flex-1 px-4 overflow-hidden relative">
+        {/* 경고 배너 — 카드 위에 오버레이로 표시 */}
         {hasAlarms && (
-          <div className="mb-4 bg-white border-l-4 border-red-500 rounded-r-xl p-4 shadow-md flex items-start animate-pulse">
-            <AlertTriangle className="w-6 h-6 text-red-500 mr-3 flex-shrink-0" />
+          <div className="absolute inset-x-4 top-2 z-20 bg-white border-l-4 border-red-500 rounded-r-xl p-3 shadow-lg flex items-start animate-pulse">
+            <AlertTriangle className="w-5 h-5 text-red-500 mr-2 flex-shrink-0" />
             <div>
-              <h3 className="font-bold text-red-600 text-lg">위험 신호 감지</h3>
-              <p className="text-sm text-gray-600 mt-0.5">
+              <h3 className="font-bold text-red-600 text-base">위험 신호 감지</h3>
+              <p className="text-xs text-gray-600 mt-0.5">
                 {unresolveWarningAlarms[0]?.message ||
                   unresolveWarningAlarms[0]?.alarmType ||
                   unresolveWarningAlarms[0]?.alarm_type ||

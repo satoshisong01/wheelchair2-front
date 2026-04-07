@@ -44,11 +44,45 @@ export function useMyWheelchair() {
     dataRef.current = data;
   }, [data]);
 
-  // 🔊 소리 및 진동 실행 함수
+  // 🔊 Audio를 미리 생성해두고 재사용 (브라우저 autoplay 정책 대응)
+  const audioMapRef = useRef<Record<string, HTMLAudioElement>>({});
+  const audioUnlockedRef = useRef(false);
+
+  // Audio 객체 미리 생성
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    ['alarm', 'ding', 'chair'].forEach((name) => {
+      if (!audioMapRef.current[name]) {
+        audioMapRef.current[name] = new Audio(`/sounds/${name}.mp3`);
+      }
+    });
+  }, []);
+
+  // 사용자 터치/클릭 시 audio unlock (모바일 autoplay 정책 해제)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const unlock = () => {
+      if (audioUnlockedRef.current) return;
+      Object.values(audioMapRef.current).forEach((audio) => {
+        audio.play().then(() => { audio.pause(); audio.currentTime = 0; }).catch(() => {});
+      });
+      audioUnlockedRef.current = true;
+    };
+    window.addEventListener('click', unlock, { once: true });
+    window.addEventListener('touchstart', unlock, { once: true });
+    return () => {
+      window.removeEventListener('click', unlock);
+      window.removeEventListener('touchstart', unlock);
+    };
+  }, []);
+
   const triggerMobileAlert = (sound: 'alarm' | 'ding' | 'chair' = 'alarm') => {
     try {
-      const audio = new Audio(`/sounds/${sound}.mp3`);
-      audio.play().catch((err) => console.warn('🔊 자동 재생 차단됨:', err));
+      const audio = audioMapRef.current[sound];
+      if (audio) {
+        audio.currentTime = 0;
+        audio.play().catch((err) => console.warn('🔊 자동 재생 차단됨:', err));
+      }
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
         navigator.vibrate(sound === 'ding' ? [300] : [500, 200, 500]);
       }
@@ -209,8 +243,9 @@ export function useMyWheelchair() {
         triggerMobileAlert('alarm');
       }
 
-      // ⭐️ 최신 알람으로 설정 (팝업용)
+      // ⭐️ 최신 알람으로 설정 (팝업용) — 5초 후 자동 닫기
       setLatestAlarm(newAlarm);
+      setTimeout(() => setLatestAlarm(null), 5000);
 
       // ⭐️ 전체 알람 목록 맨 앞에 추가 (누적 카운트 및 리스트 연동용)
       setAlarms((prev) => [newAlarm, ...prev]);

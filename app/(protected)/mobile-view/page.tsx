@@ -85,14 +85,15 @@ export default function MobileViewPage() {
 
   // 빨간 경고 모드: 새 알람 수신 시 10초간만 표시
   const [showAlarmMode, setShowAlarmMode] = useState(false);
+  const alarmTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   useEffect(() => {
     if (latestAlarm) {
       const type = (latestAlarm.alarmType || latestAlarm.alarm_type || '').toUpperCase();
       const isPositive = type.includes('COMPLETE') || type.includes('SUCCESS');
       if (!isPositive) {
         setShowAlarmMode(true);
-        const timer = setTimeout(() => setShowAlarmMode(false), 10000);
-        return () => clearTimeout(timer);
+        if (alarmTimerRef.current) clearTimeout(alarmTimerRef.current);
+        alarmTimerRef.current = setTimeout(() => setShowAlarmMode(false), 10000);
       }
     }
   }, [latestAlarm]);

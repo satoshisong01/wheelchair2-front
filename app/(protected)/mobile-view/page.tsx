@@ -230,7 +230,7 @@ export default function MobileViewPage() {
 
   return (
     <div
-      className={`fixed inset-0 flex flex-col overflow-hidden transition-colors duration-500 ${hasAlarms ? 'bg-red-50' : 'bg-gray-50'}`}
+      className={`h-full flex flex-col overflow-hidden transition-colors duration-500 ${hasAlarms ? 'bg-red-50' : 'bg-gray-50'}`}
     >
       {/* 상단 헤더 — 패딩 최소화 */}
       <header

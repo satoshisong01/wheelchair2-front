@@ -136,30 +136,27 @@ export default function PosturePage() {
       </header>
 
       <div className="flex-1 p-5 pb-20 overflow-y-auto">
-        {/* 2분 유지 타이머·예방 횟수 (시각 전용 — 카운트 반영은 서버 worker에서 처리) */}
-        {(Number(valSeat) >= 35 || isSuccessThisSession || Number(ulcerCount) > 0) && (
-          <div className="w-full rounded-2xl p-4 mb-6 bg-white border border-gray-100 shadow-sm">
-            <p className="text-sm text-gray-600 mb-2">욕창 예방 (35° 2분 유지)</p>
-            {(Number(valSeat) >= 35 || isSuccessThisSession) && (
-              <div className="mb-2">
-                <div className="w-full bg-gray-100 rounded-full h-2">
-                  <div
-                    className="h-2 rounded-full bg-indigo-500 transition-all duration-300"
-                    style={{ width: `${(timer / 120) * 100}%` }}
-                  />
-                </div>
-                <p className="text-center mt-1 text-sm font-medium text-gray-700">
-                  {Math.floor(timer / 60)}분 {timer % 60}초 {isSuccessThisSession && '✓'}
-                </p>
+        {/* 욕창 예방 + 자세유지시간 (항상 표시) */}
+        <div className="w-full rounded-2xl p-4 mb-6 bg-white border border-gray-100 shadow-sm">
+          <p className="text-sm text-gray-600 mb-2">욕창 예방 (35° 2분 유지)</p>
+          {(Number(valSeat) >= 35 || isSuccessThisSession) && (
+            <div className="mb-2">
+              <div className="w-full bg-gray-100 rounded-full h-2">
+                <div
+                  className="h-2 rounded-full bg-indigo-500 transition-all duration-300"
+                  style={{ width: `${(timer / 120) * 100}%` }}
+                />
               </div>
-            )}
-            {Number(ulcerCount) > 0 && (
-              <p className="text-sm text-gray-500">오늘 예방 횟수: <strong>{Number(ulcerCount)}회</strong></p>
-            )}
-            <p className="text-sm text-gray-500 mt-1">
-              자세유지시간: <strong>{phtHours > 0 ? `${phtHours}시간 ${phtMinutes}분` : `${phtMinutes}분`}</strong>
-            </p>
-          </div>
+              <p className="text-center mt-1 text-sm font-medium text-gray-700">
+                {Math.floor(timer / 60)}분 {timer % 60}초 {isSuccessThisSession && '✓'}
+              </p>
+            </div>
+          )}
+          <p className="text-sm text-gray-500">오늘 예방 횟수: <strong>{Number(ulcerCount)}회</strong></p>
+          <p className="text-sm text-gray-500 mt-1">
+            자세유지시간: <strong>{phtHours > 0 ? `${phtHours}시간 ${phtMinutes}분` : `${phtMinutes}분`}</strong>
+          </p>
+        </div>
         )}
 
         {/* [2달간 비활성] 욕창 예방 활동 카드 (안전 범위·2분 타이머·오늘 예방 횟수) — 6달차부터 푸시+시각 도우미 사용 시 주석 해제 */}

@@ -3,7 +3,7 @@
 
 'use client';
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useMyWheelchair } from '../../hooks/useMyWheelchair';
@@ -81,8 +81,23 @@ export default function MobileViewPage() {
     return !a.is_resolved && !isPositive; // 확인 안 됨 AND 긍정 신호 아님
   });
 
-  const hasAlarms = unresolveWarningAlarms.length > 0;
   const alarmCount = unresolveWarningAlarms.length;
+
+  // 빨간 경고 모드: 새 알람 수신 시 10초간만 표시
+  const [showAlarmMode, setShowAlarmMode] = useState(false);
+  useEffect(() => {
+    if (latestAlarm) {
+      const type = (latestAlarm.alarmType || latestAlarm.alarm_type || '').toUpperCase();
+      const isPositive = type.includes('COMPLETE') || type.includes('SUCCESS');
+      if (!isPositive) {
+        setShowAlarmMode(true);
+        const timer = setTimeout(() => setShowAlarmMode(false), 10000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [latestAlarm]);
+
+  const hasAlarms = showAlarmMode;
 
   // 진동 효과 (RN 앱 환경일 경우)
   useEffect(() => {

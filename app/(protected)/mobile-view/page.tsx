@@ -234,7 +234,7 @@ export default function MobileViewPage() {
     >
       {/* 상단 헤더 — 패딩 최소화 */}
       <header
-        className={`px-6 py-1 shadow-sm rounded-b-3xl mb-1 z-10 transition-colors duration-500 ${hasAlarms ? 'bg-red-500' : 'bg-white'}`}
+        className={`px-6 py-2 shadow-sm rounded-b-3xl mb-1 z-10 transition-colors duration-500 ${hasAlarms ? 'bg-red-500' : 'bg-white'}`}
       >
         <div className="flex justify-between items-center">
           <div>

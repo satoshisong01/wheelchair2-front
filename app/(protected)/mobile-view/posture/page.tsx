@@ -86,6 +86,11 @@ export default function PosturePage() {
   // 서버(소켓)에서 받은 오늘 예방 횟수 — worker가 posture_daily 반영 후 wheelchair_status_update로 전달
   const ulcerCount = status.ulcer_count ?? status.ulcerCount ?? 0;
 
+  // 자세 유지 시간 (PHT)
+  const postureTimeMin = Number(status.posture_time ?? status.postureTime ?? 0);
+  const phtHours = Math.floor(postureTimeMin / 60);
+  const phtMinutes = Math.floor(postureTimeMin % 60);
+
   // 서버에서 욕창 예방 카운트가 올라왔을 때 → 성공 상태·타이머 120으로 시각 반영
   useEffect(() => {
     const current = Number(ulcerCount);
@@ -151,6 +156,9 @@ export default function PosturePage() {
             {Number(ulcerCount) > 0 && (
               <p className="text-sm text-gray-500">오늘 예방 횟수: <strong>{Number(ulcerCount)}회</strong></p>
             )}
+            <p className="text-sm text-gray-500 mt-1">
+              자세유지시간: <strong>{phtHours > 0 ? `${phtHours}시간 ${phtMinutes}분` : `${phtMinutes}분`}</strong>
+            </p>
           </div>
         )}
 

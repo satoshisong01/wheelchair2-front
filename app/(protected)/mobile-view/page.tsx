@@ -230,7 +230,7 @@ export default function MobileViewPage() {
 
   return (
     <div
-      className={`min-h-screen flex flex-col pb-6 transition-colors duration-500 ${hasAlarms ? 'bg-red-50' : 'bg-gray-50'}`}
+      className={`h-screen flex flex-col overflow-hidden transition-colors duration-500 ${hasAlarms ? 'bg-red-50' : 'bg-gray-50'}`}
     >
       {/* 상단 헤더 — 패딩 최소화 */}
       <header
@@ -268,7 +268,7 @@ export default function MobileViewPage() {
         </div>
       </header>
 
-      <div className="flex-1 px-4 overflow-y-auto">
+      <div className="flex-1 px-4 overflow-hidden">
         {/* 미확인 경고 알람이 있을 때만 띠지 노출 */}
         {hasAlarms && (
           <div className="mb-4 bg-white border-l-4 border-red-500 rounded-r-xl p-4 shadow-md flex items-start animate-pulse">
@@ -285,11 +285,11 @@ export default function MobileViewPage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
           {menuItems.map((item) => {
             const isSlope = 'isSlopeCard' in item && item.isSlopeCard;
             const className = `
-              relative px-4 py-2 rounded-xl border text-left transition-all shadow-sm flex items-center w-full h-auto
+              relative px-3 py-1.5 rounded-xl border text-left transition-all shadow-sm flex items-center w-full h-auto
               ${item.bgColor} ${item.borderColor}
               ${isSlope ? '' : 'active:scale-95 cursor-pointer'}
             `;
@@ -308,7 +308,7 @@ export default function MobileViewPage() {
                     </span>
                   </div>
                   <div
-                    className={`${item.subClassName || 'text-[16px] font-bold'} opacity-80 ${item.textColor} truncate`}
+                    className={`${item.subClassName || 'text-[13px] font-semibold'} opacity-80 ${item.textColor} truncate`}
                   >
                     {item.sub}
                   </div>
@@ -340,7 +340,6 @@ export default function MobileViewPage() {
             );
           })}
         </div>
-        <div className="h-6"></div>
       </div>
     </div>
   );

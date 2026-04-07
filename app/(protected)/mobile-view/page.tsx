@@ -238,16 +238,9 @@ export default function MobileViewPage() {
       >
         <div className="flex justify-between items-center">
           <div>
-            <h1 className={`text-xl font-bold ${hasAlarms ? 'text-white' : 'text-gray-800'}`}>
-              {hasAlarms ? '🚨 경고 발생!' : `${displayName}님 👋`}
+            <h1 className={`text-lg font-bold ${hasAlarms ? 'text-white' : 'text-gray-800'}`}>
+              {hasAlarms ? '🚨 경고 발생! 휠체어 상태를 확인하세요' : `${displayName}님, 안전한 주행 되세요!`}
             </h1>
-            <p className={`text-sm mt-0.5 ${hasAlarms ? 'text-red-100' : 'text-gray-500'}`}>
-              {hasAlarms
-                ? '휠체어 상태를 확인하세요'
-                : loading
-                  ? '데이터 로딩 중...'
-                  : '오늘도 안전한 주행 되세요!'}
-            </p>
           <p className="text-xs mt-1 flex items-center gap-1">
             <span className={hasAlarms ? 'text-red-100' : 'text-gray-500'}>전원:</span>
             <span

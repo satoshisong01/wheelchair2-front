@@ -135,6 +135,7 @@ export default function LandingPage() {
           >
             안드로이드 앱 다운로드
           </a>
+          <p className="text-xs text-gray-400 mt-2">앱 버전: v1.7.0</p>
         </div>
       </div>
     </div>

@@ -4,7 +4,8 @@
       "Read(//c/Users/jungm/Desktop/projects/worker/**)",
       "Read(//c/Users/jungm/Desktop/projects/test-mqtt/**)",
       "Bash(find /c/Users/jungm/Desktop/projects/wheelchair2-front/src -type f \\\\\\(-name *.tsx -o -name *.ts \\\\\\))",
-      "Read(//c/Users/jungm/Desktop/projects/WheelchairApp/**)"
+      "Read(//c/Users/jungm/Desktop/projects/WheelchairApp/**)",
+      "Bash(./gradlew assembleRelease)"
     ],
     "additionalDirectories": [
       "C:\\Users\\jungm\\Desktop\\projects\\worker",

@@ -83,13 +83,11 @@ export default function MobileViewPage() {
 
   const alarmCount = unresolveWarningAlarms.length;
 
-  // 환영 인사: 3초 후 페이드아웃 시작, 4초에 완전히 제거
-  const [showGreeting, setShowGreeting] = useState(true);
-  const [greetingFading, setGreetingFading] = useState(false);
+  // 환영 인사: 3초 후 커튼처럼 접히며 사라짐
+  const [greetingCollapsed, setGreetingCollapsed] = useState(false);
   useEffect(() => {
-    const fadeTimer = setTimeout(() => setGreetingFading(true), 3000);
-    const removeTimer = setTimeout(() => setShowGreeting(false), 4000);
-    return () => { clearTimeout(fadeTimer); clearTimeout(removeTimer); };
+    const timer = setTimeout(() => setGreetingCollapsed(true), 3000);
+    return () => clearTimeout(timer);
   }, []);
 
   // 빨간 경고 모드: 새 알람 수신 시 10초간만 표시
@@ -248,13 +246,19 @@ export default function MobileViewPage() {
       >
         <div className="flex justify-between items-center">
           <div>
-            {hasAlarms ? (
+            {hasAlarms && (
               <h1 className="text-sm font-bold text-white">🚨 경고 발생! 휠체어 상태를 확인하세요</h1>
-            ) : showGreeting ? (
-              <h1 className={`text-sm font-bold text-gray-800 transition-opacity duration-1000 ${greetingFading ? 'opacity-0' : 'opacity-100'}`}>
-                {displayName}님, 안전한 주행 되세요!
-              </h1>
-            ) : null}
+            )}
+            {!hasAlarms && (
+              <div
+                className="overflow-hidden transition-all duration-1000 ease-in-out"
+                style={{ maxHeight: greetingCollapsed ? '0px' : '24px', opacity: greetingCollapsed ? 0 : 1 }}
+              >
+                <h1 className="text-sm font-bold text-gray-800">
+                  {displayName}님, 안전한 주행 되세요!
+                </h1>
+              </div>
+            )}
           <p className="text-sm mt-1 flex items-center gap-1">
             <span className={`font-bold ${hasAlarms ? 'text-red-100' : 'text-gray-600'}`}>전원:</span>
             <span

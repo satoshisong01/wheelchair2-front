@@ -202,17 +202,17 @@ export default function MobileViewPage() {
     {
       id: 'event',
       title: '이벤트 이력',
-      // ⭐️ [수정] 확인되지 않은 경고 알람 갯수만 표시
-      value: hasAlarms ? `${alarmCount}건 감지` : '안전',
-      sub: hasAlarms ? '확인 필요' : '최근 경고 없음',
+      // ⭐️ [수정] 실제 미확인 경고 알람 갯수 기준으로 표시
+      value: alarmCount > 0 ? `${alarmCount}건 감지` : '안전',
+      sub: alarmCount > 0 ? '확인 필요' : '최근 경고 없음',
       icon: (
         <Bell
-          className={`w-5 h-5 ${hasAlarms ? 'text-red-600 animate-bounce' : 'text-gray-600'}`}
+          className={`w-5 h-5 ${alarmCount > 0 ? 'text-red-600 animate-bounce' : 'text-gray-600'}`}
         />
       ),
-      bgColor: hasAlarms ? 'bg-red-100' : 'bg-gray-50',
-      borderColor: hasAlarms ? 'border-red-300' : 'border-gray-100',
-      textColor: hasAlarms ? 'text-red-900' : 'text-gray-900',
+      bgColor: alarmCount > 0 ? 'bg-red-100' : 'bg-gray-50',
+      borderColor: alarmCount > 0 ? 'border-red-300' : 'border-gray-100',
+      textColor: alarmCount > 0 ? 'text-red-900' : 'text-gray-900',
       onClick: () => router.push('/mobile-view/events'),
     },
     {

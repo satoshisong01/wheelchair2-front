@@ -104,10 +104,10 @@ export function useMyWheelchair() {
   useEffect(() => {
     if (!session) return;
 
-    // 1. 초기 데이터 가져오기 (DB 데이터 로드)
-    const fetchData = async () => {
+    // 1. 초기 데이터 가져오기 (DB 데이터 로드) — 실패 시 3회 재시도
+    const fetchData = async (retryCount = 0) => {
       try {
-        const res = await fetch('/api/device-info');
+        const res = await fetch(`/api/device-info?t=${Date.now()}`);
         if (res.ok) {
           const json = await res.json();
 
@@ -121,9 +121,18 @@ export function useMyWheelchair() {
           if (json.alarms && Array.isArray(json.alarms)) {
             setAlarms(json.alarms);
           }
+        } else if (retryCount < 3) {
+          console.warn(`⚠️ 데이터 로드 실패 (${retryCount + 1}/3), 3초 후 재시도...`);
+          setTimeout(() => fetchData(retryCount + 1), 3000);
+          return;
         }
       } catch (error) {
         console.error('Failed to fetch wheelchair data', error);
+        if (retryCount < 3) {
+          console.warn(`⚠️ 네트워크 오류 (${retryCount + 1}/3), 3초 후 재시도...`);
+          setTimeout(() => fetchData(retryCount + 1), 3000);
+          return;
+        }
       } finally {
         setLoading(false);
       }

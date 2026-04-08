@@ -83,11 +83,13 @@ export default function MobileViewPage() {
 
   const alarmCount = unresolveWarningAlarms.length;
 
-  // 환영 인사: 3초 후 사라짐
+  // 환영 인사: 3초 후 페이드아웃 시작, 4초에 완전히 제거
   const [showGreeting, setShowGreeting] = useState(true);
+  const [greetingFading, setGreetingFading] = useState(false);
   useEffect(() => {
-    const timer = setTimeout(() => setShowGreeting(false), 3000);
-    return () => clearTimeout(timer);
+    const fadeTimer = setTimeout(() => setGreetingFading(true), 3000);
+    const removeTimer = setTimeout(() => setShowGreeting(false), 4000);
+    return () => { clearTimeout(fadeTimer); clearTimeout(removeTimer); };
   }, []);
 
   // 빨간 경고 모드: 새 알람 수신 시 10초간만 표시
@@ -249,21 +251,21 @@ export default function MobileViewPage() {
             {hasAlarms ? (
               <h1 className="text-sm font-bold text-white">🚨 경고 발생! 휠체어 상태를 확인하세요</h1>
             ) : showGreeting ? (
-              <h1 className={`text-sm font-bold text-gray-800 transition-opacity duration-500`}>
+              <h1 className={`text-sm font-bold text-gray-800 transition-opacity duration-1000 ${greetingFading ? 'opacity-0' : 'opacity-100'}`}>
                 {displayName}님, 안전한 주행 되세요!
               </h1>
             ) : null}
-          <p className="text-xs mt-1 flex items-center gap-1">
-            <span className={hasAlarms ? 'text-red-100' : 'text-gray-500'}>전원:</span>
+          <p className="text-sm mt-1 flex items-center gap-1">
+            <span className={`font-bold ${hasAlarms ? 'text-red-100' : 'text-gray-600'}`}>전원:</span>
             <span
               className={
                 hasAlarms
                   ? isPowerOn
-                    ? 'text-lime-200 font-semibold'
-                    : 'text-yellow-100 font-semibold'
+                    ? 'text-lime-200 font-bold'
+                    : 'text-yellow-100 font-bold'
                   : isPowerOn
-                    ? 'text-green-600 font-semibold'
-                    : 'text-red-500 font-semibold'
+                    ? 'text-green-600 font-bold'
+                    : 'text-red-500 font-bold'
               }
             >
               {isPowerOn ? 'ON' : 'OFF'}

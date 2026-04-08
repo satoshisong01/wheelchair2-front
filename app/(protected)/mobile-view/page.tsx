@@ -83,6 +83,13 @@ export default function MobileViewPage() {
 
   const alarmCount = unresolveWarningAlarms.length;
 
+  // 환영 인사: 3초 후 사라짐
+  const [showGreeting, setShowGreeting] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setShowGreeting(false), 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
   // 빨간 경고 모드: 새 알람 수신 시 10초간만 표시
   const [showAlarmMode, setShowAlarmMode] = useState(false);
   const alarmTimerRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -215,17 +222,18 @@ export default function MobileViewPage() {
       textColor: alarmCount > 0 ? 'text-red-900' : 'text-gray-900',
       onClick: () => router.push('/mobile-view/events'),
     },
-    {
-      id: 'ai',
-      title: '패턴 인식',
-      value: '분석중',
-      sub: '주행 습관 분석',
-      icon: <BrainCircuit className="w-5 h-5 text-purple-600" />,
-      bgColor: 'bg-purple-50',
-      borderColor: 'border-purple-100',
-      textColor: 'text-purple-900',
-      onClick: () => router.push('/mobile-view/ai'),
-    },
+    // 패턴 인식(AI) 카드 — 현재 비활성 (추후 필요 시 주석 해제)
+    // {
+    //   id: 'ai',
+    //   title: '패턴 인식',
+    //   value: '분석중',
+    //   sub: '주행 습관 분석',
+    //   icon: <BrainCircuit className="w-5 h-5 text-purple-600" />,
+    //   bgColor: 'bg-purple-50',
+    //   borderColor: 'border-purple-100',
+    //   textColor: 'text-purple-900',
+    //   onClick: () => router.push('/mobile-view/ai'),
+    // },
   ];
 
   return (
@@ -238,9 +246,13 @@ export default function MobileViewPage() {
       >
         <div className="flex justify-between items-center">
           <div>
-            <h1 className={`text-lg font-bold ${hasAlarms ? 'text-white' : 'text-gray-800'}`}>
-              {hasAlarms ? '🚨 경고 발생! 휠체어 상태를 확인하세요' : `${displayName}님, 안전한 주행 되세요!`}
-            </h1>
+            {hasAlarms ? (
+              <h1 className="text-sm font-bold text-white">🚨 경고 발생! 휠체어 상태를 확인하세요</h1>
+            ) : showGreeting ? (
+              <h1 className={`text-sm font-bold text-gray-800 transition-opacity duration-500`}>
+                {displayName}님, 안전한 주행 되세요!
+              </h1>
+            ) : null}
           <p className="text-xs mt-1 flex items-center gap-1">
             <span className={hasAlarms ? 'text-red-100' : 'text-gray-500'}>전원:</span>
             <span

@@ -178,11 +178,11 @@
   color: black;
 }
 
-/* WheelchairStatePanel (휠체어 상태)
+/* WheelchairStatePanel (휠체어 상태) */
 .wheelchairStateCard {
-  flex: 1; /* ‼️ bottomArea의 1/2 */
-/* min-width: 320px; */
-/* } */
+  flex: 1;
+  overflow: visible;
+}
 
 .stateContainer {
   display: flex;
@@ -413,13 +413,8 @@
  * 3. 휠체어 상태 패널 (WheelchairStatePanel)
  * -----------------------------------------------
  * [수정] Grid -> Flexbox 기반 2-Row 레이아웃 (시안 2)
+ * 기본 스타일은 .wheelchairStateCard (182번줄)에 정의됨
  */
-.wheelchairStateCard {
-  flex: 1; /* bottomArea의 1/2 */
-  min-width: 320px;
-  /* (선택) 카드 내부의 기본 패딩을 줄여서 공간 확보 */
-  /* padding: 0.8rem; */
-}
 
 .stateContainer {
   display: flex;
@@ -586,32 +581,53 @@
     flex: 1;
     min-width: 0;
   }
+  .wheelchairStateCard {
+    overflow: hidden;
+  }
+  .stateContainer {
+    gap: 0.5rem;
+  }
+  .stateRow {
+    gap: 4px;
+  }
   .stateIconBox {
-    max-width: 90px;
-    height: 90px;
-    padding: 8px 4px;
+    max-width: none;
+    height: auto;
+    padding: 6px 2px;
+    min-width: 0;
   }
   .iconBackground {
-    width: 36px;
-    height: 36px;
-    margin-bottom: 4px;
+    width: 28px;
+    height: 28px;
+    margin-bottom: 2px;
+  }
+  .iconBackground img {
+    width: 28px !important;
+    height: 28px !important;
   }
   .stateLabel {
-    font-size: 0.75rem;
-    margin-bottom: 4px;
+    font-size: 0.65rem;
+    margin-bottom: 2px;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
   .stateCircle {
-    width: 10px;
-    height: 10px;
+    width: 8px;
+    height: 8px;
+    flex-shrink: 0;
   }
   .stateRowLabel {
-    font-size: 0.7rem;
-    min-width: 28px;
-    padding: 4px 2px;
+    font-size: 0.6rem;
+    min-width: 24px;
+    width: 24px;
+    height: auto;
+    padding: 4px 1px;
+    letter-spacing: 0;
   }
   .iconFlexContainer {
-    gap: 6px;
+    gap: 3px;
   }
 }
 

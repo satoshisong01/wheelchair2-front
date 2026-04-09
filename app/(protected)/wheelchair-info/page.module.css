@@ -575,7 +575,7 @@
   font-size: 0.9rem;
 }
 
-/* 15인치 노트북 대응 (1366px 이하) */
+/* 15인치 노트북 대응 (1400px 이하) */
 @media (max-width: 1400px) {
   .rightColumn {
     min-width: 300px;
@@ -585,6 +585,33 @@
   .leftColumn {
     flex: 1;
     min-width: 0;
+  }
+  .stateIconBox {
+    max-width: 90px;
+    height: 90px;
+    padding: 8px 4px;
+  }
+  .iconBackground {
+    width: 36px;
+    height: 36px;
+    margin-bottom: 4px;
+  }
+  .stateLabel {
+    font-size: 0.75rem;
+    margin-bottom: 4px;
+    white-space: nowrap;
+  }
+  .stateCircle {
+    width: 10px;
+    height: 10px;
+  }
+  .stateRowLabel {
+    font-size: 0.7rem;
+    min-width: 28px;
+    padding: 4px 2px;
+  }
+  .iconFlexContainer {
+    gap: 6px;
   }
 }
 

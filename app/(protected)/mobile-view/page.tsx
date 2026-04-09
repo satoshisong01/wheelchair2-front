@@ -282,7 +282,7 @@ export default function MobileViewPage() {
       <div className="flex-1 px-4 overflow-hidden relative">
         {/* 경고 배너 — 카드 위에 오버레이로 표시 */}
         {hasAlarms && (
-          <div className="absolute inset-x-4 top-2 z-20 bg-white border-l-4 border-red-500 rounded-r-xl p-3 shadow-lg flex items-start"
+          <div className="absolute inset-x-4 top-2 z-20 bg-white border-l-4 border-red-500 rounded-r-xl p-3 shadow-lg flex items-start">
             <AlertTriangle className="w-5 h-5 text-red-500 mr-2 flex-shrink-0" />
             <div>
               <h3 className="font-bold text-red-600 text-base">위험 신호 감지</h3>

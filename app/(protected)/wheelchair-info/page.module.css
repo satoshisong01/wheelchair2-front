@@ -134,11 +134,10 @@
 
 /* ‼️ [수정] A-2. 하단 영역 (비율 조정) */
 .bottomArea {
-  flex: 1.2; /* ‼️ 좌측 컬럼의 60% (1.2 / (0.8 + 1.2)) */
+  flex: 1.2;
   display: flex;
   gap: 1rem;
-  min-height: 200px;
-  overflow-y: auto;
+  min-height: 250px;
 }
 
 /* --- 공통 카드 스타일 --- */
@@ -160,7 +159,7 @@
 
 /* DrivingInfoPanel (운행 정보) */
 .drivingInfoCard {
-  flex: 1; /* ‼️ bottomArea의 1/2 */
+  flex: 1;
 }
 .drivingGrid {
   display: grid;
@@ -181,22 +180,25 @@
 /* WheelchairStatePanel (휠체어 상태) */
 .wheelchairStateCard {
   flex: 1;
-  overflow: visible;
 }
 
 .stateContainer {
   display: flex;
   flex-direction: column;
-  flex: 1; /* 카드 내부의 남은 공간 모두 차지 */
-  justify-content: space-around; /* 2개 행을 위아래로 분산 */
-  gap: 1rem;
-  margin-top: 1rem;
+  flex: 1;
+  justify-content: flex-start;
+  gap: 0.8rem;
+  margin-top: 0.5rem;
+  overflow: auto;
+  min-height: 0;
 }
 
 .stateRow {
   display: flex;
-  align-items: center; /* 라벨과 아이콘 컨테이너를 세로 중앙 정렬 */
+  align-items: center;
   gap: 10px;
+  flex-shrink: 0;
+  min-width: min-content;
 }
 
 .stateRowLabel {
@@ -413,22 +415,29 @@
  * 3. 휠체어 상태 패널 (WheelchairStatePanel)
  * -----------------------------------------------
  * [수정] Grid -> Flexbox 기반 2-Row 레이아웃 (시안 2)
- * 기본 스타일은 .wheelchairStateCard (182번줄)에 정의됨
  */
+.wheelchairStateCard {
+  flex: 1;
+  min-width: 320px;
+}
 
 .stateContainer {
   display: flex;
   flex-direction: column;
-  flex: 1; /* 카드 내부의 남은 공간 모두 차지 */
-  justify-content: space-around; /* 2개 행을 위아래로 분산 */
+  flex: 1;
+  justify-content: space-around;
   gap: 1rem;
   margin-top: 1rem;
+  overflow: auto;
+  min-height: 0;
 }
 
 .stateRow {
   display: flex;
-  align-items: center; /* 라벨과 아이콘 컨테이너를 세로 중앙 정렬 */
+  align-items: center;
   gap: 10px;
+  flex-shrink: 0;
+  min-width: min-content;
 }
 
 .stateRowLabel {
@@ -582,10 +591,12 @@
     min-width: 0;
   }
   .wheelchairStateCard {
-    overflow: hidden;
+    overflow: auto;
+    min-height: 0;
   }
   .stateContainer {
     gap: 0.5rem;
+    min-height: 0;
   }
   .stateRow {
     gap: 4px;

@@ -328,6 +328,17 @@ function WheelchairInfoContent() {
           );
         }
 
+        // 알림 종류에 따라 다른 소리 재생 (사용자 페이지와 동일)
+        const isComplete = type.includes('COMPLETE') || type.includes('SUCCESS');
+        const soundFile = isComplete ? '/sounds/ding.mp3' : type.includes('POSTURE_ADVICE') ? '/sounds/chair.mp3' : '/sounds/alarm.mp3';
+        const isLoop = !isComplete && !type.includes('POSTURE_ADVICE');
+        try {
+          const audio = new Audio(soundFile);
+          audio.volume = 1.0;
+          audio.play().catch(() => {});
+          setTimeout(() => { audio.pause(); audio.currentTime = 0; }, isComplete ? 2000 : 4000);
+        } catch (_) {}
+
         setDetailData((prev) => (prev ? { ...prev, alarms: [newAlarm, ...prev.alarms] } : null));
       }
     });

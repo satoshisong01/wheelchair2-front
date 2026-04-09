@@ -98,7 +98,7 @@
 .leftColumn {
   display: flex;
   flex-direction: column;
-  flex: 1; /* ‼️ 우측 컬럼보다 2배 넓게 (2/3) */
+  flex: 2; /* ‼️ 우측 컬럼보다 2배 넓게 (2/3) */
   gap: 1rem;
   min-width: 0; /* ‼️ flex 아이템이 찌그러지는 것을 방지 */
 }
@@ -109,7 +109,7 @@
   flex-direction: column;
   flex: 1; /* ‼️ 좌측 컬럼의 절반 넓이 (1/3) */
   gap: 1rem;
-  min-width: 0; /* ‼️ flex 아이템이 찌그러지는 것을 방지 */
+  min-width: 320px; /* ‼️ 15인치 이하에서 잘리지 않도록 최소 너비 보장 */
   overflow-y: auto; /* ‼️ 우측 컬럼만 내용이 넘칠 경우 스크롤 */
 }
 

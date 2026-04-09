@@ -55,11 +55,13 @@
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -2px rgba(0, 0, 0, 0.1);
   max-width: 1000px;
+  min-width: 0;
 }
 .summarySection {
   flex: 0.5;
   width: 320px;
-  flex-shrink: 0;
+  min-width: 280px;
+  flex-shrink: 1;
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;

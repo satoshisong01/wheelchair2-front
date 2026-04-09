@@ -1,8 +1,10 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-04-09T01:55:24.838Z",
+  "lastUpdated": "2026-04-09T03:24:32.713Z",
   "activeFeatures": [
-    "wheelchair-info"
+    "wheelchair-info",
+    "mobile-view",
+    "wheelchair2-front"
   ],
   "primaryFeature": "wheelchair-info",
   "features": {
@@ -18,6 +20,32 @@
         "lastUpdated": "2026-04-09T01:55:24.834Z"
       },
       "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\(protected)\\wheelchair-info\\page.tsx"
+    },
+    "mobile-view": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-04-09T03:23:54.050Z",
+        "lastUpdated": "2026-04-09T03:23:54.050Z"
+      },
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\(protected)\\mobile-view\\page.tsx"
+    },
+    "wheelchair2-front": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-04-09T03:24:32.711Z",
+        "lastUpdated": "2026-04-09T03:24:32.711Z"
+      },
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\hooks\\useMyWheelchair.ts"
     }
   },
   "pipeline": {
@@ -28,12 +56,24 @@
   "session": {
     "startedAt": "2026-04-09T01:52:22.043Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-04-09T01:55:24.838Z"
+    "lastActivity": "2026-04-09T03:24:32.713Z"
   },
   "history": [
     {
       "timestamp": "2026-04-09T01:55:24.838Z",
       "feature": "wheelchair-info",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T03:23:54.052Z",
+      "feature": "mobile-view",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-04-09T03:24:32.713Z",
+      "feature": "wheelchair2-front",
       "phase": "do",
       "action": "updated"
     }

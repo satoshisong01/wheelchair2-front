@@ -277,49 +277,12 @@ export function useMyWheelchair() {
     };
   }, [session]);
 
-  // POSTURE_COMPLETE에 해당하는 ulcer_count 증가 시, POSTURE_ADVICE는 수동 확인과 동일하게 처리
+  // POSTURE_COMPLETE 수신 시 ulcer_count 추적만 (자동 확인 처리 제거 — 사용자가 직접 확인)
   useEffect(() => {
     const st = data?.status as { ulcerCount?: number; ulcer_count?: number } | undefined;
     const n = Number(st?.ulcerCount ?? st?.ulcer_count ?? NaN);
     if (!Number.isFinite(n)) return;
-
-    const prev = prevUlcerCountRef.current;
-    if (prev === null) {
-      prevUlcerCountRef.current = n;
-      return;
-    }
-    if (n <= prev) {
-      prevUlcerCountRef.current = n;
-      return;
-    }
-
     prevUlcerCountRef.current = n;
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch('/api/alarms/resolve', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ resolvePostureAdvice: true }),
-        });
-        if (cancelled || !res.ok) return;
-        setAlarms((prevAlarms) =>
-          prevAlarms.map((a) => {
-            const t = (a.alarmType || a.alarm_type || '').toUpperCase();
-            return t === 'POSTURE_ADVICE' && !a.is_resolved ? { ...a, is_resolved: true } : a;
-          }),
-        );
-        setLatestAlarm((la) => {
-          const t = (la?.alarmType || la?.alarm_type || '').toUpperCase();
-          return t === 'POSTURE_ADVICE' ? null : la;
-        });
-      } catch (e) {
-        console.error('POSTURE_ADVICE 자동 확인 처리 실패:', e);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
   }, [data?.status]);
 
   return {

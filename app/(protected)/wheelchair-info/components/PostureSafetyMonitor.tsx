@@ -188,8 +188,8 @@ export default function PostureSafetyMonitor({
 
     lastShownAtRef.current = now;
     triggerAlarm();
-    // 5초 후 자동 닫기
-    setTimeout(() => stopAlarm(), 5000);
+    // 10초 후 자동 닫기
+    setTimeout(() => stopAlarm(), 10000);
   }, [postureAdviceAt, showAlarm, triggerAlarm, stopAlarm, COOLDOWN_MS]);
 
   // 4. 타이머 체크: POSTURE_ADVICE 즉시 팝업으로 대체되어 비활성화합니다.

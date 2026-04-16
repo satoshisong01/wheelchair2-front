@@ -239,7 +239,7 @@ export default function LocationPage() {
           onClick={() => router.back()}
           className="bg-white/90 backdrop-blur-sm p-3 rounded-full shadow-md text-gray-700 active:scale-95 transition-transform"
         >
-          <ChevronLeft className="w-6 h-6" />
+          <ChevronLeft className="w-9 h-9" />
         </button>
 
         {/* 지도 새로고침 버튼 (모바일) */}

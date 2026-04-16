@@ -85,15 +85,15 @@ export default function EventsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <header className="bg-white px-4 py-4 shadow-sm flex items-center justify-between sticky top-0 z-10">
+      <header className="bg-white px-4 py-3 shadow-sm flex items-center justify-between sticky top-0 z-10">
+        <button
+          onClick={() => router.back()}
+          className="p-1 text-gray-600 cursor-pointer active:opacity-50"
+        >
+          <ChevronLeft className="w-11 h-11" />
+        </button>
         <div className="flex items-center">
-          <button
-            onClick={() => router.back()}
-            className="p-2 -ml-2 text-gray-600 cursor-pointer active:opacity-50"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          <h1 className="text-lg font-bold text-gray-800 ml-2">
+          <h1 className="text-lg font-bold text-gray-800">
             이벤트 이력 ({filteredEvents.length})
           </h1>
         </div>

@@ -107,9 +107,9 @@ export default function BatteryPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* 헤더 */}
-      <header className="bg-white px-4 py-4 shadow-sm flex items-center sticky top-0 z-10">
-        <button onClick={() => router.back()} className="p-2 -ml-2 text-gray-600">
-          <ChevronLeft className="w-6 h-6" />
+      <header className="bg-white px-4 py-3 shadow-sm flex items-center sticky top-0 z-10">
+        <button onClick={() => router.back()} className="p-1 text-gray-600">
+          <ChevronLeft className="w-11 h-11" />
         </button>
         <h1 className="text-lg font-bold text-gray-800 ml-2">배터리 상세 정보</h1>
       </header>

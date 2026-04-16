@@ -28,15 +28,15 @@ export default function BottomNavigation() {
         </Link>
       )}
 
-      {/* 2. 휠체어 정보 (모두) -> 일반 사용자는 '홈'으로 표시 */}
+      {/* 2. 휠체어 정보 (모두) -> 일반 사용자는 '홈'으로 크게 표시 */}
       <Link
-        href="/wheelchair-info"
-        className={`${styles.navItem} ${
-          pathname.startsWith('/wheelchair-info') ? styles.active : ''
+        href={isManager ? '/wheelchair-info' : '/mobile-view'}
+        className={`${isManager ? styles.navItem : styles.navItemHome} ${
+          (isManager ? pathname.startsWith('/wheelchair-info') : pathname.startsWith('/mobile-view')) ? styles.active : ''
         }`}
       >
-        <span className={styles.icon}>{isManager ? '♿' : '🏠'}</span>
-        <span className={styles.label}>{isManager ? '정보' : '홈'}</span>
+        <span className={isManager ? styles.icon : styles.iconHome}>{isManager ? '♿' : '🏠'}</span>
+        <span className={isManager ? styles.label : styles.labelHome}>{isManager ? '정보' : '홈'}</span>
       </Link>
 
       {/* 3. 통계 그래프 (관리자 전용으로 변경) */}

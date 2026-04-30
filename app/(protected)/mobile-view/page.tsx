@@ -22,7 +22,7 @@ export default function MobileViewPage() {
   const { data: session } = useSession();
   const router = useRouter();
 
-  const { data: wheelchairData, loading, latestAlarm, alarms } = useMyWheelchair();
+  const { data: wheelchairData, loading, latestAlarm, alarms, isOnline, isSocketConnected } = useMyWheelchair();
 
   const status = (wheelchairData?.status || {}) as any;
 
@@ -278,6 +278,15 @@ export default function MobileViewPage() {
           </div>
         </div>
       </header>
+
+      {/* 📡 오프라인 / 소켓 끊김 배너 */}
+      {(!isOnline || !isSocketConnected) && (
+        <div className={`px-4 py-2 text-center text-xs font-semibold ${!isOnline ? 'bg-red-500 text-white' : 'bg-yellow-400 text-gray-900'}`}>
+          {!isOnline
+            ? '🚫 인터넷 연결이 끊겼습니다. 네트워크를 확인해주세요.'
+            : '⚠️ 서버 연결이 끊겼습니다. 자동 재연결 시도 중...'}
+        </div>
+      )}
 
       <div className="flex-1 px-4 overflow-hidden relative">
         {/* 경고 배너 — 카드 위에 오버레이로 표시 */}

@@ -65,6 +65,24 @@ function WheelchairInfoContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [postureAdviceAt, setPostureAdviceAt] = useState<Date | null>(null);
 
+  // 📡 네트워크/소켓 상태
+  const [isOnline, setIsOnline] = useState<boolean>(
+    typeof navigator !== 'undefined' ? navigator.onLine : true,
+  );
+  const [isSocketConnected, setIsSocketConnected] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
   const socketRef = useRef<Socket | null>(null);
   const currentIdRef = useRef<string | null>(null);
   /** 선택 휠체어별 ulcer_count 추적 — 증가 시 POSTURE_ADVICE 해소·팝업 종료 */
@@ -246,9 +264,39 @@ function WheelchairInfoContent() {
       transports: ['websocket'],
       rejectUnauthorized: false,
       secure: true,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
     });
 
     socketRef.current = socket;
+
+    socket.on('connect', () => {
+      console.log('✅ [Admin] 소켓 연결됨');
+      setIsSocketConnected(true);
+      // 재연결 시 현재 선택된 차량 데이터 재조회
+      const id = currentIdRef.current;
+      if (id) {
+        fetch(`/api/device-info?wheelchairId=${id}&t=${Date.now()}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((json) => {
+            if (json) setDetailData(json);
+          })
+          .catch(() => {});
+      }
+    });
+
+    socket.on('disconnect', (reason) => {
+      console.warn('⚠️ [Admin] 소켓 끊김:', reason);
+      setIsSocketConnected(false);
+    });
+
+    socket.on('connect_error', (err) => {
+      console.warn('⚠️ [Admin] 소켓 연결 에러:', err.message);
+      setIsSocketConnected(false);
+    });
 
     // 상태 업데이트 수신 (핵심 수정 부분)
     socket.on('wheelchair_status_update', (payload: any) => {
@@ -370,6 +418,22 @@ function WheelchairInfoContent() {
           wheelchairId={String(detailData.id)}
           postureAdviceAt={postureAdviceAt}
         />
+      )}
+      {(!isOnline || !isSocketConnected) && (
+        <div
+          style={{
+            padding: '6px 16px',
+            textAlign: 'center',
+            fontSize: '13px',
+            fontWeight: 600,
+            color: !isOnline ? '#fff' : '#1f2937',
+            backgroundColor: !isOnline ? '#ef4444' : '#facc15',
+          }}
+        >
+          {!isOnline
+            ? '🚫 인터넷 연결이 끊겼습니다. 네트워크를 확인해주세요.'
+            : '⚠️ 서버 연결이 끊겼습니다. 자동 재연결 시도 중...'}
+        </div>
       )}
       <InfoBar
         wc={detailData}

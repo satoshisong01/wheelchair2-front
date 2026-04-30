@@ -29,6 +29,12 @@ export function useMyWheelchair() {
   const [loading, setLoading] = useState(true);
   const [socket, setSocket] = useState<Socket | null>(null);
 
+  // 📡 네트워크/소켓 연결 상태
+  const [isOnline, setIsOnline] = useState<boolean>(
+    typeof navigator !== 'undefined' ? navigator.onLine : true,
+  );
+  const [isSocketConnected, setIsSocketConnected] = useState<boolean>(false);
+
   // 🚨 [핵심] 실시간으로 발생한 최신 알람 (팝업용)
   const [latestAlarm, setLatestAlarm] = useState<Alarm | null>(null);
 
@@ -79,9 +85,23 @@ export function useMyWheelchair() {
     };
     window.addEventListener('click', unlock, { once: true });
     window.addEventListener('touchstart', unlock, { once: true });
+
+    // 📡 브라우저 네트워크 상태 감지
+    const handleOnline = () => {
+      console.log('🌐 네트워크 복구됨');
+      setIsOnline(true);
+    };
+    const handleOffline = () => {
+      console.warn('🚫 네트워크 끊김');
+      setIsOnline(false);
+    };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
     return () => {
       window.removeEventListener('click', unlock);
       window.removeEventListener('touchstart', unlock);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
@@ -140,16 +160,37 @@ export function useMyWheelchair() {
 
     fetchData();
 
-    // 2. 소켓 연결 설정
+    // 2. 소켓 연결 설정 (재연결 강화)
     const socketInstance = io(SOCKET_URL, {
       transports: ['websocket'],
       secure: true,
       rejectUnauthorized: false,
       reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      timeout: 20000,
     });
 
     socketInstance.on('connect', () => {
       console.log('✅ [Mobile Hook] 소켓 연결 성공!');
+      setIsSocketConnected(true);
+      // 재연결 시 최신 데이터 재조회 (오래된 데이터 방지)
+      fetchData();
+    });
+
+    socketInstance.on('disconnect', (reason) => {
+      console.warn('⚠️ [Mobile Hook] 소켓 끊김:', reason);
+      setIsSocketConnected(false);
+    });
+
+    socketInstance.on('connect_error', (err) => {
+      console.warn('⚠️ [Mobile Hook] 소켓 연결 에러:', err.message);
+      setIsSocketConnected(false);
+    });
+
+    socketInstance.io.on('reconnect_attempt', (attempt) => {
+      console.log(`🔄 [Mobile Hook] 재연결 시도 #${attempt}`);
     });
 
     const myWheelchairId = (session.user as any)?.wheelchairId;
@@ -293,5 +334,7 @@ export function useMyWheelchair() {
     setLatestAlarm,
     alarms, // 👈 이제 이 배열을 화면에서 사용하면 됩니다.
     setAlarms,
+    isOnline,
+    isSocketConnected,
   };
 }

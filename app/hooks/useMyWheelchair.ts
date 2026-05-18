@@ -30,11 +30,9 @@ export function useMyWheelchair() {
   const [socket, setSocket] = useState<Socket | null>(null);
 
   // 📡 네트워크/소켓 연결 상태
-  // 초기값 true로 시작하여 첫 화면 진입 시 배너가 잠깐 표시되는 것을 방지
-  // 실제 disconnect/connect_error 이벤트 발생 시에만 false로 전환됨
-  const [isOnline, setIsOnline] = useState<boolean>(
-    typeof navigator !== 'undefined' ? navigator.onLine : true,
-  );
+  // 🔒 SSR/클라이언트 hydration mismatch 방지를 위해 항상 true로 시작
+  // 클라이언트 마운트 후 useEffect에서 실제 navigator.onLine 값 반영
+  const [isOnline, setIsOnline] = useState<boolean>(true);
   const [isSocketConnected, setIsSocketConnected] = useState<boolean>(true);
 
   // 🚨 [핵심] 실시간으로 발생한 최신 알람 (팝업용)
@@ -89,6 +87,10 @@ export function useMyWheelchair() {
     window.addEventListener('touchstart', unlock, { once: true });
 
     // 📡 브라우저 네트워크 상태 감지
+    // 마운트 시 실제 navigator.onLine 값 반영 (SSR hydration mismatch 방지)
+    if (typeof navigator !== 'undefined') {
+      setIsOnline(navigator.onLine);
+    }
     const handleOnline = () => {
       console.log('🌐 네트워크 복구됨');
       setIsOnline(true);

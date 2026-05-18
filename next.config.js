@@ -8,7 +8,7 @@ const nextConfig = {
     // - Socket.io는 polling+websocket으로 https/wss 모두 사용하므로 명시적으로 broker 도메인 포함
     const csp = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://dapi.kakao.com https://t1.daumcdn.net https://*.vercel-insights.com https://*.googleapis.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://dapi.kakao.com https://t1.daumcdn.net https://*.vercel-insights.com https://*.googleapis.com https://vercel.live https://*.vercel.live",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob: https: http:",
       "font-src 'self' data: https://fonts.gstatic.com",

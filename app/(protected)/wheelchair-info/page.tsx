@@ -66,14 +66,17 @@ function WheelchairInfoContent() {
   const [postureAdviceAt, setPostureAdviceAt] = useState<Date | null>(null);
 
   // 📡 네트워크/소켓 상태
-  const [isOnline, setIsOnline] = useState<boolean>(
-    typeof navigator !== 'undefined' ? navigator.onLine : true,
-  );
+  // 🔒 SSR/클라이언트 hydration mismatch 방지를 위해 항상 true로 시작
+  const [isOnline, setIsOnline] = useState<boolean>(true);
   // 초기값 true로 시작하여 첫 화면 진입 시 배너가 잠깐 표시되는 것을 방지
   const [isSocketConnected, setIsSocketConnected] = useState<boolean>(true);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    // 마운트 시 실제 navigator.onLine 값 반영 (hydration mismatch 방지)
+    if (typeof navigator !== 'undefined') {
+      setIsOnline(navigator.onLine);
+    }
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
     window.addEventListener('online', handleOnline);

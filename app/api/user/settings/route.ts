@@ -45,8 +45,9 @@ export async function POST(req: Request) {
     await pgPool.query(query, [enabled, wheelchairId, userId]);
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error(error);
-    return NextResponse.json({ message: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    // 🔒 [보안] 내부 에러 상세는 서버 로그에만, 클라이언트에는 일반 메시지만 노출
+    console.error('[API /user/settings] Error:', error);
+    return NextResponse.json({ message: '설정 저장에 실패했습니다.' }, { status: 500 });
   }
 }

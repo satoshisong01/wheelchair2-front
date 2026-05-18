@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { Pool } from 'pg';
-import bcrypt from 'bcryptjs';
+import bcrypt from 'bcrypt'; // 🔒 [보안] bcrypt로 일원화 (로그인 검증과 동일 라이브러리)
 import { createAuditLog } from '@/lib/log'; // ⭐️ [추가] 활동 로그 함수 임포트
 
 const pool = new Pool({

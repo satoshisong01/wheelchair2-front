@@ -3,6 +3,29 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 import { TimestreamQueryClient, QueryCommand } from '@aws-sdk/client-timestream-query';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/authOptions';
+
+// 🔒 [보안] AI가 생성한 SQL에서 차단해야 할 위험 키워드 (Prompt Injection 방어 강화)
+const FORBIDDEN_SQL_PATTERNS = [
+  /\binsert\b/i,
+  /\bupdate\b/i,
+  /\bdelete\b/i,
+  /\bdrop\b/i,
+  /\btruncate\b/i,
+  /\balter\b/i,
+  /\bcreate\b/i,
+  /\bgrant\b/i,
+  /\brevoke\b/i,
+  /\battach\b/i,
+  /\bexec\b/i,
+  /;/, // 다중 쿼리 차단
+  /--/, // SQL 주석 차단
+  /\/\*/, // 블록 주석 차단
+];
+
+// 🔒 [보안] 허용된 테이블 식별자만 참조하도록 강제
+const REQUIRED_TABLE_REF = /"WheelchairDB"\."WheelchairMetricsTable"/;
 
 // [LOG 1] 파일 시작
 console.log('--- [START] AI Dashboard API Route Load (Full Logic) ---');
@@ -26,16 +49,29 @@ console.log(
 );
 
 export async function POST(request: NextRequest) {
+  // 🔒 [보안] 인증 체크 — ADMIN/MASTER만 AI 검색 허용
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) {
+    return NextResponse.json({ message: '인증이 필요합니다.' }, { status: 401 });
+  }
+  const userRole = (session.user as { role?: string }).role;
+  if (userRole !== 'ADMIN' && userRole !== 'MASTER') {
+    return NextResponse.json({ message: '접근 권한이 없습니다.' }, { status: 403 });
+  }
+
   // [LOG 3] POST 함수 진입
   console.log('[LOG 3] POST function entered.');
   try {
     // [LOG 4] JSON Body 파싱 시도
     const { question } = await request.json(); // [LOG 5] JSON Body 파싱 완료
-    console.log(`[LOG 5] Question received: "${question}"`);
 
-    if (!question) {
-      console.log('[LOG FAIL A] No question provided.');
+    if (!question || typeof question !== 'string') {
       return NextResponse.json({ message: '질문이 없습니다.' }, { status: 400 });
+    }
+
+    // 🔒 [보안] 사용자 입력 길이 제한 (과도한 비용/DoS 방지)
+    if (question.length > 500) {
+      return NextResponse.json({ message: '질문은 500자 이내로 입력해주세요.' }, { status: 400 });
     }
 
     if (!API_KEY) {
@@ -112,15 +148,47 @@ export async function POST(request: NextRequest) {
       .replace(/```/g, '')
       .trim();
 
-    console.log('🤖 [LOG 11] Generated SQL:', generatedSql); // 5. 보안 점검 (SELECT 문만 허용)
+    // 🔒 [보안] 운영 환경에서 생성 SQL 로그 노출 방지 (DB 스키마 구조 노출)
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🤖 [LOG 11] Generated SQL:', generatedSql);
+    }
+    // 5. 보안 점검 (SELECT 문만 허용)
 
     console.log('[LOG 12] Starting security check.');
-    if (!generatedSql.toLowerCase().startsWith('select')) {
-      console.log('[LOG FAIL C] Security check failed: Not a SELECT query.');
+
+    // 🔒 [보안] 1단계 — SELECT 문으로 시작해야 함
+    if (!generatedSql.toLowerCase().trim().startsWith('select')) {
       return NextResponse.json(
         {
           message: '생성된 쿼리가 SELECT 문이 아니거나, 데이터베이스 질문이 아닙니다.',
-          sql: generatedSql, // 생성된 쿼리도 같이 반환
+          sql: null,
+          data: [],
+        },
+        { status: 200 },
+      );
+    }
+
+    // 🔒 [보안] 2단계 — 위험 키워드 차단 (DML/DDL/주석/세미콜론)
+    for (const pattern of FORBIDDEN_SQL_PATTERNS) {
+      if (pattern.test(generatedSql)) {
+        console.warn('[Security] Forbidden SQL pattern detected:', pattern);
+        return NextResponse.json(
+          {
+            message: '허용되지 않은 쿼리가 감지되었습니다.',
+            sql: null,
+            data: [],
+          },
+          { status: 200 },
+        );
+      }
+    }
+
+    // 🔒 [보안] 3단계 — 허용된 테이블만 참조하도록 강제
+    if (!REQUIRED_TABLE_REF.test(generatedSql)) {
+      return NextResponse.json(
+        {
+          message: '허용되지 않은 테이블 참조입니다.',
+          sql: null,
           data: [],
         },
         { status: 200 },
@@ -151,16 +219,13 @@ export async function POST(request: NextRequest) {
       sql: generatedSql,
       data: formattedData,
     });
-  } catch (error: any) {
-    // [LOG CATCH] 에러 발생
-    console.error('--- [LOG CATCH] Error caught ---');
-    const errorMessage = error.message || 'AI 처리 중 오류 발생';
-    console.error('AI Search Error Details:', errorMessage);
+  } catch (error: unknown) {
+    // 🔒 [보안] 내부 에러 상세는 서버 로그에만, 클라이언트에는 일반 메시지만 노출
+    console.error('[API /ai-search] Error:', error);
 
     return NextResponse.json(
       {
-        error: errorMessage,
-        message: `서버 오류 발생: ${errorMessage}`,
+        message: 'AI 검색 처리 중 오류가 발생했습니다.',
         sql: null,
         data: [],
       },

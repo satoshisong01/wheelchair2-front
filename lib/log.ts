@@ -45,9 +45,14 @@ export const createAuditLog = async ({
       finalUserName, // ⭐️ [추가] user_name 값 전달
     ]);
 
-    console.log(
-      `✅ [Audit Log Success] ${userRole} ${action} recorded (User: ${userId}, Device: ${finalDeviceSerial})`,
-    );
+    // 🔒 [보안] 운영 환경에서 userId/deviceSerial 노출 방지
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(
+        `✅ [Audit Log Success] ${userRole} ${action} recorded (User: ${userId}, Device: ${finalDeviceSerial})`,
+      );
+    } else {
+      console.log(`✅ [Audit Log Success] ${userRole} ${action} recorded`);
+    }
   } catch (error) {
     console.error(`❌ Audit Log Creation Failed (${userRole} - ${action}):`, {
       message: (error as Error).message,

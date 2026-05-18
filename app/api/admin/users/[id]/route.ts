@@ -69,11 +69,20 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     const body = await request.json();
     const { role, reason } = body; // role: 'ADMIN' or 'REJECTED'
 
+    // 🔒 [보안] 역할 화이트리스트 검증 — MASTER 권한 자동 부여 차단
+    const ALLOWED_ROLES = ['ADMIN', 'USER', 'REJECTED', 'PENDING'] as const;
+    if (!role || !ALLOWED_ROLES.includes(role)) {
+      return NextResponse.json(
+        { message: '유효하지 않은 역할입니다.' },
+        { status: 400 }
+      );
+    }
+
     console.log(`🔄 [API] 유저(${id}) 상태 변경 요청: ${role}`);
 
     // 2. DB 업데이트 (Raw SQL)
     const updateSql = `
-      UPDATE users 
+      UPDATE users
       SET role = $1
       WHERE id = $2
     `;

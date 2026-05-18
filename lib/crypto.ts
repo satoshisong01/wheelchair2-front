@@ -20,8 +20,18 @@ if (!secretKey || secretKey.length !== 32) {
   );
 }
 
+// 🔒 [보안] scrypt salt를 환경변수로 분리 (KTC 사이버보안 평가 대응)
+// 기존 운영 환경 호환을 위해 fallback 'salt' 유지하되, 신규 환경에서는 16바이트 이상 랜덤값 권장
+const ENCRYPTION_SALT = process.env.ENCRYPTION_SALT || 'salt';
+if (ENCRYPTION_SALT === 'salt') {
+  console.warn(
+    '⚠️ [보안 경고] ENCRYPTION_SALT가 기본값으로 설정되어 있습니다. ' +
+    '운영 환경에서는 .env에 16바이트 이상의 랜덤 문자열로 설정하는 것을 권장합니다.'
+  );
+}
+
 // 키 변환 (scrypt)
-const key = scryptSync(secretKey, 'salt', 32);
+const key = scryptSync(secretKey, ENCRYPTION_SALT, 32);
 
 /**
  * 기본 암호화 함수

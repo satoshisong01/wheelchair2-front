@@ -57,12 +57,12 @@ export async function GET(request: Request) {
 
     return NextResponse.json(decryptedData);
   } catch (error: unknown) {
-    let errorMessage = 'Internal Server Error';
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    }
-    console.error('[API /medical-info] GET Error:', errorMessage, error);
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    // 🔒 [보안] 내부 에러 상세는 서버 로그에만, 클라이언트에는 일반 메시지만 노출
+    console.error('[API /medical-info] GET Error:', error);
+    return NextResponse.json(
+      { error: '의료 정보 조회 중 오류가 발생했습니다.' },
+      { status: 500 },
+    );
   }
 }
 
@@ -127,11 +127,11 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
-    let errorMessage = 'Internal Server Error';
-    if (error instanceof Error) {
-      errorMessage = error.message;
-    }
-    console.error('[API /medical-info] POST Error:', errorMessage, error);
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    // 🔒 [보안] 내부 에러 상세는 서버 로그에만, 클라이언트에는 일반 메시지만 노출
+    console.error('[API /medical-info] POST Error:', error);
+    return NextResponse.json(
+      { error: '의료 정보 저장 중 오류가 발생했습니다.' },
+      { status: 500 },
+    );
   }
 }

@@ -1,0 +1,10 @@
+[     246ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://wheelchair2-front.vercel.app/:0
+[   23821ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://wheelchair2-front.vercel.app/this-page-does-not-exist:0
+[   23978ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://wheelchair2-front.vercel.app/this-page-does-not-exist:0
+[   24090ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://wheelchair2-front.vercel.app/this-page-does-not-exist:0
+[   24100ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://wheelchair2-front.vercel.app/api/nonexistent-endpoint:0
+[   24108ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://wheelchair2-front.vercel.app/api/nonexistent-endpoint:0
+[   24117ms] [ERROR] Failed to load resource: the server responded with a status of 404 () @ https://wheelchair2-front.vercel.app/api/nonexistent-endpoint:0
+[   24483ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://wheelchair2-front.vercel.app/api/device-info:0
+[   24523ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://wheelchair2-front.vercel.app/api/device-info:0
+[   24569ms] [ERROR] Failed to load resource: the server responded with a status of 401 () @ https://wheelchair2-front.vercel.app/api/device-info:0

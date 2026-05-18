@@ -230,12 +230,15 @@ const StatsChartRenderer: React.FC<StatsChartRendererProps> = ({
       {aiAnalysisComment && (
         <div className={styles.aiAnalysisBox}>
           <h4>✨ 분석 리포트</h4>
-          <div
-            className={styles.aiAnalysisContent}
-            dangerouslySetInnerHTML={{
-              __html: aiAnalysisComment.replace(/\n/g, '<br />'),
-            }}
-          />
+          {/* 🔒 [보안] AI 응답을 dangerouslySetInnerHTML 없이 안전하게 렌더링 (줄바꿈만 <br/>로 처리) */}
+          <div className={styles.aiAnalysisContent}>
+            {aiAnalysisComment.split('\n').map((line, idx, arr) => (
+              <span key={idx}>
+                {line}
+                {idx < arr.length - 1 && <br />}
+              </span>
+            ))}
+          </div>
         </div>
       )}
       <div className={styles.chartContainer}>

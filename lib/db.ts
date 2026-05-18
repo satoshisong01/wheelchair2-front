@@ -1,8 +1,23 @@
-import { Pool } from 'pg';
+import { Pool, PoolConfig } from 'pg';
 
 // 전역 객체에 pool 타입 정의 (TypeScript 에러 방지)
 declare global {
   var pool: Pool | undefined;
+}
+
+/**
+ * 🔒 [보안] DB SSL 옵션 공통 헬퍼
+ * - RDS 사용 시 SSL 적용 (TLS 1.2 이상)
+ * - DATABASE_SSL_REJECT_UNAUTHORIZED=true 환경변수로 인증서 검증 강제 가능
+ * - 기본값은 호환성 유지(false). KTC 평가 시 .env에 true 설정 권장
+ * - 신규/마이그레이션 환경에서는 RDS CA 인증서 등록 후 true로 전환 권장
+ */
+export function getDbSslOption(): PoolConfig['ssl'] {
+  const isRds = process.env.DATABASE_URL?.includes('rds.amazonaws.com');
+  if (!isRds) return undefined;
+
+  const strictMode = process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === 'true';
+  return { rejectUnauthorized: strictMode };
 }
 
 // 1. 커넥션 풀 생성 (싱글톤 패턴)
@@ -10,10 +25,7 @@ const pool =
   global.pool ||
   new Pool({
     connectionString: process.env.DATABASE_URL,
-    // AWS RDS 연결 시 SSL 설정 (기존 코드 유지)
-    ssl: process.env.DATABASE_URL?.includes('rds.amazonaws.com')
-      ? { rejectUnauthorized: false }
-      : undefined,
+    ssl: getDbSslOption(),
 
     // 🟢 [추가] DB 연결 폭주 및 좀비 방지 설정
     max: 20, // 최대 동시 연결 수 (t3.micro/small 기준 20~50 적당)

@@ -44,7 +44,18 @@ const ALL_MEASURE_NAMES = [
   .map((name: string) => `'${name}'`)
   .join(', ');
 
-// ⭐️ [수정 없음] Timestream 쿼리 함수는 모든 지표를 잘 가져오고 있음
+// 🔒 [보안] 입력값 형식 검증 — Timestream 쿼리 인젝션 방지
+const DEVICE_ID_REGEX = /^[a-zA-Z0-9_-]{1,64}$/;
+const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+const HOUR_REGEX = /^(?:[01]\d|2[0-3])$/;
+const ALLOWED_BIN_UNITS = ['1h', '6h', '12h', '1d', '7d', '15m', '30m', '5m'] as const;
+
+function assertSafeString(value: string, regex: RegExp, label: string): void {
+  if (typeof value !== 'string' || !regex.test(value)) {
+    throw new Error(`Invalid ${label} format`);
+  }
+}
+
 async function fetchTimestreamData(
   deviceId: string,
   startDate: string,
@@ -53,6 +64,16 @@ async function fetchTimestreamData(
   startHour: string = '00',
   endHour: string = '23',
 ): Promise<{ data: any[]; query: string }> {
+  // 🔒 모든 입력값을 화이트리스트로 엄격 검증
+  if (deviceId !== 'ALL') assertSafeString(deviceId, DEVICE_ID_REGEX, 'deviceId');
+  assertSafeString(startDate, DATE_REGEX, 'startDate');
+  assertSafeString(endDate, DATE_REGEX, 'endDate');
+  assertSafeString(startHour, HOUR_REGEX, 'startHour');
+  assertSafeString(endHour, HOUR_REGEX, 'endHour');
+  if (!ALLOWED_BIN_UNITS.includes(binUnit as typeof ALLOWED_BIN_UNITS[number])) {
+    throw new Error('Invalid binUnit format');
+  }
+
   // 1. WHERE 절: 한국 시간 기준으로 범위 설정 (+09:00 명시)
   const startTs = `${startDate}T${startHour}:00:00+09:00`;
   const endTs = `${endDate}T${endHour}:59:59+09:00`;
@@ -64,12 +85,12 @@ async function fetchTimestreamData(
   }
 
   const query = `
-    SELECT 
+    SELECT
       BIN(time + 9h, ${binUnit}) as date_bin,
       measure_name,
-      AVG(measure_value::double) as avg_val, 
+      AVG(measure_value::double) as avg_val,
       MAX(measure_value::double) as max_val,
-      MAX_BY(measure_value::double, time) as last_val 
+      MAX_BY(measure_value::double, time) as last_val
     FROM "${DATABASE_NAME}"."${TABLE_NAME}"
     WHERE ${whereClause}
       AND measure_name IN (${ALL_MEASURE_NAMES})
@@ -326,10 +347,11 @@ export async function POST(request: NextRequest) {
       comment: analysisComment,
       query: finalQuery,
     });
-  } catch (error: any) {
-    console.error('[API Error]:', error);
+  } catch (error: unknown) {
+    // 🔒 [보안] 내부 에러 상세는 서버 로그에만, 클라이언트에는 일반 메시지만 노출
+    console.error('[API /stats] Error:', error);
     return NextResponse.json(
-      { message: 'Server Error', error: error.message, data: [] },
+      { message: '통계 조회 중 오류가 발생했습니다.', data: [] },
       { status: 500 },
     );
   }

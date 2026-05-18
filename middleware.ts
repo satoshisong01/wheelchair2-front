@@ -1,14 +1,64 @@
 import { NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import type { NextRequest } from 'next/server';
+import { rateLimiter } from '@/lib/rate-limiter';
+
+// 🔒 [보안] Rate Limit이 적용될 경로 (브루트포스 방어)
+const RATE_LIMIT_PATHS = [
+  '/api/auth/callback/credentials', // NextAuth 로그인 시도
+  '/api/auth/change-password',
+  '/api/auth/profile-submit',
+  '/api/auth/re-apply',
+];
+
+function getClientIp(req: NextRequest): string {
+  const xff = req.headers.get('x-forwarded-for');
+  if (xff) return xff.split(',')[0].trim();
+  const xri = req.headers.get('x-real-ip');
+  if (xri) return xri;
+  return '127.0.0.1';
+}
 
 export async function middleware(req: NextRequest) {
-  // 1. 토큰(세션) 확인
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   const { pathname } = req.nextUrl;
 
-  // 디버깅용 로그
-  console.log(`🛡️ [Middleware] Path: ${pathname} | UserRole: ${token?.role || 'None'}`);
+  // 🔒 [보안] Rate Limit 적용 (Upstash Redis 기반)
+  if (RATE_LIMIT_PATHS.some((p) => pathname.startsWith(p))) {
+    try {
+      const ip = getClientIp(req);
+      const { success, limit, remaining, reset } = await rateLimiter.limit(`rl:${ip}:${pathname}`);
+      if (!success) {
+        return new NextResponse(
+          JSON.stringify({ message: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' }),
+          {
+            status: 429,
+            headers: {
+              'Content-Type': 'application/json',
+              'X-RateLimit-Limit': String(limit),
+              'X-RateLimit-Remaining': String(remaining),
+              'X-RateLimit-Reset': String(reset),
+            },
+          },
+        );
+      }
+    } catch (e) {
+      // Upstash 장애 시에도 서비스 자체는 동작해야 하므로 통과
+      console.warn('[RateLimit] Upstash 오류, 통과 처리:', (e as Error).message);
+    }
+  }
+
+  // API 경로는 페이지 리다이렉트 로직을 적용하지 않음 (각 API에서 자체 인증 처리)
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.next();
+  }
+
+  // 1. 토큰(세션) 확인
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+
+  // 🔒 [보안] 개발 환경에서만 디버깅 로그 출력 (운영 환경에서 사용자 역할 노출 방지)
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`🛡️ [Middleware] Path: ${pathname} | UserRole: ${token?.role || 'None'}`);
+  }
 
   // ============================================================
   // CASE 1: 로그인이 되어 있는 상태 (Token O)
@@ -104,6 +154,9 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // 아래 경로들은 미들웨어를 거치지 않음
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  // Rate Limit 적용 대상 API는 미들웨어를 통과해야 하므로 매처에 포함
+  // (_next/static, _next/image, favicon.ico만 제외)
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico).*)',
+  ],
 };

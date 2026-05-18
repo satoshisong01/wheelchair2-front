@@ -1,0 +1,72 @@
+- generic [active] [ref=e1]:
+  - alert [ref=e30]
+  - generic [ref=e31]:
+    - navigation [ref=e32]:
+      - link "FIRST C&D" [ref=e34] [cursor=pointer]:
+        - /url: /mobile-view
+        - img "FIRST C&D" [ref=e35]
+      - list [ref=e36]:
+        - listitem [ref=e37]:
+          - link "🏠 홈" [ref=e38] [cursor=pointer]:
+            - /url: /mobile-view
+            - generic [ref=e39]: 🏠
+            - text: 홈
+      - link "⚙️ 마이페이지" [ref=e40] [cursor=pointer]:
+        - /url: /mypage
+      - generic [ref=e41]:
+        - generic [ref=e42]:
+          - img "프로필" [ref=e44]
+          - generic [ref=e45]: sks8982
+        - button "🚪 Logout" [ref=e46] [cursor=pointer]:
+          - generic [ref=e47]: 🚪
+          - text: Logout
+    - main [ref=e49]:
+      - generic [ref=e50]:
+        - generic [ref=e53]:
+          - heading "sks8982님, 안전한 주행 되세요!" [level=1] [ref=e55]
+          - paragraph [ref=e56]:
+            - generic [ref=e57]: "전원:"
+            - generic [ref=e58]: "OFF"
+        - generic [ref=e60]:
+          - button "배터리 정보 75% 주행 가능" [ref=e61] [cursor=pointer]:
+            - img [ref=e63]
+            - generic [ref=e65]:
+              - generic [ref=e66]:
+                - generic [ref=e67]: 배터리 정보
+                - generic [ref=e68]: 75%
+              - generic [ref=e69]: 주행 가능
+          - button "위치 및 거리 0.0 m 오늘 이동 거리" [ref=e70] [cursor=pointer]:
+            - img [ref=e72]
+            - generic [ref=e75]:
+              - generic [ref=e76]:
+                - generic [ref=e77]: 위치 및 거리
+                - generic [ref=e78]: 0.0 m
+              - generic [ref=e79]: 오늘 이동 거리
+          - generic [ref=e80]:
+            - img [ref=e82]
+            - generic [ref=e85]:
+              - generic [ref=e86]:
+                - generic [ref=e87]: 전후방·측면 경사
+                - generic [ref=e88]: 25.0° / 5.0°
+              - generic [ref=e89]: 실시간 경사도
+          - button "자세·욕창 예방 예방 0회 현재 시트 각도 30°" [ref=e90] [cursor=pointer]:
+            - img [ref=e92]
+            - generic [ref=e98]:
+              - generic [ref=e99]:
+                - generic [ref=e100]: 자세·욕창 예방
+                - generic [ref=e101]: 예방 0회
+              - generic [ref=e102]: 현재 시트 각도 30°
+          - 'button "외부 날씨 정보 25.6°C 현재 상태: 맑음" [ref=e103] [cursor=pointer]':
+            - img [ref=e105]
+            - generic [ref=e110]:
+              - generic [ref=e111]:
+                - generic [ref=e112]: 외부 날씨 정보
+                - generic [ref=e113]: 25.6°C
+              - generic [ref=e114]: "현재 상태: 맑음"
+          - button "이벤트 이력 7건 감지 확인 필요" [ref=e115] [cursor=pointer]:
+            - img [ref=e117]
+            - generic [ref=e120]:
+              - generic [ref=e121]:
+                - generic [ref=e122]: 이벤트 이력
+                - generic [ref=e123]: 7건 감지
+              - generic [ref=e124]: 확인 필요

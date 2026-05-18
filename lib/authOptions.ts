@@ -172,7 +172,12 @@ export const authOptions: NextAuthOptions = {
                 method: account?.provider || 'Credentials',
               },
             });
-            console.log(`✅ [Audit Log] LOGIN recorded for user ${token.id} (${token.role})`);
+            // 🔒 [보안] 운영 환경에서 사용자 ID/역할 로그 노출 방지
+            if (process.env.NODE_ENV !== 'production') {
+              console.log(`✅ [Audit Log] LOGIN recorded for user ${token.id} (${token.role})`);
+            } else {
+              console.log('✅ [Audit Log] LOGIN recorded');
+            }
           } catch (e) {
             console.error('Login audit log error:', e);
           }
@@ -217,7 +222,10 @@ export const authOptions: NextAuthOptions = {
             token.organization = freshUser.organization;
             token.phoneNumber = freshUser.phone_number;
             token.rejectionReason = freshUser.rejection_reason;
-            console.log(`✅ [NextAuth] 토큰 갱신 성공: ${token.role} (UUID: ${userId})`);
+            // 🔒 [보안] 운영 환경에서 사용자 UUID 노출 방지
+            if (process.env.NODE_ENV !== 'production') {
+              console.log(`✅ [NextAuth] 토큰 갱신 성공: ${token.role} (UUID: ${userId})`);
+            }
           }
         } catch (e) {
           console.error('❌ [NextAuth] 토큰 갱신 중 DB 에러:', e);

@@ -37,9 +37,13 @@ export async function GET(request: Request) {
       myWheelchairId = user.wheelchairId;
     }
 
-    // ID를 못 찾으면 테스트용 1번 강제 연결
+    // 🔒 [보안] IDOR 방지 - 휠체어 ID를 찾지 못하면 404 응답 (이전엔 ID=1로 폴백되어 타 사용자 데이터 노출 위험)
     if (!myWheelchairId) {
-      myWheelchairId = 1;
+      console.warn(`[my-wheelchair] 사용자(${user.dbUserId})에게 연결된 휠체어 없음`);
+      return NextResponse.json(
+        { error: '연결된 휠체어를 찾을 수 없습니다.' },
+        { status: 404 },
+      );
     }
 
     // 3. [병렬 조회] 휠체어 정보(+상태), 알람 조회 (정비이력 제외됨)
@@ -119,8 +123,9 @@ export async function GET(request: Request) {
     };
 
     return NextResponse.json(responseData);
-  } catch (error: any) {
+  } catch (error: unknown) {
+    // 🔒 [보안] 내부 에러 상세는 서버 로그에만, 클라이언트에는 일반 메시지만 노출
     console.error('[API /my-wheelchair] Error:', error);
-    return NextResponse.json({ error: error.message || 'Server Error' }, { status: 500 });
+    return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 });
   }
 }

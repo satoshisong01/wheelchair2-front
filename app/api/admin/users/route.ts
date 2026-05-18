@@ -54,7 +54,13 @@ export async function PUT(req: NextRequest) {
         if (!userId || !newRole) {
             return NextResponse.json({ message: '필수 필드가 누락되었습니다.' }, { status: 400 });
         }
-        
+
+        // 🔒 [보안] 역할 화이트리스트 검증 — MASTER 권한 자동 부여 차단
+        const ALLOWED_ROLES = ['ADMIN', 'USER', 'REJECTED', 'PENDING'] as const;
+        if (!ALLOWED_ROLES.includes(newRole)) {
+            return NextResponse.json({ message: '유효하지 않은 역할입니다.' }, { status: 400 });
+        }
+
         const rejectionReasonText = newRole === 'REJECTED' ? rejectionReason || '관리자 거절' : null;
 
         const sql = `

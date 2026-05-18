@@ -1,0 +1,25 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e4]:
+      - heading "전동 휠체어 관제 시스템" [level=1] [ref=e5]
+      - paragraph [ref=e6]: 서비스 이용을 위해 로그인해주세요.
+    - generic [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e9]:
+          - generic [ref=e10]: 기기 ID
+          - textbox "기기 ID" [ref=e11]:
+            - /placeholder: "기기 ID (예: S/N-12345)"
+        - generic [ref=e12]:
+          - generic [ref=e13]: 비밀번호
+          - textbox "비밀번호" [ref=e14]
+      - button "기기 로그인" [ref=e16]
+    - generic [ref=e21]: 관리자 / 마스터
+    - button "카카오 로그인 & 회원가입" [ref=e23]:
+      - img [ref=e24]
+      - text: 카카오 로그인 & 회원가입
+    - generic [ref=e26]:
+      - paragraph [ref=e27]: 안드로이드 기기에서 앱으로 사용하시려면 아래에서 APK를 다운로드하세요.
+      - link "안드로이드 앱 다운로드" [ref=e28] [cursor=pointer]:
+        - /url: /download/app-release.apk
+      - paragraph [ref=e29]: "앱 버전: v1.9.0"
+  - alert [ref=e30]

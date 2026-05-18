@@ -194,12 +194,10 @@ export async function POST(request: Request) {
     // 에러 발생 시 롤백
     await client.query('ROLLBACK');
 
-    let errorMessage = 'Internal Server Error';
-    if (error.code === '23505') {
-      // Unique constraint violation code
+    // 🔒 [보안] DB 에러 코드 기반 식별 가능한 케이스만 안내 메시지로 변환, 그 외에는 일반 메시지
+    let errorMessage = '프로필 등록 중 오류가 발생했습니다.';
+    if (error && typeof error === 'object' && (error as { code?: string }).code === '23505') {
       errorMessage = '이미 등록된 시리얼 번호입니다.';
-    } else {
-      errorMessage = error.message;
     }
 
     console.error('[API /profile] POST Error:', error);

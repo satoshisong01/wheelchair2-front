@@ -16,8 +16,18 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }, // RDS SSL 옵션
 });
 
-// 1. 휠체어 목록 조회 (GET)
+// 1. 휠체어 목록 조회 (GET) — 인증 필수 (ADMIN/MASTER만 허용)
 export async function GET() {
+  // 🔒 [보안] 인증/인가 체크
+  const session = await getServerSession(authOptions);
+  if (!session || !session.user) {
+    return NextResponse.json({ message: '인증이 필요합니다.' }, { status: 401 });
+  }
+  const userRole = (session.user as { role?: string }).role;
+  if (userRole !== 'ADMIN' && userRole !== 'MASTER') {
+    return NextResponse.json({ message: '접근 권한이 없습니다.' }, { status: 403 });
+  }
+
   try {
     // ⭐️ [핵심 수정] SQL 쿼리: s.light 뒤에 콤마(,) 추가
     const query = `

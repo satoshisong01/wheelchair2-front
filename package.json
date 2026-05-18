@@ -16,7 +16,6 @@
     "@upstash/ratelimit": "^2.0.7",
     "@upstash/redis": "^1.35.6",
     "bcrypt": "^6.0.0",
-    "bcryptjs": "^3.0.2",
     "chart.js": "^4.5.1",
     "date-fn": "^0.0.2",
     "date-fns": "^4.1.0",

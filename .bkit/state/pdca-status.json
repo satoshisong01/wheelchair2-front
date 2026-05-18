@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-04-30T09:00:18.744Z",
+  "lastUpdated": "2026-05-18T06:50:39.147Z",
   "activeFeatures": [
     "wheelchair-info",
     "mobile-view",
@@ -13,7 +13,20 @@
     "location",
     "layout",
     "WheelchairApp",
-    "worker"
+    "worker",
+    "docs",
+    "wheelchairs",
+    "server-health",
+    "users",
+    "[id]",
+    "stats",
+    "ai-search",
+    "sample",
+    "my-wheelchair",
+    "settings",
+    "profile",
+    "medical-info",
+    "change-password"
   ],
   "primaryFeature": "wheelchair-info",
   "features": {
@@ -52,9 +65,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-09T03:24:32.711Z",
-        "lastUpdated": "2026-04-30T08:50:19.549Z"
+        "lastUpdated": "2026-05-18T06:50:39.145Z"
       },
-      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\page.tsx"
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\lib\\db.ts"
     },
     "battery": {
       "phase": "do",
@@ -172,6 +185,175 @@
         "lastUpdated": "2026-04-30T03:02:05.532Z"
       },
       "lastFile": "C:\\Users\\jungm\\Desktop\\projects\\worker\\worker.ts"
+    },
+    "docs": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-05-13T07:59:43.444Z",
+        "lastUpdated": "2026-05-18T05:51:31.825Z"
+      },
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\docs\\gen-arch-api.js"
+    },
+    "wheelchairs": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-05-18T04:55:34.520Z",
+        "lastUpdated": "2026-05-18T04:55:34.520Z"
+      },
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\api\\wheelchairs\\route.ts"
+    },
+    "server-health": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-05-18T04:55:54.598Z",
+        "lastUpdated": "2026-05-18T04:56:09.162Z"
+      },
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\api\\alerts\\server-health\\route.ts"
+    },
+    "users": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-05-18T04:56:29.613Z",
+        "lastUpdated": "2026-05-18T04:56:29.613Z"
+      },
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\api\\admin\\users\\route.ts"
+    },
+    "[id]": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-05-18T04:56:49.389Z",
+        "lastUpdated": "2026-05-18T04:56:49.389Z"
+      },
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\api\\admin\\users\\[id]\\route.ts"
+    },
+    "stats": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-05-18T04:57:34.307Z",
+        "lastUpdated": "2026-05-18T06:26:34.875Z"
+      },
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\api\\stats\\route.ts"
+    },
+    "ai-search": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-05-18T04:58:09.657Z",
+        "lastUpdated": "2026-05-18T06:49:19.344Z"
+      },
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\api\\ai-search\\route.ts"
+    },
+    "sample": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-05-18T05:33:49.622Z",
+        "lastUpdated": "2026-05-18T05:33:58.319Z"
+      },
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\sample\\server-monitor.js"
+    },
+    "my-wheelchair": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-05-18T06:25:52.150Z",
+        "lastUpdated": "2026-05-18T06:47:26.572Z"
+      },
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\api\\my-wheelchair\\route.ts"
+    },
+    "settings": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-05-18T06:26:07.548Z",
+        "lastUpdated": "2026-05-18T06:26:07.548Z"
+      },
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\api\\user\\settings\\route.ts"
+    },
+    "profile": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-05-18T06:27:40.480Z",
+        "lastUpdated": "2026-05-18T06:27:40.480Z"
+      },
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\api\\profile\\route.ts"
+    },
+    "medical-info": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-05-18T06:28:07.934Z",
+        "lastUpdated": "2026-05-18T06:28:24.909Z"
+      },
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\api\\medical-info\\route.ts"
+    },
+    "change-password": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-05-18T06:29:03.637Z",
+        "lastUpdated": "2026-05-18T06:29:03.637Z"
+      },
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\api\\auth\\change-password\\route.ts"
     }
   },
   "pipeline": {
@@ -182,7 +364,7 @@
   "session": {
     "startedAt": "2026-04-09T01:52:22.043Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-04-30T09:00:18.744Z"
+    "lastActivity": "2026-05-18T06:50:39.147Z"
   },
   "history": [
     {
@@ -458,6 +640,240 @@
     {
       "timestamp": "2026-04-30T09:00:18.744Z",
       "feature": "WheelchairApp",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-13T07:59:43.446Z",
+      "feature": "docs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-13T08:09:35.323Z",
+      "feature": "docs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-13T08:09:56.427Z",
+      "feature": "docs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T04:55:34.521Z",
+      "feature": "wheelchairs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T04:55:54.600Z",
+      "feature": "server-health",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T04:56:02.185Z",
+      "feature": "server-health",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T04:56:09.164Z",
+      "feature": "server-health",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T04:56:29.614Z",
+      "feature": "users",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T04:56:49.391Z",
+      "feature": "[id]",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T04:57:34.308Z",
+      "feature": "stats",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T04:58:09.658Z",
+      "feature": "ai-search",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T04:58:24.191Z",
+      "feature": "ai-search",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T04:58:39.194Z",
+      "feature": "ai-search",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T05:33:49.623Z",
+      "feature": "sample",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T05:33:58.320Z",
+      "feature": "sample",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T05:42:12.417Z",
+      "feature": "docs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T05:51:31.828Z",
+      "feature": "docs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T06:23:34.280Z",
+      "feature": "stats",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T06:24:09.648Z",
+      "feature": "wheelchair2-front",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T06:24:30.167Z",
+      "feature": "wheelchair2-front",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T06:24:42.880Z",
+      "feature": "wheelchair2-front",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T06:25:17.017Z",
+      "feature": "wheelchair2-front",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T06:25:52.151Z",
+      "feature": "my-wheelchair",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T06:26:07.550Z",
+      "feature": "settings",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T06:26:34.876Z",
+      "feature": "stats",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T06:27:02.697Z",
+      "feature": "ai-search",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T06:27:40.481Z",
+      "feature": "profile",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T06:28:07.935Z",
+      "feature": "medical-info",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T06:28:24.910Z",
+      "feature": "medical-info",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T06:29:03.638Z",
+      "feature": "change-password",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T06:47:26.573Z",
+      "feature": "my-wheelchair",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T06:47:51.337Z",
+      "feature": "wheelchair2-front",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T06:48:10.406Z",
+      "feature": "wheelchair2-front",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T06:48:44.160Z",
+      "feature": "wheelchair2-front",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T06:49:00.635Z",
+      "feature": "wheelchair2-front",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T06:49:19.346Z",
+      "feature": "ai-search",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T06:49:45.630Z",
+      "feature": "wheelchair2-front",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T06:50:12.886Z",
+      "feature": "wheelchair2-front",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T06:50:39.146Z",
+      "feature": "wheelchair2-front",
       "phase": "do",
       "action": "updated"
     }

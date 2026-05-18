@@ -30,10 +30,12 @@ export function useMyWheelchair() {
   const [socket, setSocket] = useState<Socket | null>(null);
 
   // 📡 네트워크/소켓 연결 상태
+  // 초기값 true로 시작하여 첫 화면 진입 시 배너가 잠깐 표시되는 것을 방지
+  // 실제 disconnect/connect_error 이벤트 발생 시에만 false로 전환됨
   const [isOnline, setIsOnline] = useState<boolean>(
     typeof navigator !== 'undefined' ? navigator.onLine : true,
   );
-  const [isSocketConnected, setIsSocketConnected] = useState<boolean>(false);
+  const [isSocketConnected, setIsSocketConnected] = useState<boolean>(true);
 
   // 🚨 [핵심] 실시간으로 발생한 최신 알람 (팝업용)
   const [latestAlarm, setLatestAlarm] = useState<Alarm | null>(null);

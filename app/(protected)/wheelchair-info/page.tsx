@@ -69,7 +69,8 @@ function WheelchairInfoContent() {
   const [isOnline, setIsOnline] = useState<boolean>(
     typeof navigator !== 'undefined' ? navigator.onLine : true,
   );
-  const [isSocketConnected, setIsSocketConnected] = useState<boolean>(false);
+  // 초기값 true로 시작하여 첫 화면 진입 시 배너가 잠깐 표시되는 것을 방지
+  const [isSocketConnected, setIsSocketConnected] = useState<boolean>(true);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;

@@ -3,22 +3,23 @@ const nextConfig = {
   // 1. 보안 헤더 설정
   async headers() {
     // 🔒 [보안] Content-Security-Policy
-    // - Next.js + Kakao 지도 + Vercel 환경에 맞게 구성
+    // - Next.js + Kakao 지도 + Socket.io(broker.firstcorea.com) + Vercel 환경에 맞게 구성
     // - inline 스크립트/스타일은 Next.js 내부에서 사용되므로 unsafe-inline 허용 (불가피)
+    // - Socket.io는 polling+websocket으로 https/wss 모두 사용하므로 명시적으로 broker 도메인 포함
     const csp = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://dapi.kakao.com https://t1.daumcdn.net https://*.vercel-insights.com https://*.googleapis.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob: https: http:",
       "font-src 'self' data: https://fonts.gstatic.com",
-      "connect-src 'self' https: wss:",
+      // 🔌 Socket.io / API / 외부 서비스 연결 허용
+      "connect-src 'self' https: http: wss: ws: https://broker.firstcorea.com:8080 wss://broker.firstcorea.com:8080",
       "frame-src 'self' https:",
       "media-src 'self' blob: data:",
       "object-src 'none'",
       "base-uri 'self'",
       "form-action 'self'",
       "frame-ancestors 'self'",
-      "upgrade-insecure-requests",
     ].join('; ');
 
     return [

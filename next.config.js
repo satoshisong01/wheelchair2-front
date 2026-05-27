@@ -13,7 +13,7 @@ const nextConfig = {
       "img-src 'self' data: blob: https: http:",
       "font-src 'self' data: https://fonts.gstatic.com",
       // 🔌 Socket.io / API / 외부 서비스 연결 허용
-      "connect-src 'self' https: http: wss: ws: https://broker.firstcorea.com wss://broker.firstcorea.com",
+      "connect-src 'self' https: http: wss: ws: https://broker.firstcorea.com https://broker.firstcorea.com:8080 wss://broker.firstcorea.com wss://broker.firstcorea.com:8080",
       "frame-src 'self' https:",
       "media-src 'self' blob: data:",
       "object-src 'none'",

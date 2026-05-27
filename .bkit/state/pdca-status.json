@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-05-27T00:34:14.942Z",
+  "lastUpdated": "2026-05-27T01:46:58.997Z",
   "activeFeatures": [
     "wheelchair-info",
     "mobile-view",
@@ -66,9 +66,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-09T03:24:32.711Z",
-        "lastUpdated": "2026-05-27T00:34:09.610Z"
+        "lastUpdated": "2026-05-27T00:54:27.185Z"
       },
-      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\hooks\\useMyWheelchair.ts"
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\lib\\socket.ts"
     },
     "battery": {
       "phase": "do",
@@ -79,7 +79,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-16T02:06:23.298Z",
-        "lastUpdated": "2026-04-16T02:08:38.199Z"
+        "lastUpdated": "2026-05-27T01:46:58.995Z"
       },
       "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\(protected)\\mobile-view\\battery\\page.tsx"
     },
@@ -196,9 +196,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-05-13T07:59:43.444Z",
-        "lastUpdated": "2026-05-22T06:37:35.073Z"
+        "lastUpdated": "2026-05-27T01:30:31.224Z"
       },
-      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\docs\\gen-sourcecode.js"
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\docs\\gen-security-summary.js"
     },
     "wheelchairs": {
       "phase": "do",
@@ -248,9 +248,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-05-18T04:56:49.389Z",
-        "lastUpdated": "2026-05-18T04:56:49.389Z"
+        "lastUpdated": "2026-05-27T00:56:06.466Z"
       },
-      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\api\\admin\\users\\[id]\\route.ts"
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\api\\admin\\devices\\[id]\\route.ts"
     },
     "stats": {
       "phase": "do",
@@ -287,7 +287,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-05-18T05:33:49.622Z",
-        "lastUpdated": "2026-05-18T05:33:58.319Z"
+        "lastUpdated": "2026-05-27T00:54:30.653Z"
       },
       "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\sample\\server-monitor.js"
     },
@@ -378,7 +378,7 @@
   "session": {
     "startedAt": "2026-04-09T01:52:22.043Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-05-27T00:34:14.942Z"
+    "lastActivity": "2026-05-27T01:46:58.997Z"
   },
   "history": [
     {
@@ -1038,6 +1038,66 @@
     {
       "timestamp": "2026-05-27T00:34:14.942Z",
       "feature": "wheelchair-info",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-27T00:54:27.187Z",
+      "feature": "wheelchair2-front",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-27T00:54:30.655Z",
+      "feature": "sample",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-27T00:56:06.467Z",
+      "feature": "[id]",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-27T01:02:33.456Z",
+      "feature": "docs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-27T01:23:46.221Z",
+      "feature": "docs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-27T01:26:01.638Z",
+      "feature": "docs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-27T01:28:20.343Z",
+      "feature": "docs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-27T01:30:31.226Z",
+      "feature": "docs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-27T01:46:51.334Z",
+      "feature": "battery",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-27T01:46:58.997Z",
+      "feature": "battery",
       "phase": "do",
       "action": "updated"
     }

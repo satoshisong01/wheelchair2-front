@@ -96,8 +96,12 @@ export async function PATCH(
       return NextResponse.json({ error: 'Device not found' }, { status: 404 });
     }
 
-    // 감사 로그는 간단히 콘솔에 출력
-    console.log(`[AdminAudit] Device Updated: ${id} by ${session.user.email}`);
+    // 감사 로그 (운영환경에서 사용자 이메일 노출 방지)
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[AdminAudit] Device Updated: ${id} by ${session.user.email}`);
+    } else {
+      console.log(`[AdminAudit] Device Updated: ${id}`);
+    }
 
     return NextResponse.json(result.rows[0]);
   } catch (error) {

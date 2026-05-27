@@ -8,7 +8,10 @@ const os = require('os');
 
 // --- 환경 설정 ---
 const SERVER_IDENTIFIER = 'ec2-prod-wheelchair-01';
-const API_ENDPOINT = 'http://localhost:3000/api/alerts/server-health';
+// Vercel 메인 도메인 사용 (EC2의 Next.js client 미운영, Vercel 단일화)
+const API_ENDPOINT =
+  process.env.SERVER_HEALTH_API_URL ||
+  'https://wheelchair2-front.vercel.app/api/alerts/server-health';
 const HEALTH_SECRET = process.env.SERVER_HEALTH_SECRET;
 
 if (!HEALTH_SECRET) {

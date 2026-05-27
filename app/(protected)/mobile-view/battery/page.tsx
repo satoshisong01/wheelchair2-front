@@ -39,6 +39,8 @@ export default function BatteryPage() {
   const batteryPercent = status.current_battery ?? status.battery ?? 0;
   const current = status.current_amperage ?? status.current ?? 0;
   const runtimeTotalMinutes = status.runtime ?? 0; // 🟢 DB에서 가져온 실제 주행 시간(분)
+  const operatingTimeTotalMinutes =
+    status.operating_time ?? status.operatingTime ?? 0; // 🟢 휠체어 총 사용 시간(분)
 
   const isCharging = current > 0.5;
   const isLowBattery = batteryPercent < 20;
@@ -51,6 +53,10 @@ export default function BatteryPage() {
   // 🟢 실제 오늘 주행 시간 계산 (분 -> 시/분 변환)
   const runTimeHours = Math.floor(runtimeTotalMinutes / 60);
   const runTimeMinutes = runtimeTotalMinutes % 60;
+
+  // 🟢 휠체어 사용 시간 (분 -> 시/분 변환)
+  const opTimeHours = Math.floor(operatingTimeTotalMinutes / 60);
+  const opTimeMinutes = operatingTimeTotalMinutes % 60;
 
   // 📊 2. 그래프 데이터 상태
   const [chartPeriod, setChartPeriod] = useState<'today' | 'week'>('today');
@@ -215,15 +221,28 @@ export default function BatteryPage() {
               </div>
             </div>
           </div>
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-            <span className="text-gray-500 text-[10px] font-medium block mb-1 uppercase flex items-center">
-              <Clock className="w-3 h-3 mr-1" /> 예상 사용 가능 시간 (대기 기준)
-            </span>
-            <div className="flex items-end">
-              <span className="text-xl font-bold text-gray-900">{estTimeHours}</span>
-              <span className="text-xs text-gray-500 ml-0.5 mb-1 mr-1">시간</span>
-              <span className="text-xl font-bold text-gray-900">{estTimeMinutes}</span>
-              <span className="text-xs text-gray-500 ml-0.5 mb-1">분</span>
+          <div className="flex space-x-3">
+            <div className="flex-1 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+              <span className="text-gray-500 text-[10px] font-medium block mb-1 uppercase">
+                휠체어 사용 시간
+              </span>
+              <div className="flex items-end">
+                <span className="text-xl font-bold text-gray-900">{opTimeHours}</span>
+                <span className="text-xs text-gray-500 ml-0.5 mb-1 mr-1">h</span>
+                <span className="text-xl font-bold text-gray-900">{opTimeMinutes}</span>
+                <span className="text-xs text-gray-500 ml-0.5 mb-1">m</span>
+              </div>
+            </div>
+            <div className="flex-1 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+              <span className="text-gray-500 text-[10px] font-medium block mb-1 uppercase flex items-center">
+                <Clock className="w-3 h-3 mr-1" /> 예상 사용 가능 시간
+              </span>
+              <div className="flex items-end">
+                <span className="text-xl font-bold text-gray-900">{estTimeHours}</span>
+                <span className="text-xs text-gray-500 ml-0.5 mb-1 mr-1">h</span>
+                <span className="text-xl font-bold text-gray-900">{estTimeMinutes}</span>
+                <span className="text-xs text-gray-500 ml-0.5 mb-1">m</span>
+              </div>
             </div>
           </div>
         </div>

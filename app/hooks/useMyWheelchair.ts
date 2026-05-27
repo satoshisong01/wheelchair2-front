@@ -179,6 +179,13 @@ export function useMyWheelchair() {
     socketInstance.on('connect', () => {
       console.log('✅ [Mobile Hook] 소켓 연결 성공!');
       setIsSocketConnected(true);
+
+      // 🔐 [보안] 권한 검증 + 룸 join 요청 (서버에서 DB로 진짜 권한 확인 후 분리)
+      const userId = (session?.user as any)?.id;
+      const role = (session?.user as any)?.role;
+      if (userId && role) {
+        socketInstance.emit('subscribe', { userId, role });
+      }
       // 재연결 시 최신 데이터 재조회 (오래된 데이터 방지)
       fetchData();
     });

@@ -107,6 +107,13 @@ export default function DashboardPage() {
 
       socket.on('connect', () => {
         console.log('✅ [Dashboard] 소켓 연결 성공!');
+
+        // 🔐 [보안] 권한 검증 + admin 룸 join 요청
+        const userId = (session?.user as any)?.id;
+        const role = (session?.user as any)?.role;
+        if (userId && role) {
+          socket.emit('subscribe', { userId, role });
+        }
       });
 
       // 데이터 병합 로직

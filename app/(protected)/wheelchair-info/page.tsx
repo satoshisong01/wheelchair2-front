@@ -280,6 +280,13 @@ function WheelchairInfoContent() {
     socket.on('connect', () => {
       console.log('✅ [Admin] 소켓 연결됨');
       setIsSocketConnected(true);
+
+      // 🔐 [보안] 권한 검증 + admin 룸 join 요청
+      const userId = (session?.user as any)?.id;
+      const role = (session?.user as any)?.role;
+      if (userId && role) {
+        socket.emit('subscribe', { userId, role });
+      }
       // 재연결 시 현재 선택된 차량 데이터 재조회
       const id = currentIdRef.current;
       if (id) {

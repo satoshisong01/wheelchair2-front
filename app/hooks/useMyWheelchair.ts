@@ -6,8 +6,8 @@ import { useSession } from 'next-auth/react';
 import { io, Socket } from 'socket.io-client';
 import { DashboardWheelchair } from '@/types/wheelchair';
 
-// 🟢 도메인 주소 사용 (SSL 적용)
-const SOCKET_URL = 'https://broker.firstcorea.com:8080';
+// 🟢 도메인 주소 사용 (SSL 적용) - nginx가 443에서 SSL 종료 후 localhost:8080으로 프록시
+const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://broker.firstcorea.com';
 
 // 알람 인터페이스 정의 (DB의 snake_case와 소켓의 camelCase 모두 대응)
 export interface Alarm {

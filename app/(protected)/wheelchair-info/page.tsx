@@ -19,7 +19,7 @@ import { TopRightPanel } from './components/TopRightPanel';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import PostureSafetyMonitor from './components/PostureSafetyMonitor';
 
-const SOCKET_SERVER_URL = 'https://broker.firstcorea.com:8080';
+const SOCKET_SERVER_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://broker.firstcorea.com';
 
 const CRITICAL_KEYWORDS = ['FALL', 'CRITICAL', 'EMERGENCY', 'WARNING', 'FATAL', 'COLLISION'];
 

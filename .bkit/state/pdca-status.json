@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-05-18T07:16:23.914Z",
+  "lastUpdated": "2026-05-27T00:02:40.960Z",
   "activeFeatures": [
     "wheelchair-info",
     "mobile-view",
@@ -26,7 +26,8 @@
     "settings",
     "profile",
     "medical-info",
-    "change-password"
+    "change-password",
+    "dashboard"
   ],
   "primaryFeature": "wheelchair-info",
   "features": {
@@ -39,7 +40,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-09T01:55:24.834Z",
-        "lastUpdated": "2026-05-18T07:16:23.911Z"
+        "lastUpdated": "2026-05-27T00:02:39.530Z"
       },
       "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\(protected)\\wheelchair-info\\page.tsx"
     },
@@ -65,9 +66,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-09T03:24:32.711Z",
-        "lastUpdated": "2026-05-18T07:15:37.172Z"
+        "lastUpdated": "2026-05-27T00:02:40.959Z"
       },
-      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\hooks\\useMyWheelchair.ts"
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\next.config.js"
     },
     "battery": {
       "phase": "do",
@@ -195,9 +196,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-05-13T07:59:43.444Z",
-        "lastUpdated": "2026-05-18T05:51:31.825Z"
+        "lastUpdated": "2026-05-22T06:37:35.073Z"
       },
-      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\docs\\gen-arch-api.js"
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\docs\\gen-sourcecode.js"
     },
     "wheelchairs": {
       "phase": "do",
@@ -354,6 +355,19 @@
         "lastUpdated": "2026-05-18T06:29:03.637Z"
       },
       "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\api\\auth\\change-password\\route.ts"
+    },
+    "dashboard": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-05-27T00:02:37.699Z",
+        "lastUpdated": "2026-05-27T00:02:37.699Z"
+      },
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\(protected)\\dashboard\\page.tsx"
     }
   },
   "pipeline": {
@@ -364,7 +378,7 @@
   "session": {
     "startedAt": "2026-04-09T01:52:22.043Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-05-18T07:16:23.914Z"
+    "lastActivity": "2026-05-27T00:02:40.960Z"
   },
   "history": [
     {
@@ -916,6 +930,78 @@
     {
       "timestamp": "2026-05-18T07:16:23.913Z",
       "feature": "wheelchair-info",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-18T08:37:06.288Z",
+      "feature": "docs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-21T00:18:12.570Z",
+      "feature": "docs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-21T00:21:02.535Z",
+      "feature": "docs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-21T08:22:44.010Z",
+      "feature": "docs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-22T06:30:15.635Z",
+      "feature": "docs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-22T06:33:09.853Z",
+      "feature": "docs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-22T06:35:12.362Z",
+      "feature": "docs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-22T06:37:35.074Z",
+      "feature": "docs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-27T00:02:36.063Z",
+      "feature": "wheelchair2-front",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-27T00:02:37.701Z",
+      "feature": "dashboard",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-27T00:02:39.532Z",
+      "feature": "wheelchair-info",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-27T00:02:40.960Z",
+      "feature": "wheelchair2-front",
       "phase": "do",
       "action": "updated"
     }

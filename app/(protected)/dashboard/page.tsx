@@ -17,7 +17,7 @@ import { DashboardSummaryCards } from './components/DashboardSummaryCards';
 import { WheelchairInfoModal } from './components/WheelchairInfoModal';
 import LoadingSpinner from '../../../components/ui/LoadingSpinner';
 
-const SOCKET_SERVER_URL = 'https://broker.firstcorea.com:8080';
+const SOCKET_SERVER_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://broker.firstcorea.com';
 
 type Alarm = {
   id: number | string;

@@ -176,52 +176,87 @@ export async function DELETE(req: NextRequest) {
       { message: '휠체어 ID가 필요합니다.' },
       { status: 400 }
     );
-  } // ⭐️ [핵심 수정 1] 삭제 전에 시리얼 번호와 모델명 조회
+  }
 
-  let serial = 'N/A';
-  let model = 'N/A';
+  const client = await pool.connect();
   try {
+    await client.query('BEGIN');
+
+    // 1. 삭제 전 시리얼/모델 조회 (감사 로그용)
     const lookupSql = `SELECT device_serial, model_name FROM wheelchairs WHERE id = $1`;
-    const lookupResult = await query(lookupSql, [wheelchairId]);
-    if (lookupResult.rowCount > 0) {
-      serial = lookupResult.rows[0].device_serial;
-      model = lookupResult.rows[0].model_name;
-    } else {
+    const lookupResult = await client.query(lookupSql, [wheelchairId]);
+
+    if (lookupResult.rowCount === 0) {
+      await client.query('ROLLBACK');
       return NextResponse.json(
         { message: '해당 휠체어를 찾을 수 없습니다.' },
         { status: 404 }
       );
     }
-  } catch (e) {
-    console.error('Serial lookup failed before delete:', e); // 로그는 기록하지 않고 삭제 진행 (혹은 500 에러 반환)
-  } // Wheelchair를 삭제하면 CASCADE 옵션으로 device_auths 및 user_wheelchairs 관계도 자동으로 삭제됨
 
-  try {
-    const deleteSql = `DELETE FROM wheelchairs WHERE id = $1;`;
-    const result = await query(deleteSql, [wheelchairId]);
+    const serial = lookupResult.rows[0].device_serial;
+    const model = lookupResult.rows[0].model_name;
+
+    // 2. 관련 데이터 명시적 삭제 (CASCADE 미설정 테이블 대비)
+    //    순서 중요: 자식 테이블 → 부모 테이블
+    //    CASCADE 설정된 테이블도 명시 삭제 시 idempotent 하게 동작
+    const dependentTables = [
+      'alarms',           // 알람 이력
+      'posture_daily',    // 자세 유지 일별 카운트
+      'maintenance_logs', // 정비 이력
+      'wheelchair_status',// 실시간 상태 (배터리/주행시간/위치 등)
+      'user_wheelchairs', // N:M 사용자 매핑
+      'device_auths',     // 기기 로그인 인증
+    ];
+
+    for (const tbl of dependentTables) {
+      try {
+        await client.query(
+          `DELETE FROM ${tbl} WHERE wheelchair_id = $1`,
+          [wheelchairId]
+        );
+      } catch (e: any) {
+        // 테이블이 존재하지 않는 경우(42P01)는 무시하고 계속 진행
+        if (e?.code === '42P01') continue;
+        throw e;
+      }
+    }
+
+    // 3. 휠체어 본 테이블 삭제
+    const result = await client.query(
+      `DELETE FROM wheelchairs WHERE id = $1`,
+      [wheelchairId]
+    );
 
     if (result.rowCount === 0) {
+      await client.query('ROLLBACK');
       return NextResponse.json(
         { message: '해당 휠체어를 찾을 수 없습니다.' },
         { status: 404 }
       );
-    } // ⭐️ [핵심 수정 2] 시리얼과 모델 정보를 details에 포함하여 기록
+    }
 
+    await client.query('COMMIT');
+
+    // 4. 감사 로그
     createAuditLog({
       userId: userId,
       userRole: userRole,
       action: 'DEVICE_DELETE',
-      details: { wheelchairId: wheelchairId, serial: serial, model: model }, // ⭐️ 상세 정보 추가
+      details: { wheelchairId, serial, model },
     });
 
     return NextResponse.json({
       message: `장치 (${serial})가 성공적으로 삭제되었습니다.`,
     });
   } catch (error) {
-    console.error('Device deletion failed:', error); // 삭제 실패 시에도 로그는 기록하지 않음 (선택 사항)
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('Device deletion failed:', error);
     return NextResponse.json(
       { message: '장치 삭제에 실패했습니다.' },
       { status: 500 }
     );
+  } finally {
+    client.release();
   }
 }

@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-05-27T01:46:58.997Z",
+  "lastUpdated": "2026-05-28T05:55:04.464Z",
   "activeFeatures": [
     "wheelchair-info",
     "mobile-view",
@@ -27,7 +27,9 @@
     "profile",
     "medical-info",
     "change-password",
-    "dashboard"
+    "dashboard",
+    "auto-web",
+    "devices"
   ],
   "primaryFeature": "wheelchair-info",
   "features": {
@@ -196,9 +198,9 @@
       "documents": {},
       "timestamps": {
         "started": "2026-05-13T07:59:43.444Z",
-        "lastUpdated": "2026-05-27T01:30:31.224Z"
+        "lastUpdated": "2026-05-27T07:05:35.839Z"
       },
-      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\docs\\gen-security-summary.js"
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\docs\\gen-performance-test.js"
     },
     "wheelchairs": {
       "phase": "do",
@@ -248,7 +250,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-05-18T04:56:49.389Z",
-        "lastUpdated": "2026-05-27T00:56:06.466Z"
+        "lastUpdated": "2026-05-28T05:55:04.462Z"
       },
       "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\api\\admin\\devices\\[id]\\route.ts"
     },
@@ -368,6 +370,32 @@
         "lastUpdated": "2026-05-27T00:34:12.599Z"
       },
       "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\(protected)\\dashboard\\page.tsx"
+    },
+    "auto-web": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-05-27T01:58:20.460Z",
+        "lastUpdated": "2026-05-27T01:58:20.460Z"
+      },
+      "lastFile": "C:\\Users\\jungm\\Desktop\\projects\\auto-web\\server-monitor.js"
+    },
+    "devices": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-05-28T05:54:51.834Z",
+        "lastUpdated": "2026-05-28T05:54:51.834Z"
+      },
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\api\\admin\\devices\\route.ts"
     }
   },
   "pipeline": {
@@ -378,7 +406,7 @@
   "session": {
     "startedAt": "2026-04-09T01:52:22.043Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-05-27T01:46:58.997Z"
+    "lastActivity": "2026-05-28T05:55:04.464Z"
   },
   "history": [
     {
@@ -1098,6 +1126,54 @@
     {
       "timestamp": "2026-05-27T01:46:58.997Z",
       "feature": "battery",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-27T01:58:20.461Z",
+      "feature": "auto-web",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-27T06:47:13.037Z",
+      "feature": "docs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-27T06:56:07.848Z",
+      "feature": "docs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-27T06:56:14.319Z",
+      "feature": "docs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-27T07:02:00.155Z",
+      "feature": "docs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-27T07:05:35.841Z",
+      "feature": "docs",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-28T05:54:51.836Z",
+      "feature": "devices",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-28T05:55:04.464Z",
+      "feature": "[id]",
       "phase": "do",
       "action": "updated"
     }

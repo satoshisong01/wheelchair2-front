@@ -158,7 +158,30 @@ export async function DELETE(
     `;
     await client.query(logQuery, ['DEVICE_DELETE', logDetails, adminUserId]);
 
-    // 3. 휠체어 삭제
+    // 3. 관련 데이터 명시적 삭제 (CASCADE 미설정 테이블 대비)
+    //    자식 → 부모 순서, idempotent
+    const dependentTables = [
+      'alarms',
+      'posture_daily',
+      'maintenance_logs',
+      'wheelchair_status',
+      'user_wheelchairs',
+      'device_auths',
+    ];
+
+    for (const tbl of dependentTables) {
+      try {
+        await client.query(
+          `DELETE FROM ${tbl} WHERE wheelchair_id = $1`,
+          [id]
+        );
+      } catch (e: any) {
+        if (e?.code === '42P01') continue; // 테이블 미존재 시 스킵
+        throw e;
+      }
+    }
+
+    // 4. 휠체어 본 테이블 삭제
     await client.query('DELETE FROM wheelchairs WHERE id = $1', [id]);
 
     await client.query('COMMIT'); // 커밋

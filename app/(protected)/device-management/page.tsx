@@ -58,6 +58,14 @@ export default function DeviceManagementPage() {
     targetSerial: string;
   }>({ isOpen: false, targetId: null, targetSerial: '' });
 
+  // 삭제 확인용 입력값 (시리얼 + 확인 문구)
+  const [deleteConfirm, setDeleteConfirm] = useState({
+    serialInput: '',
+    phraseInput: '',
+  });
+
+  const CONFIRM_PHRASE = '삭제합니다';
+
   useEffect(() => {
     if (
       status === 'authenticated' &&
@@ -155,15 +163,27 @@ export default function DeviceManagementPage() {
 
   const openDeleteModal = (id: string, serial: string) => {
     setDeleteModal({ isOpen: true, targetId: id, targetSerial: serial });
+    setDeleteConfirm({ serialInput: '', phraseInput: '' });
   };
+
+  const closeDeleteModal = () => {
+    setDeleteModal({ isOpen: false, targetId: null, targetSerial: '' });
+    setDeleteConfirm({ serialInput: '', phraseInput: '' });
+  };
+
+  const isDeleteConfirmValid =
+    deleteModal.isOpen &&
+    deleteConfirm.serialInput.trim() === deleteModal.targetSerial &&
+    deleteConfirm.phraseInput.trim() === CONFIRM_PHRASE;
 
   const confirmDelete = async () => {
     const { targetId, targetSerial } = deleteModal;
     if (!targetId) return;
+    if (!isDeleteConfirmValid) return;
 
     setIsLoading(true);
     setLastAction(null);
-    setDeleteModal({ isOpen: false, targetId: null, targetSerial: '' });
+    closeDeleteModal();
 
     try {
       const res = await fetch(`/api/admin/devices`, {
@@ -427,11 +447,7 @@ export default function DeviceManagementPage() {
           className={styles.modalOverlay}
           onClick={(e) => {
             if (e.target === e.currentTarget) {
-              setDeleteModal({
-                isOpen: false,
-                targetId: null,
-                targetSerial: '',
-              });
+              closeDeleteModal();
             }
           }}
         >
@@ -442,20 +458,74 @@ export default function DeviceManagementPage() {
               <br />
               삭제하시겠습니까? 삭제된 데이터는 복구할 수 없습니다.
             </p>
+
+            <div style={{ marginTop: 16, marginBottom: 16 }}>
+              <div className={styles.formGroup} style={{ marginBottom: 12 }}>
+                <label
+                  htmlFor="confirmSerial"
+                  style={{ fontSize: 13, color: '#555' }}
+                >
+                  기기 시리얼 번호를 입력하세요 (
+                  <strong>{deleteModal.targetSerial}</strong>)
+                </label>
+                <input
+                  id="confirmSerial"
+                  type="text"
+                  value={deleteConfirm.serialInput}
+                  onChange={(e) =>
+                    setDeleteConfirm((prev) => ({
+                      ...prev,
+                      serialInput: e.target.value,
+                    }))
+                  }
+                  autoComplete="off"
+                  placeholder={deleteModal.targetSerial}
+                  className={styles.input}
+                  style={{ marginTop: 4 }}
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label
+                  htmlFor="confirmPhrase"
+                  style={{ fontSize: 13, color: '#555' }}
+                >
+                  확인을 위해 <strong>{CONFIRM_PHRASE}</strong>를 입력하세요
+                </label>
+                <input
+                  id="confirmPhrase"
+                  type="text"
+                  value={deleteConfirm.phraseInput}
+                  onChange={(e) =>
+                    setDeleteConfirm((prev) => ({
+                      ...prev,
+                      phraseInput: e.target.value,
+                    }))
+                  }
+                  autoComplete="off"
+                  placeholder={CONFIRM_PHRASE}
+                  className={styles.input}
+                  style={{ marginTop: 4 }}
+                />
+              </div>
+            </div>
+
             <div className={styles.modalActions}>
               <button
-                onClick={() =>
-                  setDeleteModal({
-                    isOpen: false,
-                    targetId: null,
-                    targetSerial: '',
-                  })
-                }
+                onClick={closeDeleteModal}
                 className={styles.cancelButton}
               >
                 취소
               </button>
-              <button onClick={confirmDelete} className={styles.confirmButton}>
+              <button
+                onClick={confirmDelete}
+                disabled={!isDeleteConfirmValid}
+                className={styles.confirmButton}
+                style={{
+                  opacity: isDeleteConfirmValid ? 1 : 0.4,
+                  cursor: isDeleteConfirmValid ? 'pointer' : 'not-allowed',
+                }}
+              >
                 삭제하기
               </button>
             </div>

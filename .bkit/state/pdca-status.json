@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-05-28T06:05:53.265Z",
+  "lastUpdated": "2026-05-28T07:57:07.121Z",
   "activeFeatures": [
     "wheelchair-info",
     "mobile-view",
@@ -29,7 +29,8 @@
     "change-password",
     "dashboard",
     "auto-web",
-    "devices"
+    "devices",
+    "device-management"
   ],
   "primaryFeature": "wheelchair-info",
   "features": {
@@ -396,6 +397,19 @@
         "lastUpdated": "2026-05-28T06:05:38.985Z"
       },
       "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\api\\admin\\devices\\route.ts"
+    },
+    "device-management": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-05-28T07:56:40.041Z",
+        "lastUpdated": "2026-05-28T07:57:07.119Z"
+      },
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\(protected)\\device-management\\page.tsx"
     }
   },
   "pipeline": {
@@ -406,7 +420,7 @@
   "session": {
     "startedAt": "2026-04-09T01:52:22.043Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-05-28T06:05:53.265Z"
+    "lastActivity": "2026-05-28T07:57:07.121Z"
   },
   "history": [
     {
@@ -1186,6 +1200,24 @@
     {
       "timestamp": "2026-05-28T06:05:53.265Z",
       "feature": "[id]",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-28T07:56:40.043Z",
+      "feature": "device-management",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-28T07:56:49.427Z",
+      "feature": "device-management",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-05-28T07:57:07.121Z",
+      "feature": "device-management",
       "phase": "do",
       "action": "updated"
     }

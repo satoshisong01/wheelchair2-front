@@ -197,29 +197,34 @@ export async function DELETE(req: NextRequest) {
     const serial = lookupResult.rows[0].device_serial;
     const model = lookupResult.rows[0].model_name;
 
-    // 2. 관련 데이터 명시적 삭제 (CASCADE 미설정 테이블 대비)
-    //    순서 중요: 자식 테이블 → 부모 테이블
-    //    CASCADE 설정된 테이블도 명시 삭제 시 idempotent 하게 동작
-    const dependentTables = [
-      'alarms',           // 알람 이력
-      'posture_daily',    // 자세 유지 일별 카운트
-      'maintenance_logs', // 정비 이력
-      'wheelchair_status',// 실시간 상태 (배터리/주행시간/위치 등)
-      'user_wheelchairs', // N:M 사용자 매핑
-      'device_auths',     // 기기 로그인 인증
-    ];
+    // 2. wheelchairs를 참조하는 모든 테이블을 pg_constraint에서 동적 조회
+    //    하드코딩된 테이블 목록 의존을 제거하여 신규 테이블 추가에도 자동 대응
+    const fkLookup = await client.query(`
+      SELECT
+        cl.relname AS table_name,
+        att.attname AS column_name
+      FROM pg_constraint con
+      JOIN pg_class cl ON cl.oid = con.conrelid
+      JOIN pg_class cl_ref ON cl_ref.oid = con.confrelid
+      JOIN pg_attribute att
+        ON att.attrelid = con.conrelid
+       AND att.attnum = ANY(con.conkey)
+      WHERE con.contype = 'f'
+        AND cl_ref.relname = 'wheelchairs'
+    `);
 
-    for (const tbl of dependentTables) {
-      try {
-        await client.query(
-          `DELETE FROM ${tbl} WHERE wheelchair_id = $1`,
-          [wheelchairId]
-        );
-      } catch (e: any) {
-        // 테이블이 존재하지 않는 경우(42P01)는 무시하고 계속 진행
-        if (e?.code === '42P01') continue;
-        throw e;
+    // 3. 발견된 모든 참조 테이블에서 해당 wheelchair_id 행 삭제
+    for (const fk of fkLookup.rows) {
+      const tbl = fk.table_name as string;
+      const col = fk.column_name as string;
+      // SQL injection 방지: 식별자 안전성 검증
+      if (!/^[a-z_][a-z0-9_]*$/i.test(tbl) || !/^[a-z_][a-z0-9_]*$/i.test(col)) {
+        continue;
       }
+      await client.query(
+        `DELETE FROM "${tbl}" WHERE "${col}" = $1`,
+        [wheelchairId]
+      );
     }
 
     // 3. 휠체어 본 테이블 삭제

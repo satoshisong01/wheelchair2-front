@@ -158,27 +158,31 @@ export async function DELETE(
     `;
     await client.query(logQuery, ['DEVICE_DELETE', logDetails, adminUserId]);
 
-    // 3. 관련 데이터 명시적 삭제 (CASCADE 미설정 테이블 대비)
-    //    자식 → 부모 순서, idempotent
-    const dependentTables = [
-      'alarms',
-      'posture_daily',
-      'maintenance_logs',
-      'wheelchair_status',
-      'user_wheelchairs',
-      'device_auths',
-    ];
+    // 3. wheelchairs를 참조하는 모든 테이블을 동적으로 조회 후 삭제
+    const fkLookup = await client.query(`
+      SELECT
+        cl.relname AS table_name,
+        att.attname AS column_name
+      FROM pg_constraint con
+      JOIN pg_class cl ON cl.oid = con.conrelid
+      JOIN pg_class cl_ref ON cl_ref.oid = con.confrelid
+      JOIN pg_attribute att
+        ON att.attrelid = con.conrelid
+       AND att.attnum = ANY(con.conkey)
+      WHERE con.contype = 'f'
+        AND cl_ref.relname = 'wheelchairs'
+    `);
 
-    for (const tbl of dependentTables) {
-      try {
-        await client.query(
-          `DELETE FROM ${tbl} WHERE wheelchair_id = $1`,
-          [id]
-        );
-      } catch (e: any) {
-        if (e?.code === '42P01') continue; // 테이블 미존재 시 스킵
-        throw e;
+    for (const fk of fkLookup.rows) {
+      const tbl = fk.table_name as string;
+      const col = fk.column_name as string;
+      if (!/^[a-z_][a-z0-9_]*$/i.test(tbl) || !/^[a-z_][a-z0-9_]*$/i.test(col)) {
+        continue;
       }
+      await client.query(
+        `DELETE FROM "${tbl}" WHERE "${col}" = $1`,
+        [id]
+      );
     }
 
     // 4. 휠체어 본 테이블 삭제

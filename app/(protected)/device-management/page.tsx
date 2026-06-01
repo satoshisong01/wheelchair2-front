@@ -20,6 +20,20 @@ type DeviceView = {
   created_at: string;
   registered_by_name: string | null;
   registered_by_email: string | null;
+  push_emergency: boolean | null;
+  push_battery: boolean | null;
+  push_posture: boolean | null;
+};
+
+type NotificationType = 'emergency' | 'battery' | 'posture';
+
+const NOTIFICATION_META: Record<
+  NotificationType,
+  { key: 'push_emergency' | 'push_battery' | 'push_posture'; label: string; icon: string }
+> = {
+  emergency: { key: 'push_emergency', label: '긴급', icon: '🚨' },
+  battery: { key: 'push_battery', label: '배터리', icon: '🔋' },
+  posture: { key: 'push_posture', label: '욕창', icon: '🧘' },
 };
 
 const LoadingSpinner = () => (
@@ -158,6 +172,61 @@ export default function DeviceManagementPage() {
       setLastAction({ type: 'error', message: err.message });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // 관리자: 특정 기기의 특정 알림 ON/OFF 토글
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  const toggleNotification = async (
+    deviceId: string,
+    type: NotificationType,
+    currentEnabled: boolean | null
+  ) => {
+    const nextEnabled = !(currentEnabled ?? true);
+    const togglingKey = `${deviceId}:${type}`;
+    setTogglingId(togglingKey);
+
+    // 낙관적 업데이트
+    setDevices((prev) =>
+      prev.map((d) =>
+        d.id === deviceId
+          ? { ...d, [NOTIFICATION_META[type].key]: nextEnabled }
+          : d
+      )
+    );
+
+    try {
+      const res = await fetch(
+        `/api/admin/devices/${deviceId}/notifications`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type, enabled: nextEnabled }),
+        }
+      );
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || '알림 설정 변경 실패');
+      }
+
+      setLastAction({
+        type: 'success',
+        message: `${NOTIFICATION_META[type].icon} ${NOTIFICATION_META[type].label} 알림 ${nextEnabled ? 'ON' : 'OFF'}`,
+      });
+    } catch (err: any) {
+      // 롤백
+      setDevices((prev) =>
+        prev.map((d) =>
+          d.id === deviceId
+            ? { ...d, [NOTIFICATION_META[type].key]: currentEnabled }
+            : d
+        )
+      );
+      setLastAction({ type: 'error', message: err.message });
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -398,30 +467,81 @@ export default function DeviceManagementPage() {
             <table className={styles.table}>
               <thead>
                 <tr>
-                  {/* <th>ID</th> */}
                   <th>기기 시리얼</th>
                   <th>모델명</th>
                   <th>등록자</th>
                   <th>등록일</th>
+                  <th>알림 설정</th>
                   <th>작업</th>
                 </tr>
               </thead>
               <tbody>
                 {devices.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className={styles.emptyState}>
+                    <td colSpan={6} className={styles.emptyState}>
                       등록된 기기가 없습니다.
                     </td>
                   </tr>
                 ) : (
                   devices.map((device) => (
                     <tr key={device.id}>
-                      {/* <td>{device.id.substring(0, 8)}...</td> */}
                       <td>{device.device_serial}</td>
                       <td>{device.model_name}</td>
                       <td>{device.registered_by_name || '-'}</td>
                       <td>
                         {new Date(device.created_at).toLocaleDateString()}
+                      </td>
+                      <td>
+                        <div
+                          style={{
+                            display: 'flex',
+                            gap: 6,
+                            flexWrap: 'wrap',
+                          }}
+                        >
+                          {(['emergency', 'battery', 'posture'] as NotificationType[]).map(
+                            (type) => {
+                              const meta = NOTIFICATION_META[type];
+                              const enabled = (device[meta.key] ?? true) === true;
+                              const isPending =
+                                togglingId === `${device.id}:${type}`;
+                              return (
+                                <button
+                                  key={type}
+                                  onClick={() =>
+                                    toggleNotification(
+                                      device.id,
+                                      type,
+                                      device[meta.key]
+                                    )
+                                  }
+                                  disabled={isPending}
+                                  title={`${meta.icon} ${meta.label} 알림 ${enabled ? 'ON' : 'OFF'}`}
+                                  style={{
+                                    padding: '4px 8px',
+                                    borderRadius: 6,
+                                    border: '1px solid',
+                                    borderColor: enabled
+                                      ? '#10b981'
+                                      : '#d1d5db',
+                                    background: enabled
+                                      ? '#ecfdf5'
+                                      : '#f3f4f6',
+                                    color: enabled ? '#065f46' : '#6b7280',
+                                    cursor: isPending ? 'wait' : 'pointer',
+                                    fontSize: 12,
+                                    fontWeight: 500,
+                                    opacity: isPending ? 0.6 : 1,
+                                    transition: 'all 0.15s',
+                                  }}
+                                >
+                                  {meta.icon} {meta.label}{' '}
+                                  {enabled ? 'ON' : 'OFF'}
+                                </button>
+                              );
+                            }
+                          )}
+                        </div>
                       </td>
                       <td>
                         <button

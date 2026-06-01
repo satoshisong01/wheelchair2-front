@@ -25,12 +25,16 @@ export async function GET(req: NextRequest) {
 
   try {
     // ⭐️ SQL FIX: registrant_user_id를 기준으로 users 테이블을 조인하여 등록자 이름을 가져옵니다.
+    //    push_emergency / push_battery / push_posture 도 포함 (관리자 토글용)
     const sql = `
-            SELECT 
+            SELECT
                 w.id, w.device_serial, w.model_name, w.status, w.created_at,
                 w.user_gender, w.user_weight,
                 d.device_id,
-                u.name AS registered_by_name, 
+                d.push_emergency,
+                d.push_battery,
+                d.push_posture,
+                u.name AS registered_by_name,
                 u.email AS registered_by_email
             FROM wheelchairs w
             LEFT JOIN device_auths d ON w.id = d.wheelchair_id

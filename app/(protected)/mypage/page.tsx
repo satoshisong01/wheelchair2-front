@@ -4,6 +4,10 @@ import { useState, useEffect } from 'react';
 import styles from './page.module.css';
 import { useSession } from 'next-auth/react';
 
+// 알림 설정 UI 표시 여부 (관리자가 기기관리 페이지에서 일괄 제어하므로 일시 숨김)
+// 다시 노출하려면 true로 변경
+const SHOW_NOTIFICATION_SETTINGS = false;
+
 export default function MyPage() {
   const { data: session } = useSession();
   const userRole = session?.user?.role;
@@ -138,47 +142,49 @@ export default function MyPage() {
         </div>
       </div>
 
-      <div className={styles.formCard} style={{ marginBottom: '20px' }}>
-        <h3>알림 설정</h3>
-        <div className={styles.notificationList}>
-          <div className={styles.notificationItem}>
-            <div className={styles.notiText}>
-              <span className={styles.notiTitle}>🚨 긴급 위험 알림</span>
-              <span className={styles.notiDesc}>낙상 사고, 전복 위험, 장애물 감지</span>
+      {SHOW_NOTIFICATION_SETTINGS && (
+        <div className={styles.formCard} style={{ marginBottom: '20px' }}>
+          <h3>알림 설정</h3>
+          <div className={styles.notificationList}>
+            <div className={styles.notificationItem}>
+              <div className={styles.notiText}>
+                <span className={styles.notiTitle}>🚨 긴급 위험 알림</span>
+                <span className={styles.notiDesc}>낙상 사고, 전복 위험, 장애물 감지</span>
+              </div>
+              <div
+                className={`${styles.toggleSwitch} ${notifications.emergency ? styles.on : ''}`}
+                onClick={() => toggleNotification('emergency')}
+              >
+                <div className={styles.toggleHandle} />
+              </div>
             </div>
-            <div
-              className={`${styles.toggleSwitch} ${notifications.emergency ? styles.on : ''}`}
-              onClick={() => toggleNotification('emergency')}
-            >
-              <div className={styles.toggleHandle} />
+            <div className={styles.notificationItem}>
+              <div className={styles.notiText}>
+                <span className={styles.notiTitle}>🔋 배터리 관리 알림</span>
+                <span className={styles.notiDesc}>배터리 저전압 및 충전 필요 알림</span>
+              </div>
+              <div
+                className={`${styles.toggleSwitch} ${notifications.battery ? styles.on : ''}`}
+                onClick={() => toggleNotification('battery')}
+              >
+                <div className={styles.toggleHandle} />
+              </div>
             </div>
-          </div>
-          <div className={styles.notificationItem}>
-            <div className={styles.notiText}>
-              <span className={styles.notiTitle}>🔋 배터리 관리 알림</span>
-              <span className={styles.notiDesc}>배터리 저전압 및 충전 필요 알림</span>
-            </div>
-            <div
-              className={`${styles.toggleSwitch} ${notifications.battery ? styles.on : ''}`}
-              onClick={() => toggleNotification('battery')}
-            >
-              <div className={styles.toggleHandle} />
-            </div>
-          </div>
-          <div className={styles.notificationItem}>
-            <div className={styles.notiText}>
-              <span className={styles.notiTitle}>🧘 욕창 방지 알림</span>
-              <span className={styles.notiDesc}>15분 이상 동일 자세 유지 시 교정 알림</span>
-            </div>
-            <div
-              className={`${styles.toggleSwitch} ${notifications.posture ? styles.on : ''}`}
-              onClick={() => toggleNotification('posture')}
-            >
-              <div className={styles.toggleHandle} />
+            <div className={styles.notificationItem}>
+              <div className={styles.notiText}>
+                <span className={styles.notiTitle}>🧘 욕창 방지 알림</span>
+                <span className={styles.notiDesc}>15분 이상 동일 자세 유지 시 교정 알림</span>
+              </div>
+              <div
+                className={`${styles.toggleSwitch} ${notifications.posture ? styles.on : ''}`}
+                onClick={() => toggleNotification('posture')}
+              >
+                <div className={styles.toggleHandle} />
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {isDeviceUser ? (
         <div className={styles.formCard}>

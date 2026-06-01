@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-05-28T07:57:07.121Z",
+  "lastUpdated": "2026-06-01T04:54:13.185Z",
   "activeFeatures": [
     "wheelchair-info",
     "mobile-view",
@@ -30,7 +30,9 @@
     "dashboard",
     "auto-web",
     "devices",
-    "device-management"
+    "device-management",
+    "notifications",
+    "mypage"
   ],
   "primaryFeature": "wheelchair-info",
   "features": {
@@ -394,7 +396,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-05-28T05:54:51.834Z",
-        "lastUpdated": "2026-05-28T06:05:38.985Z"
+        "lastUpdated": "2026-06-01T04:50:08.788Z"
       },
       "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\api\\admin\\devices\\route.ts"
     },
@@ -407,9 +409,35 @@
       "documents": {},
       "timestamps": {
         "started": "2026-05-28T07:56:40.041Z",
-        "lastUpdated": "2026-05-28T07:57:07.119Z"
+        "lastUpdated": "2026-06-01T04:51:06.981Z"
       },
       "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\(protected)\\device-management\\page.tsx"
+    },
+    "notifications": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-06-01T04:50:26.114Z",
+        "lastUpdated": "2026-06-01T04:50:26.114Z"
+      },
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\api\\admin\\devices\\[id]\\notifications\\route.ts"
+    },
+    "mypage": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-06-01T04:53:55.892Z",
+        "lastUpdated": "2026-06-01T04:54:13.183Z"
+      },
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\(protected)\\mypage\\page.tsx"
     }
   },
   "pipeline": {
@@ -420,7 +448,7 @@
   "session": {
     "startedAt": "2026-04-09T01:52:22.043Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-05-28T07:57:07.121Z"
+    "lastActivity": "2026-06-01T04:54:13.185Z"
   },
   "history": [
     {
@@ -1218,6 +1246,48 @@
     {
       "timestamp": "2026-05-28T07:57:07.121Z",
       "feature": "device-management",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-01T04:50:08.789Z",
+      "feature": "devices",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-01T04:50:26.116Z",
+      "feature": "notifications",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-01T04:50:35.115Z",
+      "feature": "device-management",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-01T04:50:48.194Z",
+      "feature": "device-management",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-01T04:51:06.983Z",
+      "feature": "device-management",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-01T04:53:55.894Z",
+      "feature": "mypage",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-01T04:54:13.185Z",
+      "feature": "mypage",
       "phase": "do",
       "action": "updated"
     }

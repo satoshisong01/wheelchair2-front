@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
@@ -12,22 +12,29 @@ interface WheelchairOption {
   modelName?: string;
 }
 
-interface UlcerDayRow {
-  date: string;
-  count: number;
-}
-
-/** 전체 조회 시: 기기별·날짜별 행 */
-interface UlcerFullRow {
+interface DailyRow {
   wheelchair_id: string;
   device_serial: string;
   date: string;
-  count: number;
+  runtime_min: number | null;
+  distance_m: number | null;
+  latitude: number | null;
+  longitude: number | null;
+  ulcer_count: number;
 }
+
+// 필터 가능한 컬럼 키
+type ColumnKey = 'runtime' | 'distance' | 'location' | 'ulcer';
+
+const COLUMN_LABELS: Record<ColumnKey, string> = {
+  runtime: '사용시간',
+  distance: '주행거리',
+  location: '위경도',
+  ulcer: '욕창 방지 횟수',
+};
 
 function formatDateStr(d: string) {
   if (!d) return '-';
-  // API에서 "2025-03-15" 또는 "2025-03-15T00:00:00.000Z" 형태로 올 수 있음
   const dateOnly = typeof d === 'string' && d.includes('T') ? d.slice(0, 10) : d;
   const [y, m, day] = dateOnly.split('-');
   const month = Number(m);
@@ -36,7 +43,26 @@ function formatDateStr(d: string) {
   return `${y}. ${month}. ${dayNum}`;
 }
 
-export default function UlcerAlertsPage() {
+function formatRuntime(min: number | null): string {
+  if (min === null || min === undefined) return '-';
+  const h = Math.floor(min / 60);
+  const m = Math.round(min % 60);
+  if (h === 0) return `${m}분`;
+  return `${h}시간 ${m}분`;
+}
+
+function formatDistance(m: number | null): string {
+  if (m === null || m === undefined) return '-';
+  if (m >= 1000) return `${(m / 1000).toFixed(2)} km`;
+  return `${Math.round(m)} m`;
+}
+
+function formatLocation(lat: number | null, lon: number | null): string {
+  if (lat === null || lon === null || lat === undefined || lon === undefined) return '-';
+  return `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+}
+
+export default function DeviceUsagePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const isManager =
@@ -49,9 +75,17 @@ export default function UlcerAlertsPage() {
     new Date(today.getFullYear(), today.getMonth(), 1).toISOString().slice(0, 10)
   );
   const [toDate, setToDate] = useState<string>(today.toISOString().slice(0, 10));
-  const [rows, setRows] = useState<UlcerDayRow[]>([]);
-  const [fullRows, setFullRows] = useState<UlcerFullRow[]>([]);
+  const [rows, setRows] = useState<DailyRow[]>([]);
+  const [isFullQuery, setIsFullQuery] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // 컬럼 필터: 기본은 전부 ON
+  const [visibleCols, setVisibleCols] = useState<Record<ColumnKey, boolean>>({
+    runtime: true,
+    distance: true,
+    location: true,
+    ulcer: true,
+  });
 
   const fetchWheelchairs = useCallback(async () => {
     try {
@@ -74,97 +108,92 @@ export default function UlcerAlertsPage() {
     if (status === 'authenticated' && isManager) fetchWheelchairs();
   }, [status, isManager, fetchWheelchairs]);
 
-  const handleSearch = useCallback(async () => {
-    if (!selectedId || !fromDate || !toDate) return;
-    setLoading(true);
-    setFullRows([]);
-    try {
-      const params = new URLSearchParams({
-        wheelchairId: selectedId,
-        from: fromDate,
-        to: toDate,
-      });
-      const res = await fetch(`/api/admin/ulcer-history?${params}`);
-      if (!res.ok) throw new Error('조회 실패');
-      const data = await res.json();
-      setRows(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.error(e);
-      setRows([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedId, fromDate, toDate]);
+  const search = useCallback(
+    async (full: boolean) => {
+      if (!fromDate || !toDate) return;
+      if (!full && !selectedId) return;
 
-  const handleFullSearch = useCallback(async () => {
-    if (!fromDate || !toDate) return;
-    setLoading(true);
-    setRows([]);
-    try {
-      const params = new URLSearchParams({
-        wheelchairId: 'ALL',
-        from: fromDate,
-        to: toDate,
-      });
-      const res = await fetch(`/api/admin/ulcer-history?${params}`);
-      if (!res.ok) throw new Error('전체 조회 실패');
-      const data = await res.json();
-      setFullRows(Array.isArray(data) ? data : []);
-    } catch (e) {
-      console.error(e);
-      setFullRows([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [fromDate, toDate]);
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({
+          wheelchairId: full ? 'ALL' : selectedId,
+          from: fromDate,
+          to: toDate,
+        });
+        const res = await fetch(`/api/admin/wheelchair-daily-history?${params}`);
+        if (!res.ok) throw new Error('조회 실패');
+        const data = await res.json();
+        setRows(Array.isArray(data) ? data : []);
+        setIsFullQuery(full);
+      } catch (e) {
+        console.error(e);
+        setRows([]);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [selectedId, fromDate, toDate],
+  );
+
+  const handleColumnToggle = useCallback((col: ColumnKey) => {
+    setVisibleCols((prev) => ({ ...prev, [col]: !prev[col] }));
+  }, []);
+
+  // 활성 컬럼 (체크된 것)
+  const activeCols = useMemo(
+    () => (Object.keys(visibleCols) as ColumnKey[]).filter((k) => visibleCols[k]),
+    [visibleCols],
+  );
 
   const handleExcelDownload = useCallback(() => {
-    if (fullRows.length > 0) {
-      // 전체 조회 결과: 기기 | 날짜 | 횟수
-      const header = ['기기', '날짜', '욕창 방지 횟수 (35° 2분 유지)'];
-      const body = fullRows.map((r) => [r.device_serial, formatDateStr(r.date), `${r.count}회`]);
-      const csvRows = [
-        ['전체 조회', `${fromDate} ~ ${toDate}`],
-        ['', '', ''],
-        header,
-        ...body,
-      ].map((row) =>
-        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')
-      );
-      const csv = '\uFEFF' + csvRows.join('\r\n');
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `욕창알림내역_전체_${fromDate}_${toDate}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      return;
-    }
     if (rows.length === 0) return;
+
+    // 헤더: 기본 + 활성 컬럼
+    const headerBase = isFullQuery ? ['기기', '날짜'] : ['날짜'];
+    const headerCols = activeCols.map((c) => COLUMN_LABELS[c]);
+    const header = [...headerBase, ...headerCols];
+
+    const body = rows.map((r) => {
+      const base = isFullQuery
+        ? [r.device_serial, formatDateStr(r.date)]
+        : [formatDateStr(r.date)];
+      const cols: string[] = [];
+      for (const c of activeCols) {
+        if (c === 'runtime') cols.push(formatRuntime(r.runtime_min));
+        else if (c === 'distance') cols.push(formatDistance(r.distance_m));
+        else if (c === 'location') cols.push(formatLocation(r.latitude, r.longitude));
+        else if (c === 'ulcer') cols.push(`${r.ulcer_count}회`);
+      }
+      return [...base, ...cols];
+    });
+
     const selectedWheelchair = wheelchairs.find((w) => w.id === selectedId);
-    const deviceLabel = selectedWheelchair
-      ? `${selectedWheelchair.device_serial}${selectedWheelchair.modelName ? ` (${selectedWheelchair.modelName})` : ''}`
-      : selectedId || '-';
-    const header = ['날짜', '욕창 방지 횟수 (35° 2분 유지)'];
-    const body = rows.map((r) => [formatDateStr(r.date), `${r.count}회`]);
+    const deviceLabel = isFullQuery
+      ? '전체 기기'
+      : selectedWheelchair
+        ? `${selectedWheelchair.device_serial}${selectedWheelchair.modelName ? ` (${selectedWheelchair.modelName})` : ''}`
+        : selectedId || '-';
+
+    const metaCols = isFullQuery ? ['', '', ''] : ['', ''];
     const csvRows = [
-      ['조회 기기', deviceLabel],
-      ['', ''],
+      ['조회 대상', deviceLabel],
+      ['기간', `${fromDate} ~ ${toDate}`],
+      metaCols,
       header,
       ...body,
     ].map((row) =>
-      row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+      row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','),
     );
-    const csv = '\uFEFF' + csvRows.join('\r\n');
+    const csv = '﻿' + csvRows.join('\r\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `욕창알림내역_${deviceLabel.replace(/[/\\?%*:|"]/g, '_')}_${fromDate}_${toDate}.csv`;
+    const safeLabel = deviceLabel.replace(/[/\\?%*:|"<>]/g, '_');
+    a.download = `기기사용내역_${safeLabel}_${fromDate}_${toDate}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [rows, fullRows, fromDate, toDate, selectedId, wheelchairs]);
+  }, [rows, isFullQuery, activeCols, fromDate, toDate, selectedId, wheelchairs]);
 
   if (status === 'loading' || !session) {
     return <LoadingSpinner />;
@@ -177,10 +206,10 @@ export default function UlcerAlertsPage() {
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.pageTitle}>욕창알림 내역</h1>
+      <h1 className={styles.pageTitle}>기기 사용 내역</h1>
       <p className={styles.description}>
-        기기를 선택하고 기간을 설정한 뒤 조회하면, 날짜별로 욕창 방지를 위해 35° 이상 2분 유지를
-        몇 번 했는지 확인할 수 있습니다.
+        기기와 기간을 선택하고 조회하면 날짜별 사용시간, 주행거리, 위경도, 욕창 방지 횟수를 확인할 수 있습니다.
+        체크박스로 표시할 항목을 선택할 수 있습니다.
       </p>
 
       <div className={styles.filterSection}>
@@ -216,7 +245,7 @@ export default function UlcerAlertsPage() {
         <button
           type="button"
           className={styles.searchButton}
-          onClick={handleSearch}
+          onClick={() => search(false)}
           disabled={loading || !selectedId}
         >
           검색
@@ -224,109 +253,111 @@ export default function UlcerAlertsPage() {
         <button
           type="button"
           className={styles.searchButton}
-          onClick={handleFullSearch}
+          onClick={() => search(true)}
           disabled={loading || !fromDate || !toDate}
         >
           전체 조회
         </button>
       </div>
 
-      {loading && <div className={styles.loadingText}>조회 중...</div>}
-
-      {!loading && (rows.length > 0 || fullRows.length > 0) && (
-        <div className={styles.downloadSection}>
+      {/* 컬럼 필터 (체크박스) */}
+      {rows.length > 0 && (
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 16,
+            padding: '12px 16px',
+            marginTop: 12,
+            background: '#f9fafb',
+            border: '1px solid #e5e7eb',
+            borderRadius: 8,
+            alignItems: 'center',
+          }}
+        >
+          <span style={{ fontWeight: 600, color: '#374151', fontSize: 14 }}>표시 항목:</span>
+          {(Object.keys(COLUMN_LABELS) as ColumnKey[]).map((col) => (
+            <label
+              key={col}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                cursor: 'pointer',
+                fontSize: 14,
+                color: '#4b5563',
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={visibleCols[col]}
+                onChange={() => handleColumnToggle(col)}
+              />
+              {COLUMN_LABELS[col]}
+            </label>
+          ))}
           <button
             type="button"
             className={styles.downloadButton}
             onClick={handleExcelDownload}
+            style={{ marginLeft: 'auto' }}
           >
             엑셀 다운로드
           </button>
         </div>
       )}
 
-      {!loading && (
-        <>
-          {/* 전체 조회 결과: 기기 | 날짜 | 횟수 — PC는 테이블, 모바일은 카드 */}
-          {fullRows.length > 0 && (
-            <>
-              <div className={styles.tableWrap}>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th className={styles.thDate}>기기</th>
-                      <th className={styles.thDate}>날짜</th>
-                      <th className={styles.thCount}>욕창 방지 횟수 (35° 2분 유지)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {fullRows.map((r) => (
-                      <tr key={`${r.wheelchair_id}-${r.date}`}>
-                        <td className={styles.tdDate}>{r.device_serial}</td>
-                        <td className={styles.tdDate}>{formatDateStr(r.date)}</td>
-                        <td className={styles.tdCount}>{r.count}회</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className={styles.cardListFull}>
-                {fullRows.map((r) => (
-                  <div key={`${r.wheelchair_id}-${r.date}`} className={styles.cardItemFull}>
-                    <span className={styles.cardDevice}>{r.device_serial}</span>
-                    <span className={styles.cardDateFull}>{formatDateStr(r.date)}</span>
-                    <span className={styles.cardCountFull}>{r.count}회</span>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
+      {loading && <div className={styles.loadingText}>조회 중...</div>}
 
-          {/* 단일 기기 조회 결과 */}
-          {fullRows.length === 0 && (
-            <>
-              <div className={styles.tableWrap}>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th className={styles.thDate}>날짜</th>
-                      <th className={styles.thCount}>욕창 방지 횟수 (35° 2분 유지)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.length === 0 ? (
-                      <tr>
-                        <td colSpan={2} className={styles.emptyCell}>
-                          기기를 선택하고 검색하거나, 전체 조회를 눌러주세요.
-                        </td>
-                      </tr>
-                    ) : (
-                      rows.map((r) => (
-                        <tr key={r.date}>
-                          <td className={styles.tdDate}>{formatDateStr(r.date)}</td>
-                          <td className={styles.tdCount}>{r.count}회</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className={styles.cardList}>
-                {rows.length === 0 ? (
-                  <div className={styles.emptyCell}>선택한 기간에 기록이 없습니다.</div>
-                ) : (
-                  rows.map((r) => (
-                    <div key={r.date} className={styles.cardItem}>
-                      <span className={styles.cardDate}>{formatDateStr(r.date)}</span>
-                      <span className={styles.cardCount}>{r.count}회</span>
-                    </div>
-                  ))
+      {!loading && rows.length > 0 && (
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                {isFullQuery && <th className={styles.thDate}>기기</th>}
+                <th className={styles.thDate}>날짜</th>
+                {visibleCols.runtime && <th className={styles.thCount}>사용시간</th>}
+                {visibleCols.distance && <th className={styles.thCount}>주행거리</th>}
+                {visibleCols.location && <th className={styles.thCount}>위경도</th>}
+                {visibleCols.ulcer && (
+                  <th className={styles.thCount}>욕창 방지 횟수 (35° 2분 유지)</th>
                 )}
-              </div>
-            </>
-          )}
-        </>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={`${r.wheelchair_id}-${r.date}`}>
+                  {isFullQuery && <td className={styles.tdDate}>{r.device_serial}</td>}
+                  <td className={styles.tdDate}>{formatDateStr(r.date)}</td>
+                  {visibleCols.runtime && (
+                    <td className={styles.tdCount}>{formatRuntime(r.runtime_min)}</td>
+                  )}
+                  {visibleCols.distance && (
+                    <td className={styles.tdCount}>{formatDistance(r.distance_m)}</td>
+                  )}
+                  {visibleCols.location && (
+                    <td className={styles.tdCount}>{formatLocation(r.latitude, r.longitude)}</td>
+                  )}
+                  {visibleCols.ulcer && <td className={styles.tdCount}>{r.ulcer_count}회</td>}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {!loading && rows.length === 0 && (
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <tbody>
+              <tr>
+                <td className={styles.emptyCell}>
+                  기기를 선택하고 검색하거나, 전체 조회를 눌러주세요.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );

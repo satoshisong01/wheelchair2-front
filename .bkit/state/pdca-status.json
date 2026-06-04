@@ -1,6 +1,6 @@
 {
   "version": "3.0",
-  "lastUpdated": "2026-06-01T04:54:13.185Z",
+  "lastUpdated": "2026-06-04T00:36:36.873Z",
   "activeFeatures": [
     "wheelchair-info",
     "mobile-view",
@@ -32,7 +32,10 @@
     "devices",
     "device-management",
     "notifications",
-    "mypage"
+    "mypage",
+    "Temp",
+    "wheelchair-daily-history",
+    "ulcer-alerts"
   ],
   "primaryFeature": "wheelchair-info",
   "features": {
@@ -162,7 +165,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-16T02:08:14.241Z",
-        "lastUpdated": "2026-04-16T02:08:14.241Z"
+        "lastUpdated": "2026-06-04T00:26:43.795Z"
       },
       "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\components\\layout\\BottomNavigation.tsx"
     },
@@ -188,7 +191,7 @@
       "documents": {},
       "timestamps": {
         "started": "2026-04-16T02:15:07.218Z",
-        "lastUpdated": "2026-05-27T00:33:14.215Z"
+        "lastUpdated": "2026-06-01T07:27:17.656Z"
       },
       "lastFile": "C:\\Users\\jungm\\Desktop\\projects\\worker\\worker.ts"
     },
@@ -438,6 +441,45 @@
         "lastUpdated": "2026-06-01T04:54:13.183Z"
       },
       "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\(protected)\\mypage\\page.tsx"
+    },
+    "Temp": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-06-01T07:51:14.775Z",
+        "lastUpdated": "2026-06-01T07:51:14.775Z"
+      },
+      "lastFile": "C:\\Users\\jungm\\AppData\\Local\\Temp\\add-sp-hook.js"
+    },
+    "wheelchair-daily-history": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-06-04T00:25:49.134Z",
+        "lastUpdated": "2026-06-04T00:25:49.134Z"
+      },
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\api\\admin\\wheelchair-daily-history\\route.ts"
+    },
+    "ulcer-alerts": {
+      "phase": "do",
+      "phaseNumber": 3,
+      "matchRate": null,
+      "iterationCount": 0,
+      "requirements": [],
+      "documents": {},
+      "timestamps": {
+        "started": "2026-06-04T00:27:53.681Z",
+        "lastUpdated": "2026-06-04T00:36:36.871Z"
+      },
+      "lastFile": "c:\\Users\\jungm\\Desktop\\projects\\wheelchair2-front\\app\\(protected)\\ulcer-alerts\\page.tsx"
     }
   },
   "pipeline": {
@@ -448,7 +490,7 @@
   "session": {
     "startedAt": "2026-04-09T01:52:22.043Z",
     "onboardingCompleted": false,
-    "lastActivity": "2026-06-01T04:54:13.185Z"
+    "lastActivity": "2026-06-04T00:36:36.873Z"
   },
   "history": [
     {
@@ -1288,6 +1330,78 @@
     {
       "timestamp": "2026-06-01T04:54:13.185Z",
       "feature": "mypage",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-01T07:26:30.838Z",
+      "feature": "worker",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-01T07:26:40.697Z",
+      "feature": "worker",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-01T07:26:48.980Z",
+      "feature": "worker",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-01T07:27:04.801Z",
+      "feature": "worker",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-01T07:27:17.657Z",
+      "feature": "worker",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-01T07:51:14.776Z",
+      "feature": "Temp",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-04T00:25:49.136Z",
+      "feature": "wheelchair-daily-history",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-04T00:26:32.410Z",
+      "feature": "layout",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-04T00:26:43.796Z",
+      "feature": "layout",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-04T00:27:53.683Z",
+      "feature": "ulcer-alerts",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-04T00:35:11.324Z",
+      "feature": "ulcer-alerts",
+      "phase": "do",
+      "action": "updated"
+    },
+    {
+      "timestamp": "2026-06-04T00:36:36.873Z",
+      "feature": "ulcer-alerts",
       "phase": "do",
       "action": "updated"
     }

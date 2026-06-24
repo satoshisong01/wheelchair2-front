@@ -9,6 +9,7 @@ import { useSearchParams } from 'next/navigation';
 
 import MapView from '@/components/maps/MapView';
 import AlertList from '@/components/common/AlertList';
+import EventModal from '@/components/common/EventModal';
 import styles from './page.module.css';
 import { DashboardWheelchair, Alarm } from '@/types/wheelchair';
 import { InfoBar } from './components/InfoBar';
@@ -64,6 +65,10 @@ function WheelchairInfoContent() {
   const [detailData, setDetailData] = useState<WheelchairDetailData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [postureAdviceAt, setPostureAdviceAt] = useState<Date | null>(null);
+
+  // 경고/알림 EVENT 전체보기 모달
+  const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
 
   // 📡 네트워크/소켓 상태
   // 🔒 SSR/클라이언트 hydration mismatch 방지를 위해 항상 true로 시작
@@ -475,6 +480,13 @@ function WheelchairInfoContent() {
             <div className={`${styles.card} ${styles.eventCard}`}>
               <div className={styles.eventHeader}>
                 <h2 className={`${styles.sectionTitle} ${styles.warningTitle}`}>경고 EVENT</h2>
+                <button
+                  type="button"
+                  className={styles.viewAllLink}
+                  onClick={() => setIsWarningModalOpen(true)}
+                >
+                  전체보기 ⮞
+                </button>
               </div>
               <div className={styles.scrollableContent}>
                 <AlertList title="" alarms={warningEvents} />
@@ -483,6 +495,13 @@ function WheelchairInfoContent() {
             <div className={`${styles.card} ${styles.eventCard}`}>
               <div className={styles.eventHeader}>
                 <h2 className={`${styles.sectionTitle} ${styles.infoTitle}`}>알림 EVENT</h2>
+                <button
+                  type="button"
+                  className={styles.viewAllLink}
+                  onClick={() => setIsInfoModalOpen(true)}
+                >
+                  전체보기 ⮞
+                </button>
               </div>
               <div className={styles.scrollableContent}>
                 <AlertList title="" alarms={infoEvents} />
@@ -491,6 +510,25 @@ function WheelchairInfoContent() {
           </div>
         </div>
       </div>
+
+      <EventModal
+        isOpen={isWarningModalOpen}
+        onClose={() => setIsWarningModalOpen(false)}
+        title="경고 EVENT"
+        alarms={warningEvents.map((a) => ({
+          ...a,
+          deviceSerial: a.wheelchair?.device_serial || detailData.device_serial,
+        }))}
+      />
+      <EventModal
+        isOpen={isInfoModalOpen}
+        onClose={() => setIsInfoModalOpen(false)}
+        title="알림 EVENT"
+        alarms={infoEvents.map((a) => ({
+          ...a,
+          deviceSerial: a.wheelchair?.device_serial || detailData.device_serial,
+        }))}
+      />
     </div>
   );
 }

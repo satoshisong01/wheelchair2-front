@@ -6,6 +6,9 @@
 import { useEffect, useRef } from 'react';
 import { signOut, useSession } from 'next-auth/react';
 
+// 🔒 [UC-03] 유휴 자동 로그아웃 — 현재 일시 비활성화(데이터 상시 수신 필요).
+//    추후 재적용 시 IDLE_LOGOUT_ENABLED 값을 true 로 변경하면 된다.
+const IDLE_LOGOUT_ENABLED: boolean = false;
 const IDLE_LIMIT_MS = 30 * 60 * 1000; // 30분
 
 export default function IdleLogout() {
@@ -13,6 +16,7 @@ export default function IdleLogout() {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
+    if (!IDLE_LOGOUT_ENABLED) return; // 일시 비활성화: 타이머/리스너 등록 안 함
     if (status !== 'authenticated') return;
 
     const logout = () => {

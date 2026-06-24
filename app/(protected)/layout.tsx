@@ -9,13 +9,17 @@ import BottomNavigation from '../../components/layout/BottomNavigation';
 // ✅ [추가] 방금 만든 브릿지 컴포넌트 임포트
 // (경로는 실제 파일 위치에 맞춰주세요)
 import WebViewBridge from '@/components/common/WebViewBridge';
+import IdleLogout from '@/components/common/IdleLogout'; // 🔒 [UC-03] 유휴 세션 자동 로그아웃
 
 export default function ProtectedLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className={styles.container}>
-      {/* ✅ [추가] 여기에 브릿지 컴포넌트를 넣습니다. 
+      {/* ✅ [추가] 여기에 브릿지 컴포넌트를 넣습니다.
           화면엔 안 보이고 기능만 작동합니다. */}
       <WebViewBridge />
+
+      {/* 🔒 [UC-03] 유휴 30분 시 자동 로그아웃(세션 잠금) */}
+      <IdleLogout />
 
       {/* 1. PC용 사이드바 (기존 유지) */}
       <div className={styles.sidebarWrapper}>

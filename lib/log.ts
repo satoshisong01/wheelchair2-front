@@ -7,7 +7,7 @@ interface LogData {
   userId: string;
   userRole: string;
   action: 'LOGIN' | 'LOGOUT' | 'DEVICE_REGISTER' | 'DEVICE_DELETE' | 'USER_UPDATE' | string;
-  details: Record<string, any>;
+  details: Record<string, unknown>;
   deviceSerial?: string;
   userName?: string; // ⭐️ [추가] user_name 필드 추가
 }
@@ -62,7 +62,7 @@ export const createAuditLog = async ({
   console.error('🚨 [AUDIT-FAILURE] 감사 로그 기록 실패 — 즉시 확인 필요', {
     action,
     userRole,
-    code: (lastErr as any)?.code || 'N/A',
+    code: (lastErr as { code?: string } | null)?.code || 'N/A',
     message: (lastErr as Error)?.message,
   });
 };

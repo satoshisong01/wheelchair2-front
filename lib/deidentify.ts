@@ -41,8 +41,8 @@ const EMAIL_KEYS = /(email|메일)/i;
 const CONTACT_KEYS = /(emergency|응급|contact)/i;
 
 /** 객체에서 개인식별 가능 필드를 키 이름 기준으로 비식별화 (로그/내보내기 방어용) */
-export function deidentifyDetails(details: Record<string, any>): Record<string, any> {
-  const out: Record<string, any> = {};
+export function deidentifyDetails(details: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(details || {})) {
     if (typeof v === 'string' && v) {
       if (PHONE_KEYS.test(k) || CONTACT_KEYS.test(k)) out[k] = maskPhone(v);

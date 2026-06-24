@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { io } from 'socket.io-client';
@@ -39,6 +39,12 @@ export default function DashboardPage() {
   const [selectedWheelchair, setSelectedWheelchair] = useState<DashboardWheelchair | null>(null);
   const [wheelchairs, setWheelchairs] = useState<DashboardWheelchair[]>([]);
   const [alarms, setAlarms] = useState<Alarm[]>([]);
+
+  // 소켓 알람 보강용: 최신 wheelchairs 목록을 ref로 유지 (소켓 핸들러 클로저의 stale 방지)
+  const wheelchairsRef = useRef<DashboardWheelchair[]>([]);
+  useEffect(() => {
+    wheelchairsRef.current = wheelchairs;
+  }, [wheelchairs]);
 
   const [isWarningModalOpen, setIsWarningModalOpen] = useState(false);
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
@@ -149,7 +155,17 @@ export default function DashboardPage() {
       // 🔴 알람 수신 시 -> 소리 울리고 + 팝업 띄우기
       socket.on('new_alarm', (newAlarmData: Alarm) => {
         console.log('🚨 [Dashboard] 알람 수신:', newAlarmData);
-        setAlarms((prevAlarms) => [newAlarmData, ...prevAlarms]);
+        // 🔧 소켓 페이로드에는 차량 시리얼이 없고 wheelchairId만 있으므로, 현재 wheelchairs 목록에서
+        //    device_serial을 찾아 보강한다. (보강 전엔 차량명이 "-"로 표시되던 문제 해결)
+        const matched = wheelchairsRef.current.find(
+          (w) => String(w.id) === String(newAlarmData.wheelchairId),
+        );
+        const serial =
+          newAlarmData.deviceSerial || newAlarmData.device_serial || matched?.device_serial;
+        const enriched: Alarm = serial
+          ? { ...newAlarmData, deviceSerial: serial, wheelchair: { device_serial: serial } }
+          : newAlarmData;
+        setAlarms((prevAlarms) => [enriched, ...prevAlarms]);
 
         const type = (newAlarmData.alarmType || '').toUpperCase();
 

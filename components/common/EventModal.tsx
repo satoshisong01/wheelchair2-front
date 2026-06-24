@@ -1,6 +1,7 @@
 'use client';
 
 import styles from './EventModal.module.css';
+import { getAlarmTypeLabel } from '@/lib/alarmLabels';
 
 const safeDate = (dateStr: string | Date | undefined) => {
   if (!dateStr) return '-';
@@ -94,9 +95,13 @@ export default function EventModal({
                         <strong>{serial}</strong>
                       </td>
 
-                      {/* 2. 경고 정보 */}
+                      {/* 2. 경고 정보 (한글 라벨 + 원본 코드) */}
                       <td>
-                        {type} {msg ? `(${msg})` : ''}
+                        <strong>{getAlarmTypeLabel(type)}</strong>{' '}
+                        <span style={{ color: '#888', fontSize: '0.9em' }}>
+                          {type}
+                          {msg ? ` (${msg})` : ''}
+                        </span>
                       </td>
 
                       {/* 3. 시간 */}

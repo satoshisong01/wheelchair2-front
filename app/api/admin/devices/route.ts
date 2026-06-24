@@ -6,6 +6,7 @@ import { authOptions } from '@/lib/authOptions';
 import { query, default as pool } from '@/lib/db';
 import bcrypt from 'bcrypt';
 import { createAuditLog } from '@/lib/log'; // ⭐️ 감사 로그 임포트
+import { validatePassword } from '@/lib/password'; // 🔒 [IA-05] 비밀번호 강도 검증
 
 // ------------------------------
 // GET: 휠체어/기기 목록 조회 (ADMIN/MASTER 전용)
@@ -80,6 +81,12 @@ export async function POST(req: NextRequest) {
       { message: '필수 필드가 누락되었습니다.' },
       { status: 400 }
     );
+  }
+
+  // 🔒 [IA-05] 기기 비밀번호 강도 검증 (8자 이상 + 영문·숫자·특수 중 2종 이상)
+  const pwCheck = validatePassword(password);
+  if (!pwCheck.ok) {
+    return NextResponse.json({ message: pwCheck.message }, { status: 400 });
   }
 
   // 비밀번호 해시

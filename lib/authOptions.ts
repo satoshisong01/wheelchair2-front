@@ -6,6 +6,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import { query } from '@/lib/db';
 import { createAuditLog } from '@/lib/log'; // createAuditLog 사용
 import bcrypt from 'bcrypt';
+import { isLoginLocked, recordLoginFailure, resetLoginFailures } from '@/lib/login-lockout';
 export const authOptions: NextAuthOptions = {
   providers: [
     // ------------------------------------------------------
@@ -20,14 +21,23 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.deviceId || !credentials?.password) return null;
+        // 🔒 [IA-07] 연속 로그인 실패 시 계정 잠금 (기기 단위)
+        const lockKey = `dev:${credentials.deviceId}`;
         try {
+          if (await isLoginLocked(lockKey)) {
+            throw new Error('로그인 시도 횟수를 초과하여 계정이 일시적으로 잠겼습니다. 잠시 후 다시 시도해주세요.');
+          }
           // 쿼리 문자열 정리 (이전 단계에서 해결됨)
           const sql = `SELECT id, password, wheelchair_id, device_id FROM device_auths WHERE device_id = $1`;
           const result = await query(sql, [credentials.deviceId]);
           const device = result.rows[0];
           if (!device) throw new Error('등록되지 않은 기기입니다.');
           const isValid = await bcrypt.compare(credentials.password, device.password);
-          if (!isValid) throw new Error('비밀번호가 일치하지 않습니다.');
+          if (!isValid) {
+            await recordLoginFailure(lockKey); // 🔒 [IA-07] 실패 기록
+            throw new Error('비밀번호가 일치하지 않습니다.');
+          }
+          await resetLoginFailures(lockKey); // 🔒 [IA-07] 성공 시 실패 카운트 초기화
 
           const userPayload = {
             id: String(device.id),

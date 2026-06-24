@@ -56,6 +56,14 @@ export default function LandingPage() {
           <p className="mt-2 text-sm text-gray-600">서비스 이용을 위해 로그인해주세요.</p>
         </div>
 
+        {/* 🔒 [IA-08] 시스템 사용 알림 메시지 (인가 사용자 고지) */}
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-center">
+          <p className="text-xs leading-relaxed text-amber-800">
+            본 시스템은 <strong>인가된 사용자만</strong> 이용할 수 있습니다. 모든 접속 및 활동은
+            기록·모니터링되며, 무단 접근 시 관련 법령에 따라 책임을 물을 수 있습니다.
+          </p>
+        </div>
+
         {/* 1. 기기 로그인 폼 */}
         <form onSubmit={handleDeviceLogin} className="mt-8 space-y-6">
           <div className="space-y-4 rounded-md shadow-sm">

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import styles from './page.module.css';
 import { useSession } from 'next-auth/react';
+import { validatePassword } from '@/lib/password'; // 🔒 [IA-05] 비밀번호 강도 검증
 
 // 알림 설정 UI 표시 여부 (관리자가 기기관리 페이지에서 일괄 제어하므로 일시 숨김)
 // 다시 노출하려면 true로 변경
@@ -92,9 +93,10 @@ export default function MyPage() {
       setMessage('새 비밀번호가 서로 일치하지 않습니다.');
       return;
     }
-    if (formData.newPassword.length < 4) {
+    const pwCheck = validatePassword(formData.newPassword);
+    if (!pwCheck.ok) {
       setIsError(true);
-      setMessage('비밀번호는 최소 4자 이상이어야 합니다.');
+      setMessage(pwCheck.message || '비밀번호 정책을 확인해주세요.');
       return;
     }
 

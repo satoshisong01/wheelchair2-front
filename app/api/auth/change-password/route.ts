@@ -6,6 +6,7 @@ import { authOptions } from '@/lib/authOptions';
 import { Pool } from 'pg';
 import bcrypt from 'bcrypt'; // 🔒 [보안] bcrypt로 일원화 (로그인 검증과 동일 라이브러리)
 import { createAuditLog } from '@/lib/log'; // ⭐️ [추가] 활동 로그 함수 임포트
+import { validatePassword } from '@/lib/password'; // 🔒 [IA-05] 비밀번호 강도 검증
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -37,6 +38,12 @@ export async function POST(req: Request) {
 
     if (!currentPassword || !newPassword) {
       return NextResponse.json({ message: '입력 값이 부족합니다.' }, { status: 400 });
+    }
+
+    // 🔒 [IA-05] 새 비밀번호 강도 검증 (8자 이상 + 영문·숫자·특수 중 2종 이상)
+    const pwCheck = validatePassword(newPassword);
+    if (!pwCheck.ok) {
+      return NextResponse.json({ message: pwCheck.message }, { status: 400 });
     }
 
     const client = await pool.connect();

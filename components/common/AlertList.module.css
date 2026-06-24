@@ -24,6 +24,7 @@
 .viewAllButton {
   font-size: 0.875rem;
   color: #2563eb;
+  cursor: pointer;
 }
 
 .viewAllButton:hover {

@@ -1,7 +1,7 @@
 'use client';
 
 import { signIn } from 'next-auth/react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function LandingPage() {
@@ -9,6 +9,14 @@ export default function LandingPage() {
   const [deviceId, setDeviceId] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // 📱 앱(WebView) 내부 실행 여부 감지 — 앱에서는 APK 다운로드 버튼 숨김 (Google Play 정책: 외부 APK 배포 유도 금지)
+  const [isInApp, setIsInApp] = useState(false);
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (window as { ReactNativeWebView?: unknown }).ReactNativeWebView) {
+      setIsInApp(true);
+    }
+  }, []);
 
   // 1. 기기 로그인 처리 (이건 여기서 바로 함)
   const handleDeviceLogin = async (e: React.FormEvent) => {
@@ -132,19 +140,21 @@ export default function LandingPage() {
           </button>
         </div>
 
-        {/* 안드로이드 앱 다운로드 */}
-        <div className="mt-6 text-center">
-          <p className="text-xs text-gray-500 mb-2">
-            안드로이드 기기에서 앱으로 사용하시려면 아래에서 APK를 다운로드하세요.
-          </p>
-          <a
-            href="/download/app-release.apk"
-            className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            안드로이드 앱 다운로드
-          </a>
-          <p className="text-xs text-gray-400 mt-2">앱 버전: v1.9.0</p>
-        </div>
+        {/* 안드로이드 앱 다운로드 — 앱(WebView) 내부에서는 숨김 (Google Play 정책: 외부 APK 배포 유도 금지) */}
+        {!isInApp && (
+          <div className="mt-6 text-center">
+            <p className="text-xs text-gray-500 mb-2">
+              안드로이드 기기에서 앱으로 사용하시려면 아래에서 APK를 다운로드하세요.
+            </p>
+            <a
+              href="/download/app-release.apk"
+              className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              안드로이드 앱 다운로드
+            </a>
+            <p className="text-xs text-gray-400 mt-2">앱 버전: v1.9.0</p>
+          </div>
+        )}
       </div>
     </div>
   );

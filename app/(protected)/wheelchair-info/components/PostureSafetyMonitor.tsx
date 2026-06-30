@@ -26,8 +26,8 @@ interface MonitorProps {
 const WARNING_DELAY_MS = 2 * 60 * 60 * 1000;
 // const WARNING_DELAY_MS = 10 * 1000; // ⚡️ 테스트용
 
-// 🟢 통신 두절 판단 기준 (30초 동안 새 데이터 없으면 멈춘 것으로 간주)
-const DISCONNECT_THRESHOLD_MS = 30 * 1000;
+// 🟢 통신 두절 판단 기준 (60초 동안 새 데이터 없으면 멈춘 것으로 간주)
+const DISCONNECT_THRESHOLD_MS = 60 * 1000;
 
 export default function PostureSafetyMonitor({
   status,

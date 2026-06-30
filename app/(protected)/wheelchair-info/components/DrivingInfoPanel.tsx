@@ -5,9 +5,10 @@
 import { useState, useEffect } from 'react';
 import styles from '../page.module.css';
 import { DashboardWheelchair } from '@/types/wheelchair';
+import { fmtUnit, fmtMinutes, fmtDist } from '@/lib/format';
 
-// ⏳ 통신 두절 판단 기준 (30초)
-const DISCONNECT_THRESHOLD_MS = 30 * 1000;
+// ⏳ 통신 두절 판단 기준 (60초)
+const DISCONNECT_THRESHOLD_MS = 60 * 1000;
 
 export const DrivingInfoPanel = ({ wc }: { wc: DashboardWheelchair | null }) => {
   const [isDataFresh, setIsDataFresh] = useState(true);
@@ -40,34 +41,17 @@ export const DrivingInfoPanel = ({ wc }: { wc: DashboardWheelchair | null }) => 
   const isConnectedRaw = status.is_connected ?? status.isConnected ?? false;
   const isPowerOn = isDataFresh && isConnectedRaw;
 
-  // 3. 데이터 매핑 (끊기면 0으로 초기화할 항목들)
-  // ⭐️ 연결 끊기면 0, 아니면 값 표시
-  const voltage = isPowerOn ? status.voltage ?? 0 : 0;
-  const current = isPowerOn ? status.current ?? 0 : 0;
-  const speed = isPowerOn ? status.current_speed ?? status.speed ?? 0 : 0;
+  // 3. 데이터 매핑 (끊기면 '-' 표시할 실시간 항목들)
+  // ⭐️ 연결 끊기면 데이터 없음(null)→'-', 아니면 실측값(실제 0 포함)을 표시
+  const voltage = isPowerOn ? status.voltage : null;
+  const current = isPowerOn ? status.current : null;
+  const speed = isPowerOn ? status.current_speed ?? status.speed : null;
 
-  // 4. 데이터 매핑 (끊겨도 유지할 항목들)
-  const distance = status.distance ?? 0;
-  const operatingTime = status.operating_time ?? status.operatingTime ?? 0;
-  const postureTime = status.posture_time ?? status.postureTime ?? 0;
-  const runtime = status.runtime ?? 0;
-
-  const formatTime = (minutes: number) => {
-    const num = Number(minutes);
-    if (isNaN(num)) return '0 min';
-
-    const h = Math.floor(num / 60);
-    const m = Math.floor(num % 60);
-
-    if (h > 0) return `${h} h ${m} min`;
-    return `${m} min`;
-  };
-
-  const formatDecimal = (value: any) => {
-    const num = Number(value);
-    if (isNaN(num)) return '0.0';
-    return num.toFixed(1);
-  };
+  // 4. 데이터 매핑 (끊겨도 유지하는 누적 항목들, 값 없으면 '-')
+  const distance = status.distance;
+  const operatingTime = status.operating_time ?? status.operatingTime;
+  const postureTime = status.posture_time ?? status.postureTime;
+  const runtime = status.runtime;
 
   return (
     <div className={styles.card}>
@@ -81,32 +65,26 @@ export const DrivingInfoPanel = ({ wc }: { wc: DashboardWheelchair | null }) => 
         </p>
         <p>
           주행 시간:
-          <strong> {formatTime(runtime)}</strong>
+          <strong> {fmtMinutes(runtime)}</strong>
         </p>
         <p>
-          전압: <strong>{formatDecimal(voltage)} V</strong>
+          전압: <strong>{fmtUnit(voltage, ' V', 1)}</strong>
         </p>
         <p>
           주행 거리:
-          <strong>
-            {Number(distance).toLocaleString(undefined, {
-              minimumFractionDigits: 1,
-              maximumFractionDigits: 1,
-            })}
-            m
-          </strong>
+          <strong>{fmtDist(distance, ' m', 1)}</strong>
         </p>
         <p>
-          전류: <strong>{formatDecimal(current)} A</strong>
+          전류: <strong>{fmtUnit(current, ' A', 1)}</strong>
         </p>
         <p>
-          속도: <strong>{formatDecimal(speed)} m/s</strong>
+          속도: <strong>{fmtUnit(speed, ' m/s', 1)}</strong>
         </p>
         <p>
-          자세유지시간: <strong>{formatTime(postureTime)}</strong>
+          자세유지시간: <strong>{fmtMinutes(postureTime)}</strong>
         </p>
         <p>
-          휠체어 사용 시간: <strong>{formatTime(operatingTime)}</strong>
+          휠체어 사용 시간: <strong>{fmtMinutes(operatingTime)}</strong>
         </p>
       </div>
     </div>

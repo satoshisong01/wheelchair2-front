@@ -7,8 +7,8 @@ import styles from '../page.module.css';
 import { DashboardWheelchair } from '@/types/wheelchair';
 import Image from 'next/image';
 
-// ⏳ 통신 두절 판단 기준 (30초)
-const DISCONNECT_THRESHOLD_MS = 30 * 1000;
+// ⏳ 통신 두절 판단 기준 (60초)
+const DISCONNECT_THRESHOLD_MS = 60 * 1000;
 
 const ALL_STATES = [
   { key: 'idle', label: '대기', iconUrl: '/icons/dashboard/wheelchair02.svg', type: 'status' },

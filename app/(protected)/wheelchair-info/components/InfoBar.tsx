@@ -3,6 +3,7 @@
 import { useSession } from 'next-auth/react';
 import styles from '../page.module.css'; // 부모 CSS 모듈 사용
 import { DashboardWheelchair } from '@/types/wheelchair';
+import { fmtUnit } from '@/lib/format';
 
 interface InfoBarProps {
   // 🚨 [FIX] API 호환성을 위해 any 허용
@@ -79,15 +80,15 @@ export const InfoBar = ({
           모델명: <strong>{currentModelName}</strong>
         </span>
 
-        {/* 환경 정보 (Worker가 데이터를 보내주면 표시됨) */}
+        {/* 환경 정보 (Worker가 데이터를 보내주면 표시됨, 없으면 '-') */}
         <span className={styles.infoItem}>
-          온도: <strong>{status.temperature?.toFixed(1) || 0}°C</strong>
+          온도: <strong>{fmtUnit(status.temperature, '°C', 1)}</strong>
         </span>
         <span className={styles.infoItem}>
-          습도: <strong>{status.humidity?.toFixed(1) || 0}%</strong>
+          습도: <strong>{fmtUnit(status.humidity, '%', 1)}</strong>
         </span>
         <span className={styles.infoItem}>
-          기압: <strong>{status.pressure?.toFixed(1) || 0}hPa</strong>
+          기압: <strong>{fmtUnit(status.pressure, 'hPa', 1)}</strong>
         </span>
       </div>
 

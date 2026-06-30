@@ -4,6 +4,7 @@
 import styles from '../page.module.css';
 import { DashboardWheelchair } from '@/types/wheelchair';
 import Image from 'next/image';
+import { fmtUnit, fmtDist, hasValue, NO_DATA } from '@/lib/format';
 
 // wc 타입을 any로 확장해서 새 변수명(current_battery) 접근 허용
 interface Props {
@@ -11,26 +12,17 @@ interface Props {
 }
 
 export const TopRightPanel = ({ wc }: Props) => {
-  // ⭐️ [수정] DB(current_battery)와 소켓(batteryPercent) 둘 다 체크
-  const battery =
-    wc?.status?.current_battery ?? wc?.status?.batteryPercent ?? 0;
+  // ⭐️ [수정] DB(current_battery)와 소켓(batteryPercent) 둘 다 체크 (값 없으면 '-')
+  const battery = wc?.status?.current_battery ?? wc?.status?.batteryPercent;
 
-  // 주행거리
-  const distance = wc?.status?.distance ?? 0;
-
-  // 총 주행거리
-  const totalDistance = wc?.status?.total_distance ?? 0;
+  // 주행거리 / 총 주행거리 (값 없으면 '-')
+  const distance = wc?.status?.distance;
+  const totalDistance = wc?.status?.total_distance;
 
   // 마지막 수신 시간 (DB값 없으면 현재 시간)
   const lastSeenDate = wc?.status?.last_seen ? new Date(wc.status.last_seen) : new Date();
   const lastUpdateDate = lastSeenDate.toLocaleDateString('ko-KR');
   const lastUpdateTime = lastSeenDate.toLocaleTimeString('ko-KR');
-
-  const formatBattery = (val: any) => {
-    const num = Number(val);
-    if (isNaN(num)) return '0.0';
-    return num.toFixed(1);
-  };
 
   return (
     <div className={styles.topRightPanel}>
@@ -45,8 +37,8 @@ export const TopRightPanel = ({ wc }: Props) => {
           priority
         />
         <p className={styles.batteryValue}>
-          {/* 수정한 변수 사용 */}
-          <strong>{formatBattery(battery)}%</strong>
+          {/* 값 없으면 '-' (실측 0만 0) */}
+          <strong>{fmtUnit(battery, '%', 1)}</strong>
         </p>
         <p className={styles.batteryTimestamp} style={{ textAlign: 'center' }}>
           {lastUpdateDate}<br />{lastUpdateTime}
@@ -64,23 +56,23 @@ export const TopRightPanel = ({ wc }: Props) => {
           priority
         />
         <p className={styles.drivingValue}>
-          {/* 수정한 변수 사용 */}
-          <strong>
-            {Number(distance).toLocaleString(undefined, {
-              minimumFractionDigits: 1,
-              maximumFractionDigits: 1,
-            })}
-          </strong>{' '}
-          m
+          {/* 값 없으면 '-' */}
+          <strong>{fmtDist(distance, ' m', 1)}</strong>
         </p>
         <p className={styles.drivingTitle} style={{ marginTop: '8px', fontSize: '12px' }}>총 주행거리</p>
         <p className={styles.drivingValue}>
-          <strong>
-            {totalDistance >= 1000
-              ? `${(totalDistance / 1000).toFixed(1)}`
-              : Number(totalDistance).toFixed(1)}
-          </strong>{' '}
-          {totalDistance >= 1000 ? 'km' : 'm'}
+          {hasValue(totalDistance) ? (
+            <>
+              <strong>
+                {Number(totalDistance) >= 1000
+                  ? (Number(totalDistance) / 1000).toFixed(1)
+                  : Number(totalDistance).toFixed(1)}
+              </strong>{' '}
+              {Number(totalDistance) >= 1000 ? 'km' : 'm'}
+            </>
+          ) : (
+            <strong>{NO_DATA}</strong>
+          )}
         </p>
       </div>
     </div>

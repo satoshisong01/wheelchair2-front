@@ -8,8 +8,8 @@ import Image from 'next/image';
 import { DashboardWheelchair } from '@/types/wheelchair';
 import styles from '../page.module.css';
 
-/** 30초간 통신 없으면 OFF로 간주 (DrivingInfoPanel과 동일) */
-const DISCONNECT_THRESHOLD_MS = 30 * 1000;
+/** 60초간 통신 없으면 OFF로 간주 (DrivingInfoPanel과 동일) */
+const DISCONNECT_THRESHOLD_MS = 60 * 1000;
 
 type StateKey = 'idle' | 'operating' | 'charging' | 'fall' | 'breakdown' | 'obstacle';
 

@@ -73,11 +73,11 @@ export async function GET(request: Request) {
         .catch(() => ({ rows: [] })), // 알람 테이블 없어도 에러 안 나게 처리
     ]);
 
-    // 데이터가 없으면 빈 껍데기 반환
+    // 데이터가 없으면 빈 껍데기 반환 (값 없음은 0이 아니라 null → 화면에서 '-' 표시)
     if (wcResult.rows.length === 0) {
       return NextResponse.json({
         id: myWheelchairId,
-        status: { current_battery: 0, latitude: 37.5665, longitude: 126.978 },
+        status: { current_battery: null, latitude: 37.5665, longitude: 126.978 },
         alarms: [],
       });
     }
@@ -92,10 +92,11 @@ export async function GET(request: Request) {
       createdAt: wcRow.created_at,
 
       status: {
-        current_battery: wcRow.current_battery ?? 0,
-        current_speed: wcRow.current_speed ?? 0,
-        voltage: wcRow.voltage ?? 0,
-        current: wcRow.current ?? 0,
+        // 값 없음(NULL)은 0으로 덮지 않고 그대로 둔다 → 화면에서 '-'로 표시 (실측 0만 0)
+        current_battery: wcRow.current_battery,
+        current_speed: wcRow.current_speed,
+        voltage: wcRow.voltage,
+        current: wcRow.current,
         latitude: wcRow.latitude,
         longitude: wcRow.longitude,
         is_connected: wcRow.is_connected,

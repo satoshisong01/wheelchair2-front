@@ -7,6 +7,7 @@ import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useMyWheelchair } from '../../hooks/useMyWheelchair';
+import { fmtUnit, fmtDist, hasValue, NO_DATA } from '@/lib/format';
 import {
   Battery,
   MapPin,
@@ -27,7 +28,7 @@ export default function MobileViewPage() {
   const status = (wheelchairData?.status || {}) as any;
 
   // 🔽 추가: 전원 ON/OFF 판정을 위한 상태
-  const DISCONNECT_THRESHOLD_MS = 30 * 1000;
+  const DISCONNECT_THRESHOLD_MS = 60 * 1000;
   const [isDataFresh, setIsDataFresh] = React.useState(true);
   const lastSeen = status.last_seen;
 
@@ -119,22 +120,25 @@ export default function MobileViewPage() {
   // 기본값을 true로 두고, 실제 ON/OFF 판정은 last_seen + 30초 기준으로 결정
   const isConnectedRaw = status.is_connected ?? status.isConnected ?? true;
   const isPowerOn = isDataFresh && isConnectedRaw;
-  const batteryLevel = status.current_battery ?? 0;
-  const isLowBattery = batteryLevel < 20;
-  const distanceM = status.distance ? Number(status.distance).toFixed(1) : '0.0';
-  const rawSeatAngle = status.angle_seat ?? status.angleSeat ?? 0;
-  const seatAngle = Number(rawSeatAngle) || 0;
-  const sensorTemp = status.temperature ? Number(status.temperature).toFixed(1) : '24.0';
-  const outdoorTemp =
-    status.outdoor_temp !== undefined ? Number(status.outdoor_temp).toFixed(1) : sensorTemp;
+
+  // 배터리: 값 없으면 '-' (실측 0만 0)
+  const batteryRaw = status.current_battery ?? status.batteryPercent;
+  const hasBattery = hasValue(batteryRaw);
+  const batteryLevel = hasBattery ? Number(batteryRaw) : 0;
+  const isLowBattery = hasBattery && batteryLevel < 20;
+
+  // 거리/자세각도/온도: 값 없으면 '-'
+  const distanceText = fmtDist(status.distance, ' m', 1); // '12.3 m' 또는 '-'
+  const rawSeatAngle = status.angle_seat ?? status.angleSeat;
+  const outdoorTempRaw = status.outdoor_temp ?? status.temperature;
   const weatherDesc = status.weather_desc ?? '맑음';
 
-  // 욕창 예방 횟수는 긍정 신호를 포함한 전체 성공 횟수를 표시
+  // 욕창 예방 횟수는 '횟수'이므로 0도 유효값 (예방 0회)
   const ulcerPreventionCount = status.ulcer_count ?? status.ulcerCount ?? 0;
 
-  // 전후방·측면 경사 (메인 화면 실시간 카드용)
-  const slopeFr = status.slope_fr ?? status.inclineAngle ?? 0;
-  const slopeSide = status.slope_side ?? status.incline_side ?? 0;
+  // 전후방·측면 경사 (메인 화면 실시간 카드용, 값 없으면 '-')
+  const slopeFr = status.slope_fr ?? status.inclineAngle;
+  const slopeSide = status.slope_side ?? status.incline_side;
 
   // 표시 이름: "Device-xxx" → "xxx"
   const rawName =
@@ -148,14 +152,14 @@ export default function MobileViewPage() {
     {
       id: 'battery',
       title: '배터리 정보',
-      value: `${batteryLevel}%`,
-      sub: isLowBattery ? '충전 필요!' : '주행 가능',
+      value: hasBattery ? `${batteryLevel}%` : NO_DATA,
+      sub: !hasBattery ? '데이터 없음' : isLowBattery ? '충전 필요!' : '주행 가능',
       icon: (
         <Battery
-          className={`w-5 h-5 ${batteryLevel === 0 ? 'text-gray-400' : isLowBattery ? 'text-red-600' : 'text-blue-600'}`}
+          className={`w-5 h-5 ${!hasBattery ? 'text-gray-400' : isLowBattery ? 'text-red-600' : 'text-blue-600'}`}
         />
       ),
-      bgColor: batteryLevel === 0 ? 'bg-gray-50' : isLowBattery ? 'bg-red-50' : 'bg-blue-50',
+      bgColor: !hasBattery ? 'bg-gray-50' : isLowBattery ? 'bg-red-50' : 'bg-blue-50',
       borderColor: isLowBattery ? 'border-red-200' : 'border-blue-100',
       textColor: isLowBattery ? 'text-red-900' : 'text-blue-900',
       onClick: () => router.push('/mobile-view/battery'),
@@ -163,7 +167,7 @@ export default function MobileViewPage() {
     {
       id: 'location',
       title: '위치 및 거리',
-      value: `${distanceM} m`,
+      value: distanceText,
       sub: '오늘 이동 거리',
       icon: <MapPin className="w-5 h-5 text-green-600" />,
       bgColor: 'bg-green-50',
@@ -174,7 +178,7 @@ export default function MobileViewPage() {
     {
       id: 'slope',
       title: '전후방·측면 경사',
-      value: `${Number(slopeFr).toFixed(1)}° / ${Number(slopeSide).toFixed(1)}°`,
+      value: `${fmtUnit(slopeFr, '°', 1)} / ${fmtUnit(slopeSide, '°', 1)}`,
       sub: '실시간 경사도',
       icon: <Gauge className="w-5 h-5 text-amber-600" />,
       bgColor: 'bg-amber-50',
@@ -186,7 +190,7 @@ export default function MobileViewPage() {
       id: 'posture',
       title: '자세·욕창 예방',
       value: `예방 ${ulcerPreventionCount}회`,
-      sub: `현재 시트 각도 ${seatAngle.toFixed(0)}°`,
+      sub: `현재 시트 각도 ${fmtUnit(rawSeatAngle, '°', 0)}`,
       subClassName: 'text-[16px] font-bold',
       icon: <Accessibility className="w-5 h-5 text-indigo-600" />,
       bgColor: 'bg-indigo-50',
@@ -198,7 +202,7 @@ export default function MobileViewPage() {
     {
       id: 'weather',
       title: '외부 날씨 정보',
-      value: `${outdoorTemp}°C`,
+      value: fmtUnit(outdoorTempRaw, '°C', 1),
       sub: `현재 상태: ${weatherDesc}`,
       icon: <CloudSun className="w-5 h-5 text-orange-600" />,
       bgColor: 'bg-orange-50',

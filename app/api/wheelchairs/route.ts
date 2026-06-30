@@ -84,16 +84,17 @@ export async function GET() {
       createdAt: row.created_at,
 
       // status 객체로 묶어서 반환
+      // 값 없음(NULL)은 0으로 덮지 않고 그대로 둔다 → 화면에서 '-'로 표시 (실측 0만 0)
       status: {
-        current_battery: row.current_battery ?? 0,
-        current_speed: row.current_speed ?? 0,
-        voltage: row.voltage ?? 0,
-        current: row.current ?? 0,
-        runtime: row.runtime ?? 0,
-        distance: row.distance ?? 0,
-        total_distance: row.total_distance ?? 0,
-        posture_time: row.posture_time ?? 0,
-        operating_time: row.operating_time ?? 0,
+        current_battery: row.current_battery,
+        current_speed: row.current_speed,
+        voltage: row.voltage,
+        current: row.current,
+        runtime: row.runtime,
+        distance: row.distance,
+        total_distance: row.total_distance,
+        posture_time: row.posture_time,
+        operating_time: row.operating_time,
         is_connected: row.is_connected ?? false,
         last_seen: row.last_seen,
 

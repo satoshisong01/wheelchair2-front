@@ -3,6 +3,7 @@
 import styles from '../page.module.css';
 import { DashboardWheelchair } from '@/types/wheelchair';
 import Image from 'next/image';
+import { fmtNum, NO_DATA } from '@/lib/format';
 
 // 4. PostureItem (단위 unit 추가)
 const PostureItem = ({
@@ -39,7 +40,7 @@ const PostureItem = ({
         {/* ⭐️ 값과 단위(unit)를 함께 표시 */}
         <p className={styles.currentValue}>
           {value}
-          {unit}
+          {value !== NO_DATA ? unit : ''}
         </p>
         <p className={styles.maxValue}>
           Max {max}
@@ -56,17 +57,18 @@ export const PostureControlPanel = ({ wc }: { wc: DashboardWheelchair | any }) =
   const status = wc?.status || {};
 
   // ⭐️ [데이터 매핑] DB 컬럼명(snake_case)과 소켓 데이터 매칭
+  // 값 없으면 '-' 표시 (실측 0만 0). fmtNum이 null/undefined를 '-'로 변환.
   // 1. 등받이 & 시트
-  const valBack = status.angle_back ?? status.angleBack ?? 0;
-  const valSeat = status.angle_seat ?? status.angleSeat ?? 0; // 시트(기울기)
+  const valBack = fmtNum(status.angle_back ?? status.angleBack, 1);
+  const valSeat = fmtNum(status.angle_seat ?? status.angleSeat, 1); // 시트(기울기)
 
   // 2. 발판 & 높이
-  const valFoot = status.foot_angle ?? status.footAngle ?? 0;
-  const valElev = status.elevation_dist ?? status.elevationDist ?? 0; // 높이 (신규)
+  const valFoot = fmtNum(status.foot_angle ?? status.footAngle, 1);
+  const valElev = fmtNum(status.elevation_dist ?? status.elevationDist, 1); // 높이 (신규)
 
   // 3. 경사도 (신규)
-  const valSlopeFr = status.slope_fr ?? status.slopeFr ?? 0; // 전후방
-  const valSlopeSide = status.slope_side ?? status.slopeSide ?? 0; // 측면
+  const valSlopeFr = fmtNum(status.slope_fr ?? status.slopeFr, 1); // 전후방
+  const valSlopeSide = fmtNum(status.slope_side ?? status.slopeSide, 1); // 측면
 
   // 시간 포맷팅
   const lastTime = status.last_seen
@@ -91,7 +93,7 @@ export const PostureControlPanel = ({ wc }: { wc: DashboardWheelchair | any }) =
         <PostureItem
           title="등받이 조절"
           imageUrl="/icons/secondtab/recline-height.svg"
-          value={Number(valBack).toFixed(1)}
+          value={valBack}
           max="180"
           unit="°"
           timestamp={displayTime}
@@ -99,7 +101,7 @@ export const PostureControlPanel = ({ wc }: { wc: DashboardWheelchair | any }) =
         <PostureItem
           title="시트 조절"
           imageUrl="/icons/secondtab/tilt-adjustment.svg"
-          value={Number(valSeat).toFixed(1)}
+          value={valSeat}
           max="45"
           unit="°"
           timestamp={displayTime}
@@ -109,7 +111,7 @@ export const PostureControlPanel = ({ wc }: { wc: DashboardWheelchair | any }) =
         <PostureItem
           title="발판 조절"
           imageUrl="/icons/secondtab/footrest-adjustment.svg"
-          value={Number(valFoot).toFixed(1)}
+          value={valFoot}
           max="90"
           unit="°"
           timestamp={displayTime}
@@ -117,7 +119,7 @@ export const PostureControlPanel = ({ wc }: { wc: DashboardWheelchair | any }) =
         <PostureItem
           title="높이 조절"
           imageUrl="/icons/secondtab/elevation-adjustment.svg"
-          value={Number(valElev).toFixed(1)}
+          value={valElev}
           max="30"
           unit="cm"
           timestamp={displayTime}
@@ -127,7 +129,7 @@ export const PostureControlPanel = ({ wc }: { wc: DashboardWheelchair | any }) =
         <PostureItem
           title="전후방 경사"
           imageUrl="/icons/secondtab/front back tilt.svg" // 아이콘 적절한 걸로 변경 권장
-          value={Number(valSlopeFr).toFixed(1)}
+          value={valSlopeFr}
           max="20"
           unit="°"
           timestamp={displayTime}
@@ -135,7 +137,7 @@ export const PostureControlPanel = ({ wc }: { wc: DashboardWheelchair | any }) =
         <PostureItem
           title="측면 경사"
           imageUrl="/icons/secondtab/side tilt.svg" // 아이콘 적절한 걸로 변경 권장
-          value={Number(valSlopeSide).toFixed(1)}
+          value={valSlopeSide}
           max="20"
           unit="°"
           timestamp={displayTime}

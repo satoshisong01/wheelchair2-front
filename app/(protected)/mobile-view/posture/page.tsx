@@ -82,6 +82,7 @@ export default function PosturePage() {
   const [timer, setTimer] = useState(0);
   const [isSuccessThisSession, setIsSuccessThisSession] = useState(false);
   const prevUlcerCountRef = useRef<number | null>(null);
+  const prevPhtRef = useRef<number | null>(null);
 
   // 서버(소켓)에서 받은 오늘 예방 횟수 — worker가 posture_daily 반영 후 wheelchair_status_update로 전달
   const ulcerCount = status.ulcer_count ?? status.ulcerCount ?? 0;
@@ -100,26 +101,32 @@ export default function PosturePage() {
     }
     if (current > prevUlcerCountRef.current) {
       prevUlcerCountRef.current = current;
+      // 완료 직후의 PHT를 기준으로 잡아, 직후 PHT 변동을 '새 세션'으로 오인해 완료를 지우지 않도록 함
+      prevPhtRef.current = postureTimeMin;
       queueMicrotask(() => {
         setIsSuccessThisSession(true);
         setTimer(120);
       });
     }
-  }, [ulcerCount]);
+  }, [ulcerCount, postureTimeMin]);
 
-  // 🟢 [보강] '완료(✓)'가 무한히 갇히지 않도록 표시 후 자동 해제.
-  //     기기 PHT가 '현재 고정'이고 시트각도(CW/st, 5초)만으로는 새 세션을 놓칠 수 있어,
-  //     완료 표시 12초 뒤 게이지를 안전하게 리셋해 다음 세션을 받을 수 있게 한다.
+  // 🟢 [보강] 자세유지시간(PHT)이 줄면 = 기기가 새 자세유지 세션을 시작한 것.
+  //     시트각도(CW/st, 5초) 갱신을 놓쳐도 PHT(CW/mt) 감소만으로 '완료' 게이지가 스스로 풀리게 한다.
   useEffect(() => {
-    if (!isSuccessThisSession) return;
-    const t = setTimeout(() => {
+    if (prevPhtRef.current === null) {
+      prevPhtRef.current = postureTimeMin;
+      return;
+    }
+    if (postureTimeMin < prevPhtRef.current) {
+      prevPhtRef.current = postureTimeMin;
       queueMicrotask(() => {
         setIsSuccessThisSession(false);
         setTimer(0);
       });
-    }, 12000);
-    return () => clearTimeout(t);
-  }, [isSuccessThisSession]);
+      return;
+    }
+    prevPhtRef.current = postureTimeMin;
+  }, [postureTimeMin]);
 
   // 타이머 시각만: 35° 이상일 때 1초마다 증가, 120에서 멈춤 (API 호출 없음)
   useEffect(() => {

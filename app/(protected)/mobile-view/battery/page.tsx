@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMyWheelchair } from '../../../hooks/useMyWheelchair';
+import { useIsPowerOn } from '../../../hooks/useIsPowerOn';
+import { hasValue } from '@/lib/format';
 import { ChevronLeft, Zap, BatteryCharging, AlertTriangle, Clock, PlayCircle } from 'lucide-react';
 
 // 📊 Chart.js 관련 임포트
@@ -32,23 +34,32 @@ ChartJS.register(
 
 export default function BatteryPage() {
   const router = useRouter();
-  const { data: wheelchairData } = useMyWheelchair();
+  const { data: wheelchairData, loading } = useMyWheelchair();
   const status = (wheelchairData?.status || {}) as any;
+  const isPowerOn = useIsPowerOn(status, loading);
 
-  // 1. 데이터 매핑
-  const batteryPercent = status.current_battery ?? status.battery ?? 0;
-  const current = status.current_amperage ?? status.current ?? 0;
-  const runtimeTotalMinutes = status.runtime ?? 0; // 🟢 DB에서 가져온 실제 주행 시간(분)
+  // 1. 데이터 매핑 — 전원 OFF(60초 무통신)면 실시간 값은 '-'
+  const batteryRaw = status.current_battery ?? status.battery;
+  const hasBattery = isPowerOn && hasValue(batteryRaw);
+  const batteryPercent = hasBattery ? Number(batteryRaw) : 0; // 링/차트/계산용 숫자
+  const batteryText = hasBattery ? String(batteryPercent) : '-'; // 표시용
+
+  const currentRaw = status.current_amperage ?? status.current;
+  const current = isPowerOn && hasValue(currentRaw) ? Number(currentRaw) : 0;
+
+  // 누적(오늘/총) 값 → 전원 OFF여도 유지
+  const runtimeTotalMinutes = status.runtime ?? 0;
   const operatingTimeTotalMinutes =
-    status.operating_time ?? status.operatingTime ?? 0; // 🟢 휠체어 총 사용 시간(분)
+    status.operating_time ?? status.operatingTime ?? 0;
 
-  const isCharging = current > 0.5;
-  const isLowBattery = batteryPercent < 20;
+  const isCharging = hasBattery && current > 0.5;
+  const isLowBattery = hasBattery && batteryPercent < 20;
 
-  // 계산 로직
-  const estDistance = (batteryPercent * 0.4).toFixed(1);
-  const estTimeHours = Math.floor((batteryPercent * 0.8) / 60);
-  const estTimeMinutes = Math.floor((batteryPercent * 0.8) % 60);
+  // 계산 로직 (배터리 값 있을 때만, 없으면 '-')
+  const estDistance = hasBattery ? (batteryPercent * 0.4).toFixed(1) : '-';
+  const estTimeText = hasBattery
+    ? `${Math.floor((batteryPercent * 0.8) / 60)}h ${Math.floor((batteryPercent * 0.8) % 60)}m`
+    : '-';
 
   // 🟢 실제 오늘 주행 시간 계산 (분 -> 시/분 변환)
   const runTimeHours = Math.floor(runtimeTotalMinutes / 60);
@@ -155,8 +166,8 @@ export default function BatteryPage() {
             <span
               className={`text-6xl font-black ${isLowBattery ? 'text-red-600' : 'text-gray-800'}`}
             >
-              {batteryPercent}
-              <span className="text-3xl text-gray-400 font-medium">%</span>
+              {batteryText}
+              {hasBattery && <span className="text-3xl text-gray-400 font-medium">%</span>}
             </span>
           </div>
         </div>
@@ -165,14 +176,18 @@ export default function BatteryPage() {
         <div
           className={`w-full p-4 rounded-2xl mb-6 flex items-start space-x-3
           ${
-            isLowBattery
-              ? 'bg-red-50 text-red-800 border border-red-100'
-              : isCharging
-                ? 'bg-green-50 text-green-800 border border-green-100'
-                : 'bg-blue-50 text-blue-800 border border-blue-100'
+            !hasBattery
+              ? 'bg-gray-50 text-gray-600 border border-gray-100'
+              : isLowBattery
+                ? 'bg-red-50 text-red-800 border border-red-100'
+                : isCharging
+                  ? 'bg-green-50 text-green-800 border border-green-100'
+                  : 'bg-blue-50 text-blue-800 border border-blue-100'
           }`}
         >
-          {isLowBattery ? (
+          {!hasBattery ? (
+            <AlertTriangle className="w-6 h-6 shrink-0 text-gray-400" />
+          ) : isLowBattery ? (
             <AlertTriangle className="w-6 h-6 shrink-0" />
           ) : isCharging ? (
             <BatteryCharging className="w-6 h-6 shrink-0" />
@@ -181,18 +196,24 @@ export default function BatteryPage() {
           )}
           <div>
             <h3 className="font-bold text-lg">
-              {isLowBattery
-                ? '충전이 필요합니다!'
-                : isCharging
-                  ? '고속 충전 중입니다.'
-                  : '정상 운행 중입니다.'}
+              {!hasBattery
+                ? isPowerOn
+                  ? '데이터 없음'
+                  : '통신 끊김 (전원 OFF)'
+                : isLowBattery
+                  ? '충전이 필요합니다!'
+                  : isCharging
+                    ? '고속 충전 중입니다.'
+                    : '정상 운행 중입니다.'}
             </h3>
             <p className="text-sm opacity-90 mt-1">
-              {isLowBattery
-                ? '배터리 잔량이 20% 미만입니다.'
-                : isCharging
-                  ? '완충까지 잠시만 기다려주세요.'
-                  : '배터리 상태가 양호합니다.'}
+              {!hasBattery
+                ? '기기에서 배터리 데이터가 수신되지 않습니다.'
+                : isLowBattery
+                  ? '배터리 잔량이 20% 미만입니다.'
+                  : isCharging
+                    ? '완충까지 잠시만 기다려주세요.'
+                    : '배터리 상태가 양호합니다.'}
             </p>
           </div>
         </div>
@@ -206,7 +227,7 @@ export default function BatteryPage() {
               </span>
               <div className="flex items-end">
                 <span className="text-xl font-bold text-gray-900">{estDistance}</span>
-                <span className="text-xs text-gray-500 ml-1 mb-1">m</span>
+                {hasBattery && <span className="text-xs text-gray-500 ml-1 mb-1">m</span>}
               </div>
             </div>
             <div className="flex-1 bg-white p-4 rounded-2xl shadow-sm border border-indigo-100 ring-1 ring-indigo-50">
@@ -238,10 +259,7 @@ export default function BatteryPage() {
                 <Clock className="w-3 h-3 mr-1" /> 예상 사용 가능 시간
               </span>
               <div className="flex items-end">
-                <span className="text-xl font-bold text-gray-900">{estTimeHours}</span>
-                <span className="text-xs text-gray-500 ml-0.5 mb-1 mr-1">h</span>
-                <span className="text-xl font-bold text-gray-900">{estTimeMinutes}</span>
-                <span className="text-xs text-gray-500 ml-0.5 mb-1">m</span>
+                <span className="text-xl font-bold text-gray-900">{estTimeText}</span>
               </div>
             </div>
           </div>

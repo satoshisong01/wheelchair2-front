@@ -4,6 +4,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useMyWheelchair } from '../../../hooks/useMyWheelchair';
+import { useIsPowerOn } from '../../../hooks/useIsPowerOn';
+import { NO_DATA } from '@/lib/format';
 import { ChevronLeft } from 'lucide-react';
 
 // 📦 모바일용 상태 카드 컴포넌트
@@ -67,10 +69,12 @@ const MobileStatusCard = ({
 
 export default function PosturePage() {
   const router = useRouter();
-  const { data: wheelchairData } = useMyWheelchair();
-  
+  const { data: wheelchairData, loading } = useMyWheelchair();
+
   // 🟢 status: 소켓/API 실데이터만 사용 (snake_case·camelCase 모두 지원)
   const status = (wheelchairData?.status || {}) as Record<string, unknown>;
+  // 전원 OFF(60초 무통신)면 실시간 각도/자세유지시간은 '-'
+  const isPowerOn = useIsPowerOn(status, loading);
 
   // 1. 데이터 매핑 — 시트 각도는 휠체어에서 오는 실데이터만 사용
   const valBack = status.angle_back ?? status.angleBack ?? 0;
@@ -160,7 +164,7 @@ export default function PosturePage() {
         {/* 욕창 예방 + 자세유지시간 (항상 표시) */}
         <div className="w-full rounded-2xl p-4 mb-6 bg-white border border-gray-100 shadow-sm">
           <p className="text-sm text-gray-600 mb-2">욕창 예방 (35° 2분 유지)</p>
-          {(Number(valSeat) >= 35 || isSuccessThisSession) && (
+          {isPowerOn && (Number(valSeat) >= 35 || isSuccessThisSession) && (
             <div className="mb-2">
               <div className="w-full bg-gray-100 rounded-full h-2">
                 <div
@@ -175,7 +179,7 @@ export default function PosturePage() {
           )}
           <p className="text-sm text-gray-500">오늘 예방 횟수: <strong>{Number(ulcerCount)}회</strong></p>
           <p className="text-sm text-gray-500 mt-1">
-            자세유지시간: <strong>{phtHours > 0 ? `${phtHours}시간 ${phtMinutes}분` : `${phtMinutes}분`}</strong>
+            자세유지시간: <strong>{!isPowerOn ? NO_DATA : phtHours > 0 ? `${phtHours}시간 ${phtMinutes}분` : `${phtMinutes}분`}</strong>
           </p>
         </div>
 
@@ -242,28 +246,28 @@ export default function PosturePage() {
           <MobileStatusCard 
             title="등받이 조절"
             imageUrl="/icons/secondtab/recline-height.svg"
-            value={Number(valBack).toFixed(0)}
+            value={isPowerOn ? Number(valBack).toFixed(0) : NO_DATA}
             max="180"
           />
           <MobileStatusCard 
             title="시트 조절"
             imageUrl="/icons/secondtab/tilt-adjustment.svg"
-            value={Number(valSeat).toFixed(0)}
+            value={isPowerOn ? Number(valSeat).toFixed(0) : NO_DATA}
             max="45"
-            highlight={Number(valSeat) >= 35}
+            highlight={isPowerOn && Number(valSeat) >= 35}
           />
 
           {/* Row 2: 발판, 높이 */}
           <MobileStatusCard 
             title="발판 조절"
             imageUrl="/icons/secondtab/footrest-adjustment.svg"
-            value={Number(valFoot).toFixed(0)}
+            value={isPowerOn ? Number(valFoot).toFixed(0) : NO_DATA}
             max="90"
           />
           <MobileStatusCard 
             title="높이 조절"
             imageUrl="/icons/secondtab/elevation-adjustment.svg"
-            value={Number(valElev).toFixed(1)}
+            value={isPowerOn ? Number(valElev).toFixed(1) : NO_DATA}
             max="30"
             unit="cm"
           />

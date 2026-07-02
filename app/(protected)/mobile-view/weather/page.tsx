@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMyWheelchair } from '../../../hooks/useMyWheelchair';
+import { useIsPowerOn } from '../../../hooks/useIsPowerOn';
 import {
   ChevronLeft,
   Cloud,
@@ -19,6 +20,8 @@ export default function WeatherPage() {
   const router = useRouter();
   const { data: wheelchairData, loading: dataLoading } = useMyWheelchair();
   const status = (wheelchairData?.status || {}) as any;
+  // 전원 OFF(60초 무통신)면 실시간 환경값은 '-'
+  const isPowerOn = useIsPowerOn(status, dataLoading);
 
   // 1. 날씨 상태 관리
   const [weather, setWeather] = useState({
@@ -58,6 +61,13 @@ export default function WeatherPage() {
     status.humidity,
     status.pressure,
   ]);
+
+  // 전원 OFF면 표시값 '-'
+  const wOutdoor = isPowerOn ? weather.outdoorTemp : '-';
+  const wIndoor = isPowerOn ? weather.indoorTemp : '-';
+  const wHumidity = isPowerOn ? String(weather.humidity) : '-';
+  const wPressure = isPowerOn ? String(weather.pressure) : '-';
+  const wDesc = isPowerOn ? weather.desc : '-';
 
   const getWeatherIcon = (main: string) => {
     if (weather.desc.includes('비')) return <CloudRain className="w-8 h-8 text-blue-500" />;
@@ -106,7 +116,7 @@ export default function WeatherPage() {
                   외부
                 </span>
                 <div className="flex items-start">
-                  <span className="text-xl font-bold text-gray-800">{weather.outdoorTemp}</span>
+                  <span className="text-xl font-bold text-gray-800">{wOutdoor}</span>
                   <span className="text-xs text-gray-500 mt-0.5">°C</span>
                 </div>
               </div>
@@ -117,7 +127,7 @@ export default function WeatherPage() {
                   <span>실내</span>
                 </span>
                 <div className="flex items-start">
-                  <span className="text-xl font-bold text-gray-800">{weather.indoorTemp}</span>
+                  <span className="text-xl font-bold text-gray-800">{wIndoor}</span>
                   <span className="text-xs text-gray-500 mt-0.5">°C</span>
                 </div>
               </div>
@@ -126,7 +136,7 @@ export default function WeatherPage() {
               <div className="p-4 flex flex-col items-center justify-center">
                 <span className="h-8 flex items-center text-xs text-gray-400 mb-1">습도</span>
                 <div className="flex items-start">
-                  <span className="text-xl font-bold text-gray-800">{weather.humidity}</span>
+                  <span className="text-xl font-bold text-gray-800">{wHumidity}</span>
                   <span className="text-xs text-gray-500 mt-0.5">%</span>
                 </div>
               </div>
@@ -152,7 +162,7 @@ export default function WeatherPage() {
               <span className="text-gray-500 flex items-center">
                 <Cloud size={14} className="mr-2" /> 날씨 설명
               </span>
-              <span className="font-bold text-gray-700">{weather.desc}</span>
+              <span className="font-bold text-gray-700">{wDesc}</span>
             </div>
 
             {/* 하단 상세에 기압 정보 추가 (상단에서 빠진 대신) */}
@@ -160,14 +170,14 @@ export default function WeatherPage() {
               <span className="text-gray-500 flex items-center">
                 <Wind size={14} className="mr-2" /> 대기압
               </span>
-              <span className="font-bold text-gray-700">{weather.pressure} hPa</span>
+              <span className="font-bold text-gray-700">{wPressure} hPa</span>
             </div>
 
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-500 flex items-center">
                 <Droplets size={14} className="mr-2" /> 주변 습도
               </span>
-              <span className="font-bold text-gray-700">{weather.humidity}%</span>
+              <span className="font-bold text-gray-700">{wHumidity}%</span>
             </div>
           </div>
         </div>

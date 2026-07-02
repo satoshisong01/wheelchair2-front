@@ -136,10 +136,22 @@ export function useMyWheelchair() {
           const json = await res.json();
 
           // 휠체어 기본 정보 및 상태 저장
-          setData({
-            ...json,
-            status: json.status || {},
-          } as DashboardWheelchair);
+          // 🟢 재조회(소켓 재연결 등) 시 기존 값을 null/빈값으로 덮지 않도록 merge.
+          //    값이 들어온 필드만 갱신하고, 누락·null 필드는 마지막 값을 유지한다.
+          //    (표시 시점의 '전원 OFF(60초)' 판정은 화면단에서 별도로 '-' 처리)
+          setData((prev) => {
+            const incoming = (json.status || {}) as Record<string, any>;
+            // 빈 응답(행 없음 등)이면 기존 상태를 그대로 유지
+            if (prev && Object.keys(incoming).length === 0) return prev;
+            const mergedStatus: Record<string, any> = { ...(prev?.status || {}) };
+            for (const [k, v] of Object.entries(incoming)) {
+              if (v !== null && v !== undefined) mergedStatus[k] = v;
+            }
+            return {
+              ...json,
+              status: mergedStatus,
+            } as DashboardWheelchair;
+          });
 
           // 🚨 DB에 저장되어 있던 기존 알람 목록 저장
           if (json.alarms && Array.isArray(json.alarms)) {

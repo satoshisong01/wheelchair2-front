@@ -251,9 +251,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(rows);
   } catch (error: any) {
     console.error('[wheelchair-daily-history] Error:', error);
-    return NextResponse.json(
-      { message: error?.message || 'Server Error' },
-      { status: 500 },
-    );
+    // 🔒 내부 오류 상세(스택·SQL·드라이버 메시지)를 클라이언트에 노출하지 않음 (서버 로그에만 기록)
+    return NextResponse.json({ message: 'Server Error' }, { status: 500 });
   }
 }

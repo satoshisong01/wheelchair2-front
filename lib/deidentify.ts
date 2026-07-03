@@ -5,6 +5,12 @@
 import { createHmac } from 'crypto';
 
 const SALT = process.env.DEID_SALT || process.env.ENCRYPTION_SALT || 'deid';
+if (SALT === 'deid' && process.env.NODE_ENV === 'production') {
+  console.warn(
+    '⚠️ [보안 경고] DEID_SALT/ENCRYPTION_SALT 미설정 — 비식별화가 고정 기본 솔트를 사용 중입니다. ' +
+      '운영 환경에서는 .env에 16바이트 이상 랜덤 문자열로 설정하세요.',
+  );
+}
 
 /** 이름 마스킹: 홍길동 → 홍*동 */
 export function maskName(name?: string | null): string {

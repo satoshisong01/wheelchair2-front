@@ -3,7 +3,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions'; 
-import { query } from '@/lib/db'; 
+import { query } from '@/lib/db';
+import { createAuditLog } from '@/lib/log'; // 🔒 [F6] 역할 변경 감사 로그
 
 // ------------------------------
 // GET: PENDING, USER, ADMIN 사용자 목록 조회
@@ -78,7 +79,21 @@ export async function PUT(req: NextRequest) {
         if (result.rowCount === 0) {
             return NextResponse.json({ message: '사용자를 찾을 수 없습니다.' }, { status: 404 });
         }
-        
+
+        // 🔒 [F6] MASTER의 역할 변경(승인/거절)을 감사 로그에 기록 (fail-safe: 실패해도 본 작업 중단 안 함)
+        await createAuditLog({
+            // @ts-ignore
+            userId: session.user.id,
+            // @ts-ignore
+            userRole: session.user.role,
+            action: 'USER_ROLE_UPDATE',
+            details: {
+                targetUserId: userId,
+                newRole,
+                rejectionReason: rejectionReasonText,
+            },
+        });
+
         return NextResponse.json({ message: '사용자 상태가 성공적으로 업데이트되었습니다.' });
     } catch (error) {
         console.error('Error updating user status:', error);

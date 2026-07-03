@@ -12,10 +12,12 @@ const RATE_LIMIT_PATHS = [
 ];
 
 function getClientIp(req: NextRequest): string {
+  // 🔒 Vercel/프록시가 실제 연결 IP로 설정하는 x-real-ip 우선.
+  //    x-forwarded-for 첫 토큰은 클라이언트가 위조 가능해 rate-limit 우회에 악용될 수 있어 후순위로 둠.
+  const xri = req.headers.get('x-real-ip');
+  if (xri) return xri.trim();
   const xff = req.headers.get('x-forwarded-for');
   if (xff) return xff.split(',')[0].trim();
-  const xri = req.headers.get('x-real-ip');
-  if (xri) return xri;
   return '127.0.0.1';
 }
 

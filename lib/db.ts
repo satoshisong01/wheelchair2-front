@@ -61,6 +61,42 @@ export function getDbSslOption(): PoolConfig['ssl'] {
   return { rejectUnauthorized: false, minVersion: 'TLSv1.2' } as PoolConfig['ssl'];
 }
 
+/**
+ * 🔎 [진단] 현재 DB TLS 검증 상태 (부작용 없음) — 확인용 엔드포인트에서 사용
+ */
+export function getDbTlsStatus() {
+  const isRds = !!process.env.DATABASE_URL?.includes('rds.amazonaws.com');
+  const strictRequested = process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === 'true';
+  let caFound = false;
+  let caSource = 'none';
+  if (isRds && strictRequested) {
+    try {
+      const caPem = process.env.DATABASE_CA_CERT;
+      const caPath =
+        process.env.DATABASE_CA_PATH ||
+        path.join(process.cwd(), 'certs', 'rds-global-bundle.pem');
+      if (caPem && caPem.includes('BEGIN CERTIFICATE')) {
+        caFound = true;
+        caSource = 'env:DATABASE_CA_CERT';
+      } else if (fs.existsSync(caPath)) {
+        caFound = true;
+        caSource = `file:${caPath}`;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  const verifying = isRds && strictRequested && caFound;
+  return {
+    isRds,
+    strictRequested,
+    caFound,
+    caSource,
+    verifying,
+    mode: !isRds ? 'no-ssl' : verifying ? 'verify (검증 활성 ✅)' : 'relaxed (검증 완화 ⚠️)',
+  };
+}
+
 // 1. 커넥션 풀 생성 (싱글톤 패턴)
 const pool =
   global.pool ||

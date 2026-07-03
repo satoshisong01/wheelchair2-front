@@ -24,6 +24,30 @@ function getClientIp(req: NextRequest): string {
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  // 🔒 [CSRF] 상태 변경 API(POST/PUT/PATCH/DELETE)의 Origin 검증 — 교차 출처(다른 사이트)발 위조 요청 차단.
+  //   세션 쿠키 SameSite=Lax에 더한 방어 심화. Origin이 없으면(네이티브 앱/서버간 호출) 통과시켜 정상 동작 보존.
+  if (
+    pathname.startsWith('/api/') &&
+    ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method)
+  ) {
+    const origin = req.headers.get('origin');
+    if (origin) {
+      const host = req.headers.get('host');
+      let originHost = '';
+      try {
+        originHost = new URL(origin).host;
+      } catch {
+        originHost = 'invalid';
+      }
+      if (!host || originHost !== host) {
+        return new NextResponse(
+          JSON.stringify({ message: '요청 출처가 유효하지 않습니다.' }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+    }
+  }
+
   // 🔒 [보안] Rate Limit 적용 (Upstash Redis 기반)
   if (RATE_LIMIT_PATHS.some((p) => pathname.startsWith(p))) {
     try {

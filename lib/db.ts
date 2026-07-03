@@ -14,35 +14,51 @@ declare global {
  * - 기본값은 호환성 유지(false). KTC 평가 시 .env에 true 설정 권장
  * - 신규/마이그레이션 환경에서는 RDS CA 인증서 등록 후 true로 전환 권장
  */
+let _sslLogged = false;
+
 export function getDbSslOption(): PoolConfig['ssl'] {
   const isRds = process.env.DATABASE_URL?.includes('rds.amazonaws.com');
   if (!isRds) return undefined;
 
   const strictMode = process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === 'true';
-  const ssl: Record<string, unknown> = {
-    rejectUnauthorized: strictMode,
-    minVersion: 'TLSv1.2',
-  };
-
-  // 🔒 검증 강제(strict) 시 Amazon RDS CA 번들을 신뢰 CA로 주입.
-  //   우선순위: DATABASE_CA_CERT(PEM 문자열, Vercel 권장) > DATABASE_CA_PATH(파일) > certs/rds-global-bundle.pem
-  //   기본값(strict=false)은 현행 동작 그대로 유지 → 배포해도 안 깨짐.
-  if (strictMode) {
-    try {
-      const caPem = process.env.DATABASE_CA_CERT;
-      const caPath =
-        process.env.DATABASE_CA_PATH ||
-        path.join(process.cwd(), 'certs', 'rds-global-bundle.pem');
-      if (caPem && caPem.includes('BEGIN CERTIFICATE')) {
-        ssl.ca = caPem;
-      } else if (fs.existsSync(caPath)) {
-        ssl.ca = fs.readFileSync(caPath, 'utf8');
-      }
-    } catch {
-      // CA 로드 실패 시 시스템 신뢰저장소로 폴백
-    }
+  // 기본값(strict=false)은 현행 동작 그대로 유지 → 배포해도 안 깨짐.
+  if (!strictMode) {
+    return { rejectUnauthorized: false, minVersion: 'TLSv1.2' } as PoolConfig['ssl'];
   }
-  return ssl as PoolConfig['ssl'];
+
+  // 🔒 strict 요청됨 → Amazon RDS CA 번들 확보 시도.
+  //   우선순위: DATABASE_CA_CERT(PEM 문자열) > DATABASE_CA_PATH(파일) > certs/rds-global-bundle.pem
+  let ca: string | undefined;
+  try {
+    const caPem = process.env.DATABASE_CA_CERT;
+    const caPath =
+      process.env.DATABASE_CA_PATH ||
+      path.join(process.cwd(), 'certs', 'rds-global-bundle.pem');
+    if (caPem && caPem.includes('BEGIN CERTIFICATE')) {
+      ca = caPem;
+    } else if (fs.existsSync(caPath)) {
+      ca = fs.readFileSync(caPath, 'utf8');
+    }
+  } catch {
+    /* 아래에서 폴백 처리 */
+  }
+
+  if (ca) {
+    if (!_sslLogged) {
+      console.log('[db] ✅ RDS CA 로드 — DB TLS 인증서 검증 활성화');
+      _sslLogged = true;
+    }
+    return { rejectUnauthorized: true, minVersion: 'TLSv1.2', ca } as PoolConfig['ssl'];
+  }
+
+  // ⚠️ strict 요청됐으나 CA 미확보 → 운영 DB 끊김 방지 위해 검증 완화로 폴백(경고)
+  if (!_sslLogged) {
+    console.warn(
+      '[db] ⚠️ DATABASE_SSL_REJECT_UNAUTHORIZED=true 이나 CA 번들 미확보 → 검증 완화(false) 폴백. certs/rds-global-bundle.pem 포함 또는 DATABASE_CA_CERT 설정 확인',
+    );
+    _sslLogged = true;
+  }
+  return { rejectUnauthorized: false, minVersion: 'TLSv1.2' } as PoolConfig['ssl'];
 }
 
 // 1. 커넥션 풀 생성 (싱글톤 패턴)

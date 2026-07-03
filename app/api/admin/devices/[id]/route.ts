@@ -5,11 +5,12 @@ import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import { getServerSession } from 'next-auth';
 // 🚨 authOptions 경로 확인 필수
-import { authOptions } from '@/lib/authOptions'; 
+import { authOptions } from '@/lib/authOptions';
+import { getDbSslOption } from '@/lib/db';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }, 
+  ssl: getDbSslOption(),
 });
 
 interface RouteParams {

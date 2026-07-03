@@ -6,10 +6,11 @@ import { Pool } from 'pg';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/authOptions';
 import { encryptMedicalInfo } from '@/lib/crypto'; // lib/crypto.ts 수정 필수 (emergencyContact)
+import { getDbSslOption } from '@/lib/db';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
+  ssl: getDbSslOption(),
 });
 
 // 1. GET: 프로필 조회 (기존 로직 유지)

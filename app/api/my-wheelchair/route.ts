@@ -5,10 +5,11 @@ import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/authOptions';
+import { getDbSslOption } from '@/lib/db';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
+  ssl: getDbSslOption(),
 });
 
 export async function GET(request: Request) {

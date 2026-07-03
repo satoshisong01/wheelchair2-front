@@ -6,10 +6,11 @@ import { Pool } from 'pg';
 import { getServerSession } from 'next-auth';
 // 🚨 authOptions 경로 확인 (lib/authOptions 또는 app/api/auth/[...nextauth]/route)
 import { authOptions } from '@/lib/authOptions';
+import { getDbSslOption } from '@/lib/db';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }, // RDS 연결 필수
+  ssl: getDbSslOption(),
 });
 
 interface RouteParams {

@@ -7,10 +7,11 @@ import { Pool } from 'pg';
 import bcrypt from 'bcrypt'; // 🔒 [보안] bcrypt로 일원화 (로그인 검증과 동일 라이브러리)
 import { createAuditLog } from '@/lib/log'; // ⭐️ [추가] 활동 로그 함수 임포트
 import { validatePassword } from '@/lib/password'; // 🔒 [IA-05] 비밀번호 강도 검증
+import { getDbSslOption } from '@/lib/db';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
+  ssl: getDbSslOption(),
 });
 
 export async function POST(req: Request) {

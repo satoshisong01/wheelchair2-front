@@ -1,4 +1,6 @@
 import { Pool, PoolConfig } from 'pg';
+import * as fs from 'fs';
+import * as path from 'path';
 
 // 전역 객체에 pool 타입 정의 (TypeScript 에러 방지)
 declare global {
@@ -17,7 +19,30 @@ export function getDbSslOption(): PoolConfig['ssl'] {
   if (!isRds) return undefined;
 
   const strictMode = process.env.DATABASE_SSL_REJECT_UNAUTHORIZED === 'true';
-  return { rejectUnauthorized: strictMode };
+  const ssl: Record<string, unknown> = {
+    rejectUnauthorized: strictMode,
+    minVersion: 'TLSv1.2',
+  };
+
+  // 🔒 검증 강제(strict) 시 Amazon RDS CA 번들을 신뢰 CA로 주입.
+  //   우선순위: DATABASE_CA_CERT(PEM 문자열, Vercel 권장) > DATABASE_CA_PATH(파일) > certs/rds-global-bundle.pem
+  //   기본값(strict=false)은 현행 동작 그대로 유지 → 배포해도 안 깨짐.
+  if (strictMode) {
+    try {
+      const caPem = process.env.DATABASE_CA_CERT;
+      const caPath =
+        process.env.DATABASE_CA_PATH ||
+        path.join(process.cwd(), 'certs', 'rds-global-bundle.pem');
+      if (caPem && caPem.includes('BEGIN CERTIFICATE')) {
+        ssl.ca = caPem;
+      } else if (fs.existsSync(caPath)) {
+        ssl.ca = fs.readFileSync(caPath, 'utf8');
+      }
+    } catch {
+      // CA 로드 실패 시 시스템 신뢰저장소로 폴백
+    }
+  }
+  return ssl as PoolConfig['ssl'];
 }
 
 // 1. 커넥션 풀 생성 (싱글톤 패턴)

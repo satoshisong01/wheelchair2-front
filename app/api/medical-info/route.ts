@@ -8,11 +8,12 @@ import { Pool } from 'pg';
 // 1. 인증 및 암호화 헬퍼 임포트
 import { authOptions } from '@/lib/authOptions';
 import { encryptMedicalInfo, decryptMedicalInfo } from '@/lib/crypto';
+import { getDbSslOption } from '@/lib/db';
 
 // 2. DB 연결 설정
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }, // RDS 연결 필수
+  ssl: getDbSslOption(),
 });
 
 /**

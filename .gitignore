@@ -23,6 +23,8 @@
 # misc
 .DS_Store
 *.pem
+# 예외: AWS RDS 공개 CA 번들(비밀 아님) — DB TLS 검증용, 커밋 허용
+!certs/rds-global-bundle.pem
 
 #docs
 docs/*

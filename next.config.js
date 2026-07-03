@@ -1,5 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // 0. Vercel 서버리스 함수 번들에 RDS CA 파일 포함 (getDbSslOption이 런타임에 fs로 읽음)
+  //    → 이게 잡히면 DATABASE_CA_CERT 붙여넣기 없이 파일만으로 검증 가능
+  outputFileTracingIncludes: {
+    '/api/**': ['./certs/rds-global-bundle.pem'],
+  },
+
   // 1. 보안 헤더 설정
   async headers() {
     // 🔒 [보안] Content-Security-Policy

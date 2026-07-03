@@ -6,6 +6,11 @@ const nextConfig = {
     // - Next.js + Kakao 지도 + Socket.io(broker.firstcorea.com) + Vercel 환경에 맞게 구성
     // - inline 스크립트/스타일은 Next.js 내부에서 사용되므로 unsafe-inline 허용 (불가피)
     // - Socket.io는 polling+websocket으로 https/wss 모두 사용하므로 명시적으로 broker 도메인 포함
+    // 🔒 운영에서는 평문 전송(http:/ws:) 제거, 개발에서는 HMR(ws://localhost) 위해 유지
+    const isProd = process.env.NODE_ENV === 'production';
+    const connectSrc = isProd
+      ? "connect-src 'self' https: wss: https://broker.firstcorea.com https://broker.firstcorea.com:8080 wss://broker.firstcorea.com wss://broker.firstcorea.com:8080"
+      : "connect-src 'self' https: http: wss: ws: https://broker.firstcorea.com https://broker.firstcorea.com:8080 wss://broker.firstcorea.com wss://broker.firstcorea.com:8080";
     const csp = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://dapi.kakao.com https://t1.daumcdn.net https://*.vercel-insights.com https://*.googleapis.com https://vercel.live https://*.vercel.live",
@@ -13,7 +18,7 @@ const nextConfig = {
       "img-src 'self' data: blob: https: http:",
       "font-src 'self' data: https://fonts.gstatic.com",
       // 🔌 Socket.io / API / 외부 서비스 연결 허용
-      "connect-src 'self' https: http: wss: ws: https://broker.firstcorea.com https://broker.firstcorea.com:8080 wss://broker.firstcorea.com wss://broker.firstcorea.com:8080",
+      connectSrc,
       "frame-src 'self' https:",
       "media-src 'self' blob: data:",
       "object-src 'none'",

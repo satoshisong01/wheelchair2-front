@@ -1,6 +1,13 @@
 const { Pool } = require('pg');
 require('dotenv').config({ path: '.env.local' });
 
+// 🔒 [안전장치] 운영/스테이징에서 DROP SCHEMA public CASCADE(전체 데이터 영구삭제) 실행 방지
+const _env = process.env.NODE_ENV;
+if (_env === 'production' || _env === 'staging') {
+  console.error(`[SAFETY] reset-db.js는 '${_env}' 환경에서 실행할 수 없습니다. (DROP SCHEMA 차단)`);
+  process.exit(1);
+}
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.DATABASE_URL?.includes('rds.amazonaws.com')

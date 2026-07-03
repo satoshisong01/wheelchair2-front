@@ -271,7 +271,6 @@ function WheelchairInfoContent() {
 
     const socket = io(SOCKET_SERVER_URL, {
       transports: ['websocket'],
-      rejectUnauthorized: false,
       secure: true,
       reconnection: true,
       reconnectionAttempts: Infinity,

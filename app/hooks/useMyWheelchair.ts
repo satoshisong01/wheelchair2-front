@@ -180,7 +180,6 @@ export function useMyWheelchair() {
     const socketInstance = io(SOCKET_URL, {
       transports: ['websocket'],
       secure: true,
-      rejectUnauthorized: false,
       reconnection: true,
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,

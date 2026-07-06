@@ -492,13 +492,7 @@ export default function DeviceManagementPage() {
                         {new Date(device.created_at).toLocaleDateString()}
                       </td>
                       <td>
-                        <div
-                          style={{
-                            display: 'flex',
-                            gap: 6,
-                            flexWrap: 'wrap',
-                          }}
-                        >
+                        <div className={styles.badgeGroup}>
                           {(['emergency', 'battery', 'posture'] as NotificationType[]).map(
                             (type) => {
                               const meta = NOTIFICATION_META[type];
@@ -517,23 +511,15 @@ export default function DeviceManagementPage() {
                                   }
                                   disabled={isPending}
                                   title={`${meta.icon} ${meta.label} 알림 ${enabled ? 'ON' : 'OFF'}`}
-                                  style={{
-                                    padding: '4px 8px',
-                                    borderRadius: 6,
-                                    border: '1px solid',
-                                    borderColor: enabled
-                                      ? '#10b981'
-                                      : '#d1d5db',
-                                    background: enabled
-                                      ? '#ecfdf5'
-                                      : '#f3f4f6',
-                                    color: enabled ? '#065f46' : '#6b7280',
-                                    cursor: isPending ? 'wait' : 'pointer',
-                                    fontSize: 12,
-                                    fontWeight: 500,
-                                    opacity: isPending ? 0.6 : 1,
-                                    transition: 'all 0.15s',
-                                  }}
+                                  className={`${styles.badge} ${
+                                    enabled
+                                      ? type === 'emergency'
+                                        ? styles.badgeEmergencyOn
+                                        : type === 'battery'
+                                          ? styles.badgeBatteryOn
+                                          : styles.badgePostureOn
+                                      : styles.badgeOff
+                                  }`}
                                 >
                                   {meta.icon} {meta.label}{' '}
                                   {enabled ? 'ON' : 'OFF'}

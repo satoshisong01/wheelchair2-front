@@ -465,6 +465,14 @@ export default function DeviceManagementPage() {
           {error && <div className={styles.errorBox}>{error}</div>}
           {!isLoading && !error && (
             <table className={styles.table}>
+              <colgroup>
+                <col style={{ width: '19%' }} />
+                <col style={{ width: '18%' }} />
+                <col style={{ width: '13%' }} />
+                <col style={{ width: '17%' }} />
+                <col style={{ width: '18%' }} />
+                <col style={{ width: '15%' }} />
+              </colgroup>
               <thead>
                 <tr>
                   <th>기기 시리얼</th>

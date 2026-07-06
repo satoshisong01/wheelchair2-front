@@ -103,6 +103,9 @@ function WheelchairInfoContent() {
   // 1. 초기 데이터 로딩
   useEffect(() => {
     if (status !== 'authenticated') return;
+    // 🔒 [레이스 방지] 이 effect가 여러 번 실행될 때(status/searchParams 변화), 오래된 실행의
+    //   비동기 결과가 최신 선택을 덮어쓰지 못하도록 취소 플래그로 가드한다.
+    let cancelled = false;
 
     const fetchData = async () => {
       setIsLoading(true);
@@ -111,6 +114,7 @@ function WheelchairInfoContent() {
         const listRes = await fetch(`/api/wheelchairs?t=${Date.now()}`);
         if (!listRes.ok) throw new Error('목록 로딩 실패');
         const list: any[] = await listRes.json();
+        if (cancelled) return;
         setAllWheelchairs(list);
 
         // 2. 현재 선택된 ID 결정
@@ -149,6 +153,8 @@ function WheelchairInfoContent() {
               console.error('알람 로딩 실패', e);
             }
 
+            if (cancelled) return; // 🔒 오래된 실행이 최신 선택을 덮어쓰지 않도록 (간헐적 오선택 방지)
+
             // POSTURE_ADVICE는 "수신 시점"에만 팝업을 띄우도록 합니다.
             setPostureAdviceAt(null);
 
@@ -166,6 +172,9 @@ function WheelchairInfoContent() {
       }
     };
     fetchData();
+    return () => {
+      cancelled = true;
+    };
   }, [status, searchParams]);
 
   // 2. 휠체어 선택 핸들러

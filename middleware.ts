@@ -5,7 +5,9 @@ import { rateLimiter } from '@/lib/rate-limiter';
 
 // 🔒 [보안] Rate Limit이 적용될 경로 (브루트포스 방어)
 const RATE_LIMIT_PATHS = [
-  '/api/auth/callback/credentials', // NextAuth 로그인 시도
+  // NextAuth Credentials 로그인 시도 — provider id가 'device-login'이므로 실제 POST 경로는
+  // /api/auth/callback/device-login (구 '/credentials' 경로는 매칭되지 않아 rate-limit 미발동이었음)
+  '/api/auth/callback/device-login',
   '/api/auth/change-password',
   '/api/auth/profile-submit',
   '/api/auth/re-apply',

@@ -7,6 +7,7 @@ import { Pool } from 'pg';
 import * as dotenv from 'dotenv';
 import { resolve } from 'path';
 import { format } from 'util';
+import * as fs from 'fs';
 
 // .env.local 파일 로드 (배포 환경에서는 .env가 읽히도록 설정)
 dotenv.config(); // dotenv.config()만 호출하여 .env를 읽게 함 (EC2 환경)
@@ -40,7 +41,12 @@ async function testConnection() {
   // 1. pg Pool 설정
   const testPool = new Pool({
     connectionString: databaseUrl,
-    ssl: { rejectUnauthorized: false }, // RDS 연결 시 필수
+    // 🔒 RDS CA 검증 강제 (운영과 동일 조건으로 테스트)
+    ssl: {
+      rejectUnauthorized: true,
+      minVersion: 'TLSv1.2',
+      ca: fs.readFileSync(resolve(__dirname, '..', 'certs', 'rds-global-bundle.pem'), 'utf8'),
+    },
     connectionTimeoutMillis: 5000,
   });
 

@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth';
 // 🚨 authOptions 경로 확인 필수
 import { authOptions } from '@/lib/authOptions';
 import { getDbSslOption } from '@/lib/db';
+import { createAuditLog } from '@/lib/log';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -97,12 +98,19 @@ export async function PATCH(
       return NextResponse.json({ error: 'Device not found' }, { status: 404 });
     }
 
-    // 감사 로그 (운영환경에서 사용자 이메일 노출 방지)
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`[AdminAudit] Device Updated: ${id} by ${session.user.email}`);
-    } else {
-      console.log(`[AdminAudit] Device Updated: ${id}`);
-    }
+    // 🔒 [UC-04] 기기 정보 수정 감사기록 (DB 영속 — 기존 console.log만으로는 감사기록 미생성)
+    await createAuditLog({
+      userId: String(session.user.dbUserId ?? session.user.email ?? 'unknown'),
+      userRole: session.user.role,
+      action: 'DEVICE_UPDATE',
+      details: {
+        wheelchairId: id,
+        updated: { modelName: modelName ?? null, deviceSerial: deviceSerial ?? null },
+        adminEmail: session.user.email,
+      },
+      deviceSerial: result.rows[0].device_serial,
+      userName: session.user.name || undefined,
+    });
 
     return NextResponse.json(result.rows[0]);
   } catch (error) {
@@ -145,20 +153,6 @@ export async function DELETE(
     const serial = lookupResult.rows[0].device_serial;
     const model = lookupResult.rows[0].model_name;
 
-    // ⭐️ [핵심 FIX 2] 감사 로그 기록 (JSON 형태로 시리얼 포함)
-    const logDetails = JSON.stringify({
-      wheelchair_id: id,
-      serial: serial,
-      model: model,
-      adminEmail: adminEmail,
-    });
-    
-    const logQuery = `
-      INSERT INTO admin_audit_logs (action_type, details, admin_user_id, created_at)
-      VALUES ($1, $2, $3, NOW())
-    `;
-    await client.query(logQuery, ['DEVICE_DELETE', logDetails, adminUserId]);
-
     // 3. wheelchairs를 참조하는 모든 테이블을 동적으로 조회 후 삭제
     const fkLookup = await client.query(`
       SELECT
@@ -190,6 +184,17 @@ export async function DELETE(
     await client.query('DELETE FROM wheelchairs WHERE id = $1', [id]);
 
     await client.query('COMMIT'); // 커밋
+
+    // 🔒 [UC-04] 기기 삭제 감사기록 — 표준 스키마(createAuditLog)로 통일
+    //   (기존 직접 INSERT는 구컬럼(action_type/admin_user_id) 기준이라 현행 스키마와 불일치)
+    await createAuditLog({
+      userId: String(adminUserId ?? adminEmail ?? 'unknown'),
+      userRole: session.user.role,
+      action: 'DEVICE_DELETE',
+      details: { wheelchairId: id, serial, model, adminEmail },
+      deviceSerial: serial,
+      userName: session.user.name || undefined,
+    });
 
     console.log(`[Admin] Device Deleted: ${serial} by ${adminEmail}`);
 

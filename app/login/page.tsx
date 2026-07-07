@@ -45,6 +45,18 @@ const styles = {
     fontSize: '1rem',
     width: '100%',
   },
+  // 🔒 [IA-08] 시스템 사용 알림 배너
+  notice: {
+    margin: '0 0 1.25rem 0',
+    padding: '0.75rem',
+    borderRadius: '0.375rem',
+    border: '1px solid #fde68a',
+    backgroundColor: '#fffbeb',
+    color: '#92400e',
+    fontSize: '0.75rem',
+    lineHeight: 1.6,
+    textAlign: 'center' as 'center',
+  },
 };
 
 export default function LoginPage() {
@@ -88,6 +100,12 @@ export default function LoginPage() {
         <div style={styles.card}>
           <h1 style={styles.title}>로그인</h1>
           <p style={styles.message}>서비스 이용을 위해 로그인이 필요합니다.</p>
+
+          {/* 🔒 [IA-08] 시스템 사용 알림 메시지 (인가 사용자 고지) */}
+          <div style={styles.notice}>
+            본 시스템은 <strong>인가된 사용자만</strong> 이용할 수 있습니다. 모든 접속 및 활동은
+            기록·모니터링되며, 무단 접근 시 관련 법령에 따라 책임을 물을 수 있습니다.
+          </div>
 
           <button
             onClick={() => signIn('kakao')} // 'kakao' provider로 로그인

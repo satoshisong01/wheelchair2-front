@@ -3,6 +3,8 @@
  */
 
 require('dotenv').config({ path: '.env.local' });
+const fs = require('fs');
+const path = require('path');
 const { DataSource } = require('typeorm');
 
 async function testConnection() {
@@ -36,8 +38,11 @@ async function testConnection() {
     url: databaseUrl,
     connectTimeoutMS: 5000,
     logging: ['error'],
+    // 🔒 RDS CA 검증 강제 (운영과 동일 조건으로 테스트)
     ssl: {
-      rejectUnauthorized: false, // RDS에서 자체 서명된 인증서를 사용할 수 있음
+      rejectUnauthorized: true,
+      minVersion: 'TLSv1.2',
+      ca: fs.readFileSync(path.join(__dirname, '..', 'certs', 'rds-global-bundle.pem'), 'utf8'),
     },
   });
 

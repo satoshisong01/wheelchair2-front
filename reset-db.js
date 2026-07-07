@@ -1,17 +1,27 @@
 const { Pool } = require('pg');
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config({ path: '.env.local' });
 
-// 🔒 [안전장치] 운영/스테이징에서 DROP SCHEMA public CASCADE(전체 데이터 영구삭제) 실행 방지
-const _env = process.env.NODE_ENV;
-if (_env === 'production' || _env === 'staging') {
-  console.error(`[SAFETY] reset-db.js는 '${_env}' 환경에서 실행할 수 없습니다. (DROP SCHEMA 차단)`);
+// 🔒 [안전장치] 화이트리스트 방식 — development/test가 명시된 경우에만 실행 허용
+//   (NODE_ENV 미설정 포함 그 외 전부 차단. 로컬 실행 시: NODE_ENV=development node reset-db.js)
+const ALLOWED_ENVS = ['development', 'test'];
+if (!ALLOWED_ENVS.includes(process.env.NODE_ENV ?? '')) {
+  console.error(
+    `[SAFETY] reset-db.js는 NODE_ENV가 development/test일 때만 실행됩니다. (현재: '${process.env.NODE_ENV ?? '미설정'}' — DROP SCHEMA 차단)`,
+  );
   process.exit(1);
 }
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  // 🔒 RDS 연결 시 CA 검증 강제 (CA 파일이 없으면 즉시 실패 — 개발 스크립트라 폴백 불필요)
   ssl: process.env.DATABASE_URL?.includes('rds.amazonaws.com')
-    ? { rejectUnauthorized: false }
+    ? {
+        rejectUnauthorized: true,
+        minVersion: 'TLSv1.2',
+        ca: fs.readFileSync(path.join(__dirname, 'certs', 'rds-global-bundle.pem'), 'utf8'),
+      }
     : undefined,
 });
 

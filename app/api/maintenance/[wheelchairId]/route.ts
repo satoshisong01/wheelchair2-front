@@ -2,6 +2,8 @@
 // 📝 설명: TypeORM 제거, Raw SQL 적용, UUID 호환, 권한 체크 로직 이식 완료
 
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/validate';
 import { Pool } from 'pg';
 import { getServerSession } from 'next-auth';
 // 🚨 authOptions 경로 확인 (lib/authOptions 또는 app/api/auth/[...nextauth]/route)
@@ -97,17 +99,23 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    // 2. 요청 Body 파싱
-    const body = await request.json();
-    const { reportDate, description, technician } = body;
-
-    // 3. 필수 값 검증
-    if (!reportDate || !description) {
+    // 2. 요청 Body 파싱 + 검증
+    const parsed = await parseJsonBody(
+      request,
+      z.object({
+        reportDate: z.string().min(1).max(200),
+        description: z.string().min(1).max(10000),
+        technician: z.string().max(200).nullish(),
+      }),
+      'Missing required fields: reportDate and description',
+    );
+    if ('error' in parsed) {
       return NextResponse.json(
         { error: 'Missing required fields: reportDate and description' },
         { status: 400 }
       );
     }
+    const { reportDate, description, technician } = parsed.data;
 
     // 4. 휠체어 존재 여부 확인
     const checkQuery = 'SELECT 1 FROM wheelchairs WHERE id = $1';

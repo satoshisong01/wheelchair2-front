@@ -2,6 +2,8 @@
 
 import { NextResponse, NextRequest } from 'next/server';
 import { createAuditLog } from '@/lib/log'; // 기존 로그 함수 사용
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/validate';
 
 // 서버 모니터링 스크립트가 POST 요청을 보낼 엔드포인트
 // 🔒 [보안] SERVER_HEALTH_SECRET 헤더로 인증 (외부 무인증 호출 차단)
@@ -18,15 +20,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: '접근 권한이 없습니다.' }, { status: 403 });
     }
 
-    const { cpu_percent, memory_free_gb, alert_reason, server_id, process_info } = await req.json();
-
-    // 2. 필수 입력값 검증 (최소한의 정보)
-    if (!cpu_percent || !alert_reason || !server_id) {
-      return NextResponse.json(
-        { message: '필수 서버 상태 정보가 누락되었습니다.' },
-        { status: 400 },
-      );
-    }
+    // 2. 요청 body 파싱 + 검증 (정상 입력은 그대로 통과, 과대 크기/타입만 차단)
+    const parsed = await parseJsonBody(
+      req,
+      z.object({
+        cpu_percent: z.coerce.number(),
+        memory_free_gb: z.coerce.number().nullish(),
+        alert_reason: z.string().min(1).max(10000),
+        server_id: z.string().min(1).max(100),
+        process_info: z.any().optional(),
+      }),
+      '필수 서버 상태 정보가 누락되었습니다.',
+    );
+    if ('error' in parsed) return parsed.error;
+    const { cpu_percent, memory_free_gb, alert_reason, server_id, process_info } = parsed.data;
 
     // 3. 감사 로그 기록
     // userRole: 기존 ADMIN 역할로 기록 (권한 필터링을 타기 위해)

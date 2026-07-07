@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth'; // 세션 필수
 import { authOptions } from '@/lib/authOptions';
 import { Pool } from 'pg';
 import { getDbSslOption } from '@/lib/db';
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/validate';
 
 const pgPool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -17,7 +19,16 @@ export async function POST(req: Request) {
     }
 
     // 🟢 Body에서 데이터 받기
-    const { wheelchairId, type, enabled } = await req.json();
+    const parsed = await parseJsonBody(
+      req,
+      z.object({
+        wheelchairId: z.any().optional(),
+        type: z.string().max(50).optional(),
+        enabled: z.boolean().optional(),
+      }),
+    );
+    if ('error' in parsed) return parsed.error;
+    const { wheelchairId, type, enabled } = parsed.data;
 
     // 현재 로그인한 사용자 ID (Kakao ID 등)
     // device_auths 테이블의 어떤 컬럼이 사용자 식별자인지에 따라 수정 필요 (여기선 id 혹은 user_id 추정)

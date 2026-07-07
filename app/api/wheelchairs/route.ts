@@ -8,6 +8,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { createAuditLog } from '@/lib/log';
 import { getDbSslOption } from '@/lib/db';
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/validate';
 
 dotenv.config();
 
@@ -148,16 +150,21 @@ export async function POST(req: Request) {
   }
 
   try {
-    const body = await req.json();
-    const { device_serial, model_name } = body;
-
-    // ⭐️ [추가] 필수 값 검증
-    if (!device_serial || !model_name) {
+    const parsed = await parseJsonBody(
+      req,
+      z.object({
+        device_serial: z.string().min(1).max(100),
+        model_name: z.string().min(1).max(200),
+      }),
+      '시리얼 번호와 모델명이 필요합니다.',
+    );
+    if ('error' in parsed) {
       return NextResponse.json(
         { error: '시리얼 번호와 모델명이 필요합니다.' },
         { status: 400 }
       );
     }
+    const { device_serial, model_name } = parsed.data;
 
     // UUID 자동 생성 (gen_random_uuid)
     const query = `

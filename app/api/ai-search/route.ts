@@ -1,6 +1,8 @@
 // app/api/ai-search/route.ts (안전성 강화)
 
 import { NextResponse, NextRequest } from 'next/server';
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/validate';
 import { GoogleGenAI } from '@google/genai';
 import { TimestreamQueryClient, QueryCommand } from '@aws-sdk/client-timestream-query';
 import { getServerSession } from 'next-auth';
@@ -63,11 +65,13 @@ export async function POST(request: NextRequest) {
   console.log('[LOG 3] POST function entered.');
   try {
     // [LOG 4] JSON Body 파싱 시도
-    const { question } = await request.json(); // [LOG 5] JSON Body 파싱 완료
-
-    if (!question || typeof question !== 'string') {
-      return NextResponse.json({ message: '질문이 없습니다.' }, { status: 400 });
-    }
+    const parsed = await parseJsonBody(
+      request,
+      z.object({ question: z.string().min(1).max(10000) }),
+      '질문이 없습니다.',
+    );
+    if ('error' in parsed) return parsed.error;
+    const { question } = parsed.data; // [LOG 5] JSON Body 파싱 완료
 
     // 🔒 [보안] 사용자 입력 길이 제한 (과도한 비용/DoS 방지)
     if (question.length > 500) {

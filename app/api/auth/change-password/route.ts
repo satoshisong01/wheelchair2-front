@@ -8,6 +8,8 @@ import bcrypt from 'bcrypt'; // 🔒 [보안] bcrypt로 일원화 (로그인 검
 import { createAuditLog } from '@/lib/log'; // ⭐️ [추가] 활동 로그 함수 임포트
 import { validatePassword } from '@/lib/password'; // 🔒 [IA-05] 비밀번호 강도 검증
 import { getDbSslOption } from '@/lib/db';
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/validate';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -35,11 +37,16 @@ export async function POST(req: Request) {
       );
     }
 
-    const { currentPassword, newPassword } = await req.json();
-
-    if (!currentPassword || !newPassword) {
-      return NextResponse.json({ message: '입력 값이 부족합니다.' }, { status: 400 });
-    }
+    const parsed = await parseJsonBody(
+      req,
+      z.object({
+        currentPassword: z.string().min(1).max(200),
+        newPassword: z.string().min(1).max(200),
+      }),
+      '입력 값이 부족합니다.',
+    );
+    if ('error' in parsed) return parsed.error;
+    const { currentPassword, newPassword } = parsed.data;
 
     // 🔒 [IA-05] 새 비밀번호 강도 검증 (8자 이상 + 영문·숫자·특수 중 2종 이상)
     const pwCheck = validatePassword(newPassword);

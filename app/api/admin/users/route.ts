@@ -5,6 +5,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions'; 
 import { query } from '@/lib/db';
 import { createAuditLog } from '@/lib/log'; // 🔒 [F6] 역할 변경 감사 로그
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/validate';
 
 // ------------------------------
 // GET: PENDING, USER, ADMIN 사용자 목록 조회
@@ -50,15 +52,21 @@ export async function PUT(req: NextRequest) {
     }
 
     try {
-        const { userId, newRole, rejectionReason } = await req.json();
-
-        if (!userId || !newRole) {
-            return NextResponse.json({ message: '필수 필드가 누락되었습니다.' }, { status: 400 });
-        }
+        const parsed = await parseJsonBody(
+            req,
+            z.object({
+                userId: z.string().min(1).max(100),
+                newRole: z.string().min(1).max(30),
+                rejectionReason: z.string().max(500).nullish(),
+            }),
+            '필수 필드가 누락되었습니다.',
+        );
+        if ('error' in parsed) return parsed.error;
+        const { userId, newRole, rejectionReason } = parsed.data;
 
         // 🔒 [보안] 역할 화이트리스트 검증 — MASTER 권한 자동 부여 차단
         const ALLOWED_ROLES = ['ADMIN', 'USER', 'REJECTED', 'PENDING'] as const;
-        if (!ALLOWED_ROLES.includes(newRole)) {
+        if (!(ALLOWED_ROLES as readonly string[]).includes(newRole)) {
             return NextResponse.json({ message: '유효하지 않은 역할입니다.' }, { status: 400 });
         }
 

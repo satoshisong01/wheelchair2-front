@@ -7,6 +7,8 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/authOptions';
 import { encryptMedicalInfo } from '@/lib/crypto'; // lib/crypto.ts 수정 필수 (emergencyContact)
 import { getDbSslOption } from '@/lib/db';
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/validate';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -66,27 +68,38 @@ export async function POST(request: Request) {
     }
     const userId = session.user.dbUserId;
 
-    // 2. 요청 데이터 파싱
-    const body = await request.json();
-    const {
-      nickname,
-      location1, // 시/도
-      location2, // 시/군/구
-      deviceSerial,
-      modelName,
-      purchaseDate,
-      disabilityGrade,
-      medicalConditions,
-      emergencyContact, // (추가 필드)
-    } = body;
-
-    // 3. 필수 값 검증
-    if (!nickname || !deviceSerial || !disabilityGrade || !medicalConditions) {
+    // 2. 요청 데이터 파싱 + 검증 (정상 입력은 그대로 통과, 과대 크기/타입만 차단)
+    const parsed = await parseJsonBody(
+      request,
+      z.object({
+        nickname: z.string().min(1).max(200),
+        location1: z.string().max(200).nullish(), // 시/도
+        location2: z.string().max(200).nullish(), // 시/군/구
+        deviceSerial: z.string().min(1).max(100),
+        modelName: z.string().max(200).nullish(),
+        purchaseDate: z.any().optional(),
+        disabilityGrade: z.string().min(1).max(100),
+        medicalConditions: z.string().min(1).max(10000),
+        emergencyContact: z.string().max(200).nullish(), // (추가 필드)
+      }),
+    );
+    if ('error' in parsed) {
       return NextResponse.json(
         { error: '필수 입력값이 누락되었습니다.' },
         { status: 400 }
       );
     }
+    const {
+      nickname,
+      location1,
+      location2,
+      deviceSerial,
+      modelName,
+      purchaseDate,
+      disabilityGrade,
+      medicalConditions,
+      emergencyContact,
+    } = parsed.data;
 
     // 4. 트랜잭션 시작
     await client.query('BEGIN');

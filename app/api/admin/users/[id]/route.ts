@@ -4,6 +4,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { query } from '@/lib/db'; // ✅ 공용 DB 연결 도구 사용
 import { createAuditLog } from '@/lib/log'; // ✅ 공용 로그 도구 사용
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/validate';
 
 // Next.js 15+ 라우트 파라미터 타입
 interface RouteParams {
@@ -65,13 +67,20 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       );
     }
 
-    // ⭐️ [FIX] req -> request 로 수정 (오타 해결!)
-    const body = await request.json();
-    const { role, reason } = body; // role: 'ADMIN' or 'REJECTED'
+    const parsed = await parseJsonBody(
+      request,
+      z.object({
+        role: z.string().min(1).max(50),
+        reason: z.string().max(10000).nullish(),
+      }),
+      '유효하지 않은 역할입니다.',
+    );
+    if ('error' in parsed) return parsed.error;
+    const { role, reason } = parsed.data; // role: 'ADMIN' or 'REJECTED'
 
     // 🔒 [보안] 역할 화이트리스트 검증 — MASTER 권한 자동 부여 차단
     const ALLOWED_ROLES = ['ADMIN', 'USER', 'REJECTED', 'PENDING'] as const;
-    if (!role || !ALLOWED_ROLES.includes(role)) {
+    if (!role || !(ALLOWED_ROLES as readonly string[]).includes(role)) {
       return NextResponse.json(
         { message: '유효하지 않은 역할입니다.' },
         { status: 400 }

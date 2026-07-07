@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/authOptions'; 
+import { authOptions } from '@/lib/authOptions';
 import { query } from '@/lib/db';
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/validate';
 
 export async function POST(req: Request) {
   try {
@@ -13,11 +15,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: '인증되지 않은 사용자입니다.' }, { status: 401 });
     }
 
-    const { name, organization, phoneNumber } = await req.json();
-
-    if (!name || !organization || !phoneNumber) {
-      return NextResponse.json({ message: '필수 값이 누락되었습니다.' }, { status: 400 });
-    }
+    const parsed = await parseJsonBody(
+      req,
+      z.object({
+        name: z.string().min(1).max(100),
+        organization: z.string().min(1).max(200),
+        phoneNumber: z.string().min(1).max(50),
+      }),
+      '필수 값이 누락되었습니다.',
+    );
+    if ('error' in parsed) return parsed.error;
+    const { name, organization, phoneNumber } = parsed.data;
 
     // 1. DB 업데이트 (GUEST -> PENDING)
     const sql = `

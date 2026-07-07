@@ -8,6 +8,8 @@ import { authOptions } from '@/lib/authOptions';
 import { Pool } from 'pg';
 import { createAuditLog } from '@/lib/log';
 import { getDbSslOption } from '@/lib/db';
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/validate';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -49,17 +51,16 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     );
   }
 
-  let body: { type?: NotificationType; enabled?: boolean };
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json(
-      { message: '잘못된 요청 형식입니다.' },
-      { status: 400 }
-    );
-  }
-
-  const { type, enabled } = body;
+  const parsed = await parseJsonBody(
+    req,
+    z.object({
+      type: z.string().min(1).max(50),
+      enabled: z.boolean().optional(),
+    }),
+    'type 또는 enabled 값이 올바르지 않습니다.',
+  );
+  if ('error' in parsed) return parsed.error;
+  const { type, enabled } = parsed.data;
 
   if (!type || !(type in COLUMN_MAP) || typeof enabled !== 'boolean') {
     return NextResponse.json(

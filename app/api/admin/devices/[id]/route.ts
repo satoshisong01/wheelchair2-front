@@ -8,6 +8,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { getDbSslOption } from '@/lib/db';
 import { createAuditLog } from '@/lib/log';
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/validate';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -80,8 +82,18 @@ export async function PATCH(
     }
 
     const { id } = await params;
-    const body = await request.json();
-    const { modelName, deviceSerial } = body;
+    const parsed = await parseJsonBody(
+      request,
+      z.object({
+        modelName: z.string().max(200).nullish(),
+        deviceSerial: z.string().max(100).nullish(),
+      }),
+      '입력값이 올바르지 않습니다.',
+    );
+    if ('error' in parsed) {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+    const { modelName, deviceSerial } = parsed.data;
 
     // 업데이트 쿼리
     const query = `

@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/authOptions';
 import { Pool } from 'pg';
 import { getDbSslOption } from '@/lib/db';
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/validate';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -15,7 +17,16 @@ export async function POST(req: Request) {
     if (!session || !session.user)
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
-    const { alarmId, all, resolvePostureAdvice } = await req.json();
+    const parsed = await parseJsonBody(
+      req,
+      z.object({
+        alarmId: z.any().optional(),
+        all: z.boolean().optional(),
+        resolvePostureAdvice: z.boolean().optional(),
+      }),
+    );
+    if ('error' in parsed) return parsed.error;
+    const { alarmId, all, resolvePostureAdvice } = parsed.data;
     const wheelchairId = (session.user as any).wheelchairId;
 
     const client = await pool.connect();

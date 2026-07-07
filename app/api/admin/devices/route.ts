@@ -7,6 +7,8 @@ import { query, default as pool } from '@/lib/db';
 import bcrypt from 'bcrypt';
 import { createAuditLog } from '@/lib/log'; // ⭐️ 감사 로그 임포트
 import { validatePassword } from '@/lib/password'; // 🔒 [IA-05] 비밀번호 강도 검증
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/validate';
 
 // ------------------------------
 // GET: 휠체어/기기 목록 조회 (ADMIN/MASTER 전용)
@@ -73,15 +75,21 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const parsed = await parseJsonBody(
+    req,
+    z.object({
+      deviceSerial: z.string().min(1).max(100),
+      deviceId: z.string().min(1).max(100),
+      password: z.string().min(1).max(200),
+      modelName: z.string().max(200).nullish(),
+      userGender: z.string().max(50).nullish(),
+      userWeight: z.any().optional(),
+    }),
+    '필수 필드가 누락되었습니다.',
+  );
+  if ('error' in parsed) return parsed.error;
   const { deviceSerial, deviceId, password, modelName, userGender, userWeight } =
-    await req.json();
-
-  if (!deviceSerial || !deviceId || !password) {
-    return NextResponse.json(
-      { message: '필수 필드가 누락되었습니다.' },
-      { status: 400 }
-    );
-  }
+    parsed.data;
 
   // 🔒 [IA-05] 기기 비밀번호 강도 검증 (8자 이상 + 영문·숫자·특수 중 2종 이상)
   const pwCheck = validatePassword(password);
@@ -180,14 +188,15 @@ export async function DELETE(req: NextRequest) {
     );
   }
 
-  const { wheelchairId } = await req.json();
-
-  if (!wheelchairId) {
-    return NextResponse.json(
-      { message: '휠체어 ID가 필요합니다.' },
-      { status: 400 }
-    );
-  }
+  const parsed = await parseJsonBody(
+    req,
+    z.object({
+      wheelchairId: z.string().min(1).max(100),
+    }),
+    '휠체어 ID가 필요합니다.',
+  );
+  if ('error' in parsed) return parsed.error;
+  const { wheelchairId } = parsed.data;
 
   const client = await pool.connect();
   try {

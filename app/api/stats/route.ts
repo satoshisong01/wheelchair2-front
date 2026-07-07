@@ -5,6 +5,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { GoogleGenAI } from '@google/genai';
 import { TimestreamQueryClient, QueryCommand } from '@aws-sdk/client-timestream-query';
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/validate';
 
 // AWS Timestream 클라이언트 설정
 const queryClient = new TimestreamQueryClient({
@@ -259,6 +261,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
     }
 
+    const parsed = await parseJsonBody(
+      request,
+      z.object({
+        mode: z.string().max(50).optional(),
+        startDate: z.string().max(100).optional(),
+        endDate: z.string().max(100).optional(),
+        compareDates: z.array(z.string()).optional(),
+        deviceId: z.string().max(100).nullish(),
+        metric: z.string().max(50).optional(),
+        unit: z.string().max(50).optional(),
+        startHour: z.string().max(100).optional(),
+        endHour: z.string().max(100).optional(),
+      }),
+      '입력값이 올바르지 않습니다.',
+    );
+    if ('error' in parsed) return parsed.error;
     const {
       mode,
       startDate,
@@ -269,7 +287,7 @@ export async function POST(request: NextRequest) {
       unit: timeUnit,
       startHour,
       endHour,
-    } = await request.json();
+    } = parsed.data;
 
     if (mode === 'RANGE' && (!startDate || !endDate)) {
       return NextResponse.json({ message: '기간 범위 오류' }, { status: 400 });

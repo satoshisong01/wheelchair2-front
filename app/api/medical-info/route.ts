@@ -9,6 +9,8 @@ import { Pool } from 'pg';
 import { authOptions } from '@/lib/authOptions';
 import { encryptMedicalInfo, decryptMedicalInfo } from '@/lib/crypto';
 import { getDbSslOption } from '@/lib/db';
+import { z } from 'zod';
+import { parseJsonBody } from '@/lib/validate';
 
 // 2. DB 연결 설정
 const pool = new Pool({
@@ -79,17 +81,22 @@ export async function POST(request: Request) {
     }
     const userId = session.user.dbUserId;
 
-    // 2. 요청 데이터 파싱
-    const body = await request.json();
-    const { disabilityGrade, medicalConditions, emergencyContact } = body;
-
-    // 유효성 검사
-    if (!disabilityGrade || !medicalConditions) {
+    // 2. 요청 데이터 파싱 + 검증 (정상 입력은 그대로 통과, 과대 크기/타입만 차단)
+    const parsed = await parseJsonBody(
+      request,
+      z.object({
+        disabilityGrade: z.string().min(1).max(100),
+        medicalConditions: z.string().min(1).max(10000),
+        emergencyContact: z.string().max(200).nullish(),
+      }),
+    );
+    if ('error' in parsed) {
       return NextResponse.json(
         { error: '장애 등급과 특이사항은 필수입니다. "없음"을 입력해주세요.' },
         { status: 400 }
       );
     }
+    const { disabilityGrade, medicalConditions, emergencyContact } = parsed.data;
 
     // 3. 데이터 암호화
     const encryptedData = encryptMedicalInfo({

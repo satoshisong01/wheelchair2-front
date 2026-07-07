@@ -1,11 +1,11 @@
 // app/api/profile/route.ts
-// 📝 설명: TypeORM 제거, Raw SQL 트랜잭션 적용, 유저+의료+휠체어 통합 업데이트
+// 📝 설명: TypeORM 제거, Raw SQL 트랜잭션 적용, 유저+휠체어 통합 업데이트
+//   (의료정보 수집 기능 제거 — 최소 수집 원칙)
 
 import { NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/authOptions';
-import { encryptMedicalInfo } from '@/lib/crypto'; // lib/crypto.ts 수정 필수 (emergencyContact)
 import { getDbSslOption } from '@/lib/db';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/validate';
@@ -56,7 +56,7 @@ export async function GET() {
   }
 }
 
-// 2. POST: 프로필 + 의료정보 + 휠체어 통합 등록/수정 (트랜잭션 적용)
+// 2. POST: 프로필 + 휠체어 통합 등록/수정 (트랜잭션 적용)
 export async function POST(request: Request) {
   const client = await pool.connect(); // 트랜잭션을 위해 클라이언트 연결
 
@@ -78,9 +78,6 @@ export async function POST(request: Request) {
         deviceSerial: z.string().min(1).max(100),
         modelName: z.string().max(200).nullish(),
         purchaseDate: z.any().optional(),
-        disabilityGrade: z.string().min(1).max(100),
-        medicalConditions: z.string().min(1).max(10000),
-        emergencyContact: z.string().max(200).nullish(), // (추가 필드)
       }),
     );
     if ('error' in parsed) {
@@ -96,9 +93,6 @@ export async function POST(request: Request) {
       deviceSerial,
       modelName,
       purchaseDate,
-      disabilityGrade,
-      medicalConditions,
-      emergencyContact,
     } = parsed.data;
 
     // 4. 트랜잭션 시작
@@ -120,35 +114,7 @@ export async function POST(request: Request) {
     ]);
 
     // -------------------------------------------------------------
-    // (B) MedicalInfo 업데이트 (Upsert)
-    // -------------------------------------------------------------
-    const encryptedData = encryptMedicalInfo({
-      disabilityGrade,
-      medicalConditions,
-      emergencyContact,
-    });
-
-    const upsertMedicalQuery = `
-      INSERT INTO medical_info (
-        user_id, disability_grade, medical_conditions, emergency_contact, updated_at
-      )
-      VALUES ($1, $2, $3, $4, NOW())
-      ON CONFLICT (user_id) 
-      DO UPDATE SET 
-        disability_grade = $2, 
-        medical_conditions = $3,
-        emergency_contact = $4,
-        updated_at = NOW()
-    `;
-    await client.query(upsertMedicalQuery, [
-      userId,
-      encryptedData.disabilityGrade,
-      encryptedData.medicalConditions,
-      encryptedData.emergencyContact || null,
-    ]);
-
-    // -------------------------------------------------------------
-    // (C) 휠체어 등록 및 연결 (UserWheelchair 매핑)
+    // (B) 휠체어 등록 및 연결 (UserWheelchair 매핑)
     // -------------------------------------------------------------
 
     // C-1. 휠체어 찾기 (없으면 생성, 있으면 업데이트)

@@ -113,15 +113,6 @@ export interface Role {
   canViewBattery: boolean;
   canViewAlerts: boolean;
   canViewLocation: boolean;
-  canViewMedicalInfo: boolean;
-}
-export interface MedicalInfo {
-  id: number;
-  userId: number;
-  disabilityGrade: string;
-  medicalConditions: string;
-  createdAt: Date;
-  updatedAt?: Date;
 }
 export interface UserWheelchair {
   userId: number;

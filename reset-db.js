@@ -77,18 +77,6 @@ async function resetDatabase() {
       );
     `);
 
-    // 5. MedicalInfo 테이블 (의료 정보 - 1:1)
-    await client.query(`
-      CREATE TABLE medical_info (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID UNIQUE REFERENCES users(id) ON DELETE CASCADE,
-        disability_grade VARCHAR(100), -- 장애 등급
-        medical_conditions TEXT,       -- 기저 질환 (암호화 저장)
-        created_at TIMESTAMP DEFAULT NOW(),
-        updated_at TIMESTAMP DEFAULT NOW()
-      );
-    `);
-
     // 6. DeviceAuth 테이블 (기기 로그인용 - 1:1)
     await client.query(`
       CREATE TABLE device_auths (

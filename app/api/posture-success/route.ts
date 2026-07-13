@@ -47,8 +47,10 @@ export async function POST() {
     try {
       // 1. posture_daily: 기기당 하루 1행, 오늘 행이 있으면 count+1, 없으면 (오늘, 1) INSERT
       const upsert = await client.query(
+        // 🕒 KST 자정 기준으로 하루를 자른다 (사용시간·거리 및 자정 cron과 통일).
+        //    CURRENT_DATE(UTC)면 KST 00~09시 카운트가 전날로 집계되던 문제 수정.
         `INSERT INTO posture_daily (wheelchair_id, date, count)
-         VALUES ($1, CURRENT_DATE, 1)
+         VALUES ($1, (now() AT TIME ZONE 'Asia/Seoul')::date, 1)
          ON CONFLICT (wheelchair_id, date) DO UPDATE SET count = posture_daily.count + 1
          RETURNING count`,
         [wheelchairId]

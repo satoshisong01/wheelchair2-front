@@ -161,6 +161,10 @@ export function useMyWheelchair() {
           console.warn(`⚠️ 데이터 로드 실패 (${retryCount + 1}/3), 3초 후 재시도...`);
           setTimeout(() => fetchData(retryCount + 1), 3000);
           return;
+        } else {
+          // 🟢 [복구력] 최종 실패 시에도 data를 null로 두지 않고 빈 상태로 시드.
+          //    이후 소켓 값이 이 상태에 병합되어 화면이 스스로 채워진다.
+          setData((prev) => prev ?? ({ status: {} } as DashboardWheelchair));
         }
       } catch (error) {
         console.error('Failed to fetch wheelchair data', error);
@@ -169,6 +173,7 @@ export function useMyWheelchair() {
           setTimeout(() => fetchData(retryCount + 1), 3000);
           return;
         }
+        setData((prev) => prev ?? ({ status: {} } as DashboardWheelchair));
       } finally {
         setLoading(false);
       }
@@ -178,7 +183,8 @@ export function useMyWheelchair() {
 
     // 2. 소켓 연결 설정 (재연결 강화)
     const socketInstance = io(SOCKET_URL, {
-      transports: ['websocket'],
+      // 🟢 [복구력] websocket 업그레이드가 막힌 망에서도 polling으로 연결 유지
+      transports: ['websocket', 'polling'],
       secure: true,
       reconnection: true,
       reconnectionAttempts: Infinity,
@@ -229,9 +235,12 @@ export function useMyWheelchair() {
 
       // 🟢 camelCase로 온 경사/각도 필드를 snake_case와 함께 매핑
       setData((prev) => {
-        if (!prev) return prev;
+        // 🟢 [복구력] prev(data)가 null이어도 실시간 소켓 데이터로 상태를 '생성'한다.
+        //    (기존 if(!prev) return prev 는 초기 REST 실패 시 소켓 값을 전부 버려서,
+        //     앱 재시작 전까지 화면이 빈 채로 굳는 근본 원인이었음)
+        const base = (prev ?? ({ status: {} } as DashboardWheelchair));
 
-        const prevStatus = prev.status || {};
+        const prevStatus = base.status || {};
         const nextStatus: any = { ...prevStatus };
 
         const assign = (key: string, value: any) => {
@@ -279,7 +288,7 @@ export function useMyWheelchair() {
         nextStatus.last_seen = new Date().toISOString();
 
         return {
-          ...prev,
+          ...base,
           status: nextStatus,
         } as DashboardWheelchair;
       });
@@ -335,7 +344,22 @@ export function useMyWheelchair() {
 
     setSocket(socketInstance);
 
+    // 📱 [복구력] 앱이 백그라운드→포그라운드로 복귀(WebView resume)하면
+    //    소켓 재연결 + 최신 데이터 재조회 → 백그라운드 중 끊긴 채로 빈 화면 유지 방지
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        if (!socketInstance.connected) socketInstance.connect();
+        fetchData();
+      }
+    };
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibility);
+    }
+
     return () => {
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleVisibility);
+      }
       socketInstance.disconnect();
     };
   }, [session]);

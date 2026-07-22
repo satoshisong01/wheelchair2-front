@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
+import PostureEventAnglesModal from './PostureEventAnglesModal';
 
 interface WheelchairOption {
   id: string;
@@ -78,6 +79,8 @@ export default function DeviceUsagePage() {
   const [rows, setRows] = useState<DailyRow[]>([]);
   const [isFullQuery, setIsFullQuery] = useState(false);
   const [loading, setLoading] = useState(false);
+  // 욕창 방지 횟수 클릭 시 이벤트별 각도 확인 모달
+  const [modalRow, setModalRow] = useState<DailyRow | null>(null);
 
   // 컬럼 필터: 기본은 전부 ON
   const [visibleCols, setVisibleCols] = useState<Record<ColumnKey, boolean>>({
@@ -320,7 +323,12 @@ export default function DeviceUsagePage() {
                 {visibleCols.distance && <th className={styles.thCount}>주행거리</th>}
                 {visibleCols.location && <th className={styles.thCount}>위경도</th>}
                 {visibleCols.ulcer && (
-                  <th className={styles.thCount}>욕창 방지 횟수 (35° 2분 유지)</th>
+                  <th
+                    className={styles.thCount}
+                    title="횟수를 클릭하면 자세 변경 이벤트별 휠체어 각도(±30초)를 확인할 수 있습니다."
+                  >
+                    욕창 방지 횟수 (35° 2분 유지)
+                  </th>
                 )}
               </tr>
             </thead>
@@ -338,7 +346,22 @@ export default function DeviceUsagePage() {
                   {visibleCols.location && (
                     <td className={styles.tdCount}>{formatLocation(r.latitude, r.longitude)}</td>
                   )}
-                  {visibleCols.ulcer && <td className={styles.tdCount}>{r.ulcer_count}회</td>}
+                  {visibleCols.ulcer && (
+                    <td className={styles.tdCount}>
+                      {r.ulcer_count > 0 ? (
+                        <button
+                          type="button"
+                          className={styles.ulcerLink}
+                          onClick={() => setModalRow(r)}
+                          title="클릭하면 자세 변경 이벤트별 휠체어 각도(±30초)를 확인할 수 있습니다."
+                        >
+                          {r.ulcer_count}회
+                        </button>
+                      ) : (
+                        `${r.ulcer_count}회`
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -359,6 +382,15 @@ export default function DeviceUsagePage() {
           </table>
         </div>
       )}
+
+      <PostureEventAnglesModal
+        open={modalRow !== null}
+        onClose={() => setModalRow(null)}
+        wheelchairId={modalRow?.wheelchair_id ?? ''}
+        deviceSerial={modalRow?.device_serial ?? ''}
+        date={modalRow?.date ? modalRow.date.slice(0, 10) : ''}
+        ulcerCount={modalRow?.ulcer_count ?? 0}
+      />
     </div>
   );
 }

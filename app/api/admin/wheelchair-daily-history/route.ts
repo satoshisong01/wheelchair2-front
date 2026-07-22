@@ -136,7 +136,7 @@ async function fetchTimestreamDaily(
   // 양(+)의 증가분만 합산 → 실제 일별 사용시간. (MAX는 최장 세션만 잡히므로 부정확)
   const optQuery = `
     SELECT wheelchair_id,
-           DATE_FORMAT(BIN(time + 9h, 1d), '%Y-%m-%d') AS day,
+           day,
            SUM(pos_delta) AS operating_min
     FROM (
       SELECT wheelchair_id,
@@ -157,34 +157,40 @@ async function fetchTimestreamDaily(
     GROUP BY wheelchair_id, day
   `;
 
-  const optCommand = new QueryCommand({ QueryString: optQuery.trim() });
-  const optResponse = await queryClient.send(optCommand);
+  // OPT 집계가 실패해도 나머지(주행시간·거리·위경도·욕창횟수)는 정상 반환해야 하므로 격리한다.
+  try {
+    const optCommand = new QueryCommand({ QueryString: optQuery.trim() });
+    const optResponse = await queryClient.send(optCommand);
 
-  (optResponse.Rows || []).forEach((row) => {
-    const data = row.Data;
-    if (!data || data.length < 3) return;
+    (optResponse.Rows || []).forEach((row) => {
+      const data = row.Data;
+      if (!data || data.length < 3) return;
 
-    const wcId = data[0]?.ScalarValue || '';
-    const day = data[1]?.ScalarValue || '';
-    const operatingMin = parseFloat(data[2]?.ScalarValue || '0');
+      const wcId = data[0]?.ScalarValue || '';
+      const day = data[1]?.ScalarValue || '';
+      const operatingMin = parseFloat(data[2]?.ScalarValue || '0');
 
-    if (!wcId || !day) return;
+      if (!wcId || !day) return;
 
-    const key = `${wcId}|${day}`;
-    if (result.has(key)) {
-      result.get(key)!.operating_min = operatingMin;
-    } else {
-      result.set(key, {
-        wheelchair_id: wcId,
-        date: day,
-        runtime_min: null,
-        distance_m: null,
-        latitude: null,
-        longitude: null,
-        operating_min: operatingMin,
-      });
-    }
-  });
+      const key = `${wcId}|${day}`;
+      if (result.has(key)) {
+        result.get(key)!.operating_min = operatingMin;
+      } else {
+        result.set(key, {
+          wheelchair_id: wcId,
+          date: day,
+          runtime_min: null,
+          distance_m: null,
+          latitude: null,
+          longitude: null,
+          operating_min: operatingMin,
+        });
+      }
+    });
+  } catch (e) {
+    // 사용시간(OPT)만 생략되고 나머지 데이터는 정상 표시됨
+    console.error('[wheelchair-daily-history] operating_time 집계 실패:', e);
+  }
 
   return result;
 }

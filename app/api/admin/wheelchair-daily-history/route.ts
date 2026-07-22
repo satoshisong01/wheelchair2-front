@@ -48,6 +48,7 @@ interface DailyRow {
   device_serial: string;
   date: string;
   runtime_min: number | null;
+  operating_min: number | null;
   distance_m: number | null;
   latitude: number | null;
   longitude: number | null;
@@ -117,6 +118,7 @@ async function fetchTimestreamDaily(
         wheelchair_id: wcId,
         date: day,
         runtime_min: null,
+        operating_min: null,
         distance_m: null,
         latitude: null,
         longitude: null,
@@ -128,6 +130,60 @@ async function fetchTimestreamDaily(
     else if (measureName === 'distance') entry.distance_m = maxVal;
     else if (measureName === 'latitude') entry.latitude = lastVal;
     else if (measureName === 'longitude') entry.longitude = lastVal;
+  });
+
+  // operating_time(OPT = 기기 사용시간): 카운터 리셋과 무관하게 KST 하루 동안의
+  // 양(+)의 증가분만 합산 → 실제 일별 사용시간. (MAX는 최장 세션만 잡히므로 부정확)
+  const optQuery = `
+    SELECT wheelchair_id,
+           DATE_FORMAT(BIN(time + 9h, 1d), '%Y-%m-%d') AS day,
+           SUM(pos_delta) AS operating_min
+    FROM (
+      SELECT wheelchair_id,
+        DATE_FORMAT(BIN(time + 9h, 1d), '%Y-%m-%d') AS day,
+        GREATEST(
+          measure_value::double - COALESCE(
+            LAG(measure_value::double) OVER (
+              PARTITION BY wheelchair_id, DATE_FORMAT(BIN(time + 9h, 1d), '%Y-%m-%d')
+              ORDER BY time
+            ),
+            measure_value::double
+          ),
+          0.0
+        ) AS pos_delta
+      FROM "${DATABASE_NAME}"."${TABLE_NAME}"
+      WHERE ${whereClause} AND measure_name = 'operating_time'
+    )
+    GROUP BY wheelchair_id, day
+  `;
+
+  const optCommand = new QueryCommand({ QueryString: optQuery.trim() });
+  const optResponse = await queryClient.send(optCommand);
+
+  (optResponse.Rows || []).forEach((row) => {
+    const data = row.Data;
+    if (!data || data.length < 3) return;
+
+    const wcId = data[0]?.ScalarValue || '';
+    const day = data[1]?.ScalarValue || '';
+    const operatingMin = parseFloat(data[2]?.ScalarValue || '0');
+
+    if (!wcId || !day) return;
+
+    const key = `${wcId}|${day}`;
+    if (result.has(key)) {
+      result.get(key)!.operating_min = operatingMin;
+    } else {
+      result.set(key, {
+        wheelchair_id: wcId,
+        date: day,
+        runtime_min: null,
+        distance_m: null,
+        latitude: null,
+        longitude: null,
+        operating_min: operatingMin,
+      });
+    }
   });
 
   return result;
@@ -233,6 +289,7 @@ export async function GET(req: NextRequest) {
         device_serial: deviceSerial,
         date,
         runtime_min: tsEntry.runtime_min ?? null,
+        operating_min: tsEntry.operating_min ?? null,
         distance_m: tsEntry.distance_m ?? null,
         latitude: tsEntry.latitude ?? null,
         longitude: tsEntry.longitude ?? null,

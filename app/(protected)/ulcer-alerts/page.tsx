@@ -18,6 +18,7 @@ interface DailyRow {
   device_serial: string;
   date: string;
   runtime_min: number | null;
+  operating_min: number | null;
   distance_m: number | null;
   latitude: number | null;
   longitude: number | null;
@@ -25,10 +26,11 @@ interface DailyRow {
 }
 
 // 필터 가능한 컬럼 키
-type ColumnKey = 'runtime' | 'distance' | 'location' | 'ulcer';
+type ColumnKey = 'runtime' | 'operating' | 'distance' | 'location' | 'ulcer';
 
 const COLUMN_LABELS: Record<ColumnKey, string> = {
-  runtime: '사용시간',
+  operating: '사용시간',
+  runtime: '주행 시간',
   distance: '주행거리',
   location: '위경도',
   ulcer: '욕창 방지 횟수',
@@ -85,6 +87,7 @@ export default function DeviceUsagePage() {
   // 컬럼 필터: 기본은 전부 ON
   const [visibleCols, setVisibleCols] = useState<Record<ColumnKey, boolean>>({
     runtime: true,
+    operating: true,
     distance: true,
     location: true,
     ulcer: true,
@@ -163,6 +166,7 @@ export default function DeviceUsagePage() {
       const cols: string[] = [];
       for (const c of activeCols) {
         if (c === 'runtime') cols.push(formatRuntime(r.runtime_min));
+        else if (c === 'operating') cols.push(formatRuntime(r.operating_min));
         else if (c === 'distance') cols.push(formatDistance(r.distance_m));
         else if (c === 'location') cols.push(formatLocation(r.latitude, r.longitude));
         else if (c === 'ulcer') cols.push(`${r.ulcer_count}회`);
@@ -319,7 +323,8 @@ export default function DeviceUsagePage() {
               <tr>
                 {isFullQuery && <th className={styles.thDate}>기기</th>}
                 <th className={styles.thDate}>날짜</th>
-                {visibleCols.runtime && <th className={styles.thCount}>사용시간</th>}
+                {visibleCols.operating && <th className={styles.thCount}>사용시간</th>}
+                {visibleCols.runtime && <th className={styles.thCount}>주행 시간</th>}
                 {visibleCols.distance && <th className={styles.thCount}>주행거리</th>}
                 {visibleCols.location && <th className={styles.thCount}>위경도</th>}
                 {visibleCols.ulcer && (
@@ -337,6 +342,9 @@ export default function DeviceUsagePage() {
                 <tr key={`${r.wheelchair_id}-${r.date}`}>
                   {isFullQuery && <td className={styles.tdDate}>{r.device_serial}</td>}
                   <td className={styles.tdDate}>{formatDateStr(r.date)}</td>
+                  {visibleCols.operating && (
+                    <td className={styles.tdCount}>{formatRuntime(r.operating_min)}</td>
+                  )}
                   {visibleCols.runtime && (
                     <td className={styles.tdCount}>{formatRuntime(r.runtime_min)}</td>
                   )}

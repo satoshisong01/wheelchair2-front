@@ -303,12 +303,12 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // 정렬: device_serial → date
+    // 정렬: device_serial → date(최신 날짜가 위로, 내림차순)
     rows.sort((a, b) => {
       if (a.device_serial !== b.device_serial) {
         return a.device_serial.localeCompare(b.device_serial);
       }
-      return a.date.localeCompare(b.date);
+      return b.date.localeCompare(a.date);
     });
 
     return NextResponse.json(rows);

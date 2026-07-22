@@ -151,6 +151,22 @@ export default function DeviceUsagePage() {
     [visibleCols],
   );
 
+  // 기기 표시명: 시리얼 + 명칭(모델명) — 예: "01222365606 (나래)"
+  const modelById = useMemo(
+    () =>
+      new Map<string, string | undefined>(
+        wheelchairs.map((w) => [w.id, w.modelName]),
+      ),
+    [wheelchairs],
+  );
+  const getDeviceLabel = useCallback(
+    (r: DailyRow) => {
+      const name = modelById.get(r.wheelchair_id);
+      return name ? `${r.device_serial} (${name})` : r.device_serial;
+    },
+    [modelById],
+  );
+
   const handleExcelDownload = useCallback(() => {
     if (rows.length === 0) return;
 
@@ -161,7 +177,7 @@ export default function DeviceUsagePage() {
 
     const body = rows.map((r) => {
       const base = isFullQuery
-        ? [r.device_serial, formatDateStr(r.date)]
+        ? [getDeviceLabel(r), formatDateStr(r.date)]
         : [formatDateStr(r.date)];
       const cols: string[] = [];
       for (const c of activeCols) {
@@ -200,7 +216,7 @@ export default function DeviceUsagePage() {
     a.download = `기기사용내역_${safeLabel}_${fromDate}_${toDate}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [rows, isFullQuery, activeCols, fromDate, toDate, selectedId, wheelchairs]);
+  }, [rows, isFullQuery, activeCols, fromDate, toDate, selectedId, wheelchairs, getDeviceLabel]);
 
   if (status === 'loading' || !session) {
     return <LoadingSpinner />;
@@ -340,7 +356,7 @@ export default function DeviceUsagePage() {
             <tbody>
               {rows.map((r) => (
                 <tr key={`${r.wheelchair_id}-${r.date}`}>
-                  {isFullQuery && <td className={styles.tdDate}>{r.device_serial}</td>}
+                  {isFullQuery && <td className={styles.tdDate}>{getDeviceLabel(r)}</td>}
                   <td className={styles.tdDate}>{formatDateStr(r.date)}</td>
                   {visibleCols.operating && (
                     <td className={styles.tdCount}>{formatRuntime(r.operating_min)}</td>

@@ -83,6 +83,7 @@ export default function PostureEventAnglesModal({
   const [events, setEvents] = useState<PostureEvent[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [eventsError, setEventsError] = useState<string | null>(null);
+  const [typeFilter, setTypeFilter] = useState<'complete' | 'all'>('complete');
 
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [angles, setAngles] = useState<AnglesResponse | null>(null);
@@ -105,6 +106,7 @@ export default function PostureEventAnglesModal({
 
     let cancelled = false;
     setSelectedEventId(null);
+    setTypeFilter('complete');
     setAngles(null);
     setAnglesError(null);
     setEventsError(null);
@@ -161,6 +163,14 @@ export default function PostureEventAnglesModal({
   }, []);
 
   if (!open) return null;
+
+  // 좌측 목록: 타입별 카운트 + 필터 적용
+  const completeCount = events.filter((e) => e.alarmType === 'POSTURE_COMPLETE').length;
+  const adviceCount = events.length - completeCount;
+  const shownEvents =
+    typeFilter === 'complete'
+      ? events.filter((e) => e.alarmType === 'POSTURE_COMPLETE')
+      : events;
 
   // 이벤트 시각에 가장 가까운 샘플 인덱스 (하이라이트용)
   let nearestIdx = -1;
@@ -253,16 +263,52 @@ export default function PostureEventAnglesModal({
             <div
               style={{
                 padding: '10px 16px',
-                fontWeight: 600,
-                fontSize: 13,
-                color: '#374151',
                 borderBottom: '1px solid #eee',
                 position: 'sticky',
                 top: 0,
                 background: '#f9fafb',
               }}
             >
-              자세 변경 이벤트
+              <div style={{ fontWeight: 600, fontSize: 13, color: '#374151' }}>자세 변경 이벤트</div>
+              <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 3 }}>
+                완료 {completeCount}회 · 권고 {adviceCount}회
+              </div>
+              <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+                <button
+                  type="button"
+                  onClick={() => setTypeFilter('complete')}
+                  style={{
+                    flex: 1,
+                    padding: '4px 8px',
+                    borderRadius: 6,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    border: typeFilter === 'complete' ? '1px solid #0f2a4a' : '1px solid #d1d5db',
+                    background: typeFilter === 'complete' ? '#0f2a4a' : '#fff',
+                    color: typeFilter === 'complete' ? '#fff' : '#6b7280',
+                  }}
+                >
+                  완료 {completeCount}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTypeFilter('all')}
+                  style={{
+                    flex: 1,
+                    padding: '4px 8px',
+                    borderRadius: 6,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    border: typeFilter === 'all' ? '1px solid #0f2a4a' : '1px solid #d1d5db',
+                    background: typeFilter === 'all' ? '#0f2a4a' : '#fff',
+                    color: typeFilter === 'all' ? '#fff' : '#6b7280',
+                  }}
+                >
+                  전체 {events.length}
+                </button>
+              </div>
             </div>
 
             {eventsLoading && (
@@ -276,10 +322,16 @@ export default function PostureEventAnglesModal({
                 해당 날짜에 자세 변경 이벤트가 없습니다.
               </div>
             )}
+            {!eventsLoading && !eventsError && events.length > 0 && shownEvents.length === 0 && (
+              <div style={{ padding: 16, color: '#6b7280', fontSize: 13 }}>
+                완료 이벤트가 없습니다. &apos;전체&apos;를 눌러 권고를 확인하세요.
+              </div>
+            )}
             {!eventsLoading &&
               !eventsError &&
-              events.map((ev) => {
+              shownEvents.map((ev) => {
                 const active = ev.id === selectedEventId;
+                const isComplete = ev.alarmType === 'POSTURE_COMPLETE';
                 return (
                   <button
                     key={ev.id}
@@ -289,7 +341,7 @@ export default function PostureEventAnglesModal({
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'flex-start',
-                      gap: 2,
+                      gap: 3,
                       width: '100%',
                       textAlign: 'left',
                       padding: '10px 16px',
@@ -300,10 +352,58 @@ export default function PostureEventAnglesModal({
                       cursor: 'pointer',
                     }}
                   >
-                    <span style={{ fontWeight: 600, color: '#111', fontSize: 13 }}>
-                      {formatKstTime(ev.epochMs)}
+                    <span
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        width: '100%',
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontWeight: isComplete ? 700 : 500,
+                          color: isComplete ? '#111' : '#6b7280',
+                          fontSize: 13,
+                        }}
+                      >
+                        {formatKstTime(ev.epochMs)}
+                      </span>
+                      {isComplete ? (
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            color: '#fff',
+                            background: '#047857',
+                            borderRadius: 4,
+                            padding: '1px 6px',
+                          }}
+                        >
+                          완료
+                        </span>
+                      ) : (
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 600,
+                            color: '#9ca3af',
+                            border: '1px solid #d1d5db',
+                            borderRadius: 4,
+                            padding: '1px 6px',
+                          }}
+                        >
+                          권고
+                        </span>
+                      )}
                     </span>
-                    <span style={{ fontSize: 12, color: '#4b5563' }}>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        fontWeight: isComplete ? 600 : 400,
+                        color: isComplete ? '#047857' : '#9ca3af',
+                      }}
+                    >
                       {getAlarmTypeLabel(ev.alarmType)}
                     </span>
                   </button>

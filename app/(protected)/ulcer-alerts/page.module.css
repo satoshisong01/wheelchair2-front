@@ -167,6 +167,22 @@
   padding: 40px 20px;
 }
 
+/* 욕창 방지 횟수 클릭 링크 (관리자 각도 검증 모달 오픈) */
+.ulcerLink {
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: #0d6efd;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.ulcerLink:hover {
+  color: #0b5ed7;
+}
+
 .description {
   font-size: 13px;
   color: #555;

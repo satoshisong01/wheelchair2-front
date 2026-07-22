@@ -192,6 +192,57 @@ async function fetchTimestreamDaily(
     console.error('[wheelchair-daily-history] operating_time 집계 실패:', e);
   }
 
+  // OPT가 없는 날짜(수집 이전 과거)는 '데이터 수신 흔적'으로 사용시간을 추정해 채운다.
+  //   기기는 켜져 있을 때만 데이터를 보내므로, CW/st(각도) 점 사이 간격이 60초 이하인 구간의 합 = 켜져 있던 시간.
+  //   OPT가 이미 채워진 날은 건드리지 않음(OPT 우선).
+  const estQuery = `
+    SELECT wheelchair_id, day, ROUND(SUM(gap_min), 0) AS est_min
+    FROM (
+      SELECT wheelchair_id, DATE_FORMAT(BIN(time + 9h, 1d), '%Y-%m-%d') AS day,
+        CASE WHEN date_diff('second',
+               LAG(time) OVER (PARTITION BY wheelchair_id, DATE_FORMAT(BIN(time + 9h, 1d), '%Y-%m-%d') ORDER BY time), time) BETWEEN 1 AND 60
+          THEN date_diff('second',
+               LAG(time) OVER (PARTITION BY wheelchair_id, DATE_FORMAT(BIN(time + 9h, 1d), '%Y-%m-%d') ORDER BY time), time) / 60.0
+          ELSE 0 END AS gap_min
+      FROM "${DATABASE_NAME}"."${TABLE_NAME}"
+      WHERE ${whereClause} AND measure_name = 'angle_back'
+    )
+    GROUP BY wheelchair_id, day
+  `;
+
+  try {
+    const estResponse = await queryClient.send(
+      new QueryCommand({ QueryString: estQuery.trim() }),
+    );
+    (estResponse.Rows || []).forEach((row) => {
+      const data = row.Data;
+      if (!data || data.length < 3) return;
+      const wcId = data[0]?.ScalarValue || '';
+      const day = data[1]?.ScalarValue || '';
+      const estMin = parseFloat(data[2]?.ScalarValue || '0');
+      if (!wcId || !day) return;
+      const key = `${wcId}|${day}`;
+      if (result.has(key)) {
+        // OPT가 이미 있으면 유지(OPT 우선), 없을 때만 추정치로 채움
+        if (result.get(key)!.operating_min == null) {
+          result.get(key)!.operating_min = estMin;
+        }
+      } else {
+        result.set(key, {
+          wheelchair_id: wcId,
+          date: day,
+          runtime_min: null,
+          distance_m: null,
+          latitude: null,
+          longitude: null,
+          operating_min: estMin,
+        });
+      }
+    });
+  } catch (e) {
+    console.error('[wheelchair-daily-history] 사용시간 추정(데이터 수신 기반) 실패:', e);
+  }
+
   return result;
 }
 
@@ -303,12 +354,12 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // 정렬: device_serial → date(최신 날짜가 위로, 내림차순)
+    // 정렬: 날짜(최신 먼저)를 1순위 → 같은 날짜 안에서 기기순
+    //   (전체 조회 시 같은 날짜의 여러 기기가 함께 묶여 나오도록)
     rows.sort((a, b) => {
-      if (a.device_serial !== b.device_serial) {
-        return a.device_serial.localeCompare(b.device_serial);
-      }
-      return b.date.localeCompare(a.date);
+      const byDate = b.date.localeCompare(a.date);
+      if (byDate !== 0) return byDate;
+      return a.device_serial.localeCompare(b.device_serial);
     });
 
     return NextResponse.json(rows);

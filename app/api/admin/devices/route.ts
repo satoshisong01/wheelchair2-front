@@ -122,15 +122,18 @@ export async function POST(req: NextRequest) {
     const wheelchairId = wheelchairResult.rows[0].id;
 
     // 2. DeviceAuth 테이블에 로그인 정보 삽입
+    //    알림 설정 3종은 DB 기본값을 사용하며, 초기 상태를 감사 로그로 남기기 위해 RETURNING으로 회수
     const insertDeviceAuthSql = `
             INSERT INTO device_auths (device_id, password, wheelchair_id)
-            VALUES ($1, $2, $3);
+            VALUES ($1, $2, $3)
+            RETURNING push_emergency, push_battery, push_posture;
         `;
-    await client.query(insertDeviceAuthSql, [
+    const deviceAuthResult = await client.query(insertDeviceAuthSql, [
       deviceId,
       hashedPassword,
       wheelchairId,
     ]);
+    const initialNotifications = deviceAuthResult.rows[0];
 
     // 3. User-Wheelchair 연결 테이블에도 현재 유저 연결 (N:M 관계)
     const insertUserWheelchairSql = `
@@ -147,6 +150,20 @@ export async function POST(req: NextRequest) {
       userRole: userRole,
       action: 'DEVICE_REGISTER',
       details: { serial: deviceSerial, wcId: wheelchairId, model: modelName },
+    });
+
+    // 알림 설정 초기 상태 로그 — 이후 DEVICE_NOTIFICATION_TOGGLE 이력과 합치면
+    // 등록 시점부터 각 알림(자세/응급/배터리)의 ON/OFF 이력을 완전히 복원 가능
+    createAuditLog({
+      userId: userId,
+      userRole: userRole,
+      action: 'DEVICE_NOTIFICATION_INIT',
+      details: {
+        wheelchairId,
+        emergency: initialNotifications.push_emergency,
+        battery: initialNotifications.push_battery,
+        posture: initialNotifications.push_posture,
+      },
     });
 
     return NextResponse.json({

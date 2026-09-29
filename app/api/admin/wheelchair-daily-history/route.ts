@@ -63,7 +63,8 @@ function assertSafe(value: string, regex: RegExp, label: string): void {
 
 /**
  * Timestream에서 일별 집계 데이터 조회
- * - runtime, distance: 그날의 MAX (자정 직전 누적값 = 그날 증가량)
+ * - operating_time(사용시간)·runtime(주행시간)·distance(주행거리): 누적 카운터의
+ *   하루 양(+) 증분만 합산 → 실제 일별 값 (카운터 리셋/정체값에 안전). MAX 방식은 부정확이라 폐기.
  * - latitude, longitude: 그날의 마지막 측정값 (MAX_BY)
  */
 async function fetchTimestreamDaily(
@@ -89,7 +90,7 @@ async function fetchTimestreamDaily(
       MAX_BY(measure_value::double, time) AS last_val
     FROM "${DATABASE_NAME}"."${TABLE_NAME}"
     WHERE ${whereClause}
-      AND measure_name IN ('runtime', 'distance', 'latitude', 'longitude')
+      AND measure_name IN ('latitude', 'longitude')
     GROUP BY wheelchair_id, BIN(time + 9h, 1d), measure_name
     ORDER BY wheelchair_id, day ASC
   `;
@@ -107,7 +108,6 @@ async function fetchTimestreamDaily(
     const wcId = data[0]?.ScalarValue || '';
     const day = data[1]?.ScalarValue || '';
     const measureName = data[2]?.ScalarValue || '';
-    const maxVal = parseFloat(data[3]?.ScalarValue || '0');
     const lastVal = parseFloat(data[4]?.ScalarValue || '0');
 
     if (!wcId || !day || !measureName) return;
@@ -126,25 +126,26 @@ async function fetchTimestreamDaily(
     }
 
     const entry = result.get(key)!;
-    if (measureName === 'runtime') entry.runtime_min = maxVal;
-    else if (measureName === 'distance') entry.distance_m = maxVal;
-    else if (measureName === 'latitude') entry.latitude = lastVal;
+    if (measureName === 'latitude') entry.latitude = lastVal;
     else if (measureName === 'longitude') entry.longitude = lastVal;
   });
 
-  // operating_time(OPT = 기기 사용시간): 카운터 리셋과 무관하게 KST 하루 동안의
-  // 양(+)의 증가분만 합산 → 실제 일별 사용시간. (MAX는 최장 세션만 잡히므로 부정확)
-  const optQuery = `
+  // 사용시간(operating_time)·주행시간(runtime)·주행거리(distance)는 모두 누적 카운터다.
+  // 카운터 리셋/정체값과 무관하게 KST 하루 동안의 양(+) 증분만 합산 → 실제 일별 값.
+  // (그날 MAX 방식은 누적치/최장세션만 잡혀 부정확 → 세 값 모두 동일 방식으로 통일)
+  const deltaQuery = `
     SELECT wheelchair_id,
            day,
-           SUM(pos_delta) AS operating_min
+           measure_name,
+           SUM(pos_delta) AS day_delta
     FROM (
       SELECT wheelchair_id,
         DATE_FORMAT(BIN(time + 9h, 1d), '%Y-%m-%d') AS day,
+        measure_name,
         GREATEST(
           measure_value::double - COALESCE(
             LAG(measure_value::double) OVER (
-              PARTITION BY wheelchair_id, DATE_FORMAT(BIN(time + 9h, 1d), '%Y-%m-%d')
+              PARTITION BY wheelchair_id, measure_name, DATE_FORMAT(BIN(time + 9h, 1d), '%Y-%m-%d')
               ORDER BY time
             ),
             measure_value::double
@@ -152,44 +153,47 @@ async function fetchTimestreamDaily(
           0.0
         ) AS pos_delta
       FROM "${DATABASE_NAME}"."${TABLE_NAME}"
-      WHERE ${whereClause} AND measure_name = 'operating_time'
+      WHERE ${whereClause} AND measure_name IN ('operating_time', 'runtime', 'distance')
     )
-    GROUP BY wheelchair_id, day
+    GROUP BY wheelchair_id, day, measure_name
   `;
 
-  // OPT 집계가 실패해도 나머지(주행시간·거리·위경도·욕창횟수)는 정상 반환해야 하므로 격리한다.
+  // 증분 집계가 실패해도 위경도·욕창횟수는 정상 반환해야 하므로 격리한다.
   try {
-    const optCommand = new QueryCommand({ QueryString: optQuery.trim() });
-    const optResponse = await queryClient.send(optCommand);
+    const deltaCommand = new QueryCommand({ QueryString: deltaQuery.trim() });
+    const deltaResponse = await queryClient.send(deltaCommand);
 
-    (optResponse.Rows || []).forEach((row) => {
+    (deltaResponse.Rows || []).forEach((row) => {
       const data = row.Data;
-      if (!data || data.length < 3) return;
+      if (!data || data.length < 4) return;
 
       const wcId = data[0]?.ScalarValue || '';
       const day = data[1]?.ScalarValue || '';
-      const operatingMin = parseFloat(data[2]?.ScalarValue || '0');
+      const measureName = data[2]?.ScalarValue || '';
+      const dayDelta = parseFloat(data[3]?.ScalarValue || '0');
 
-      if (!wcId || !day) return;
+      if (!wcId || !day || !measureName) return;
 
       const key = `${wcId}|${day}`;
-      if (result.has(key)) {
-        result.get(key)!.operating_min = operatingMin;
-      } else {
+      if (!result.has(key)) {
         result.set(key, {
           wheelchair_id: wcId,
           date: day,
           runtime_min: null,
+          operating_min: null,
           distance_m: null,
           latitude: null,
           longitude: null,
-          operating_min: operatingMin,
         });
       }
+      const entry = result.get(key)!;
+      if (measureName === 'operating_time') entry.operating_min = dayDelta;
+      else if (measureName === 'runtime') entry.runtime_min = dayDelta;
+      else if (measureName === 'distance') entry.distance_m = dayDelta;
     });
   } catch (e) {
-    // 사용시간(OPT)만 생략되고 나머지 데이터는 정상 표시됨
-    console.error('[wheelchair-daily-history] operating_time 집계 실패:', e);
+    // 증분 집계만 생략되고 위경도·욕창 데이터는 정상 표시됨
+    console.error('[wheelchair-daily-history] 일별 증분 집계 실패:', e);
   }
 
   // OPT가 없는 날짜(수집 이전 과거)는 '데이터 수신 흔적'으로 사용시간을 추정해 채운다.
@@ -341,13 +345,27 @@ export async function GET(req: NextRequest) {
       const ulcerCount = pgData.ulcerMap.get(key) ?? 0;
       const deviceSerial = pgData.serialMap.get(wcId) || wcId;
 
+      // 정합성 보정: 주행은 사용의 부분집합이므로 주행시간 ≤ 사용시간.
+      //   사용시간 0 → 주행시간·거리도 0(전원만 켜진 채 누적된 유령값 차단),
+      //   주행시간 > 사용시간 → 사용시간으로 캡.
+      const operatingMin = tsEntry.operating_min ?? null;
+      let runtimeMin = tsEntry.runtime_min ?? null;
+      let distanceM = tsEntry.distance_m ?? null;
+      if (operatingMin != null && runtimeMin != null && runtimeMin > operatingMin) {
+        runtimeMin = operatingMin;
+      }
+      if (operatingMin === 0) {
+        runtimeMin = 0;
+        distanceM = 0;
+      }
+
       rows.push({
         wheelchair_id: wcId,
         device_serial: deviceSerial,
         date,
-        runtime_min: tsEntry.runtime_min ?? null,
-        operating_min: tsEntry.operating_min ?? null,
-        distance_m: tsEntry.distance_m ?? null,
+        runtime_min: runtimeMin,
+        operating_min: operatingMin,
+        distance_m: distanceM,
         latitude: tsEntry.latitude ?? null,
         longitude: tsEntry.longitude ?? null,
         ulcer_count: ulcerCount,

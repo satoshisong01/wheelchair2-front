@@ -408,6 +408,70 @@ export default function DeviceUsagePage() {
         </div>
       )}
 
+      {/* 모바일 카드 뷰 (≤768px에서 테이블은 CSS로 숨겨지고 이 카드가 표시됨) */}
+      {!loading && rows.length > 0 && (
+        <div className={styles.cardList}>
+          {rows.map((r) => (
+            <div key={`card-${r.wheelchair_id}-${r.date}`} className={styles.histCard}>
+              <div className={styles.histCardHead}>
+                {isFullQuery && (
+                  <span className={styles.histCardDevice}>{getDeviceLabel(r)}</span>
+                )}
+                <span className={styles.histCardDate}>{formatDateStr(r.date)}</span>
+              </div>
+              {visibleCols.operating && (
+                <div className={styles.histCardRow}>
+                  <span>사용시간</span>
+                  <span>{formatRuntime(r.operating_min)}</span>
+                </div>
+              )}
+              {visibleCols.runtime && (
+                <div className={styles.histCardRow}>
+                  <span>주행 시간</span>
+                  <span>{formatRuntime(r.runtime_min)}</span>
+                </div>
+              )}
+              {visibleCols.distance && (
+                <div className={styles.histCardRow}>
+                  <span>주행거리</span>
+                  <span>{formatDistance(r.distance_m)}</span>
+                </div>
+              )}
+              {visibleCols.location && (
+                <div className={styles.histCardRow}>
+                  <span>위경도</span>
+                  <span>{formatLocation(r.latitude, r.longitude)}</span>
+                </div>
+              )}
+              {visibleCols.ulcer && (
+                <div className={styles.histCardRow}>
+                  <span>욕창 방지 횟수</span>
+                  <span>
+                    {r.ulcer_count > 0 ? (
+                      <button
+                        type="button"
+                        className={styles.ulcerLink}
+                        onClick={() => setModalRow(r)}
+                      >
+                        {r.ulcer_count}회
+                      </button>
+                    ) : (
+                      `${r.ulcer_count}회`
+                    )}
+                  </span>
+                </div>
+              )}
+              {visibleCols.slope && (
+                <div className={styles.histCardRow}>
+                  <span>급경사 경고 횟수</span>
+                  <span>{r.slope_count}회</span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       {!loading && rows.length === 0 && (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
@@ -419,6 +483,15 @@ export default function DeviceUsagePage() {
               </tr>
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* 모바일 빈 상태 (≤768px) */}
+      {!loading && rows.length === 0 && (
+        <div className={styles.cardList}>
+          <div className={styles.emptyCard}>
+            기기를 선택하고 검색하거나, 전체 조회를 눌러주세요.
+          </div>
         </div>
       )}
 

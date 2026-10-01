@@ -255,6 +255,66 @@
   color: #0d6efd;
 }
 
+/* 모바일 카드 (다열 데이터용) — .cardList 안에서 사용. 데스크톱에선 .cardList가 숨겨짐 */
+.histCard {
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.histCardHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.histCardDevice {
+  font-weight: 700;
+  color: #111;
+  font-size: 14px;
+}
+
+.histCardDate {
+  color: #555;
+  font-size: 14px;
+  font-weight: 600;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.histCardRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+  font-size: 14px;
+}
+
+.histCardRow > span:first-child {
+  color: #666;
+}
+
+.histCardRow > span:last-child {
+  font-weight: 600;
+  color: #111;
+  text-align: right;
+}
+
+.emptyCard {
+  text-align: center;
+  color: #666;
+  padding: 32px 16px;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 8px;
+}
+
 @media (max-width: 768px) {
   .container {
     padding: 16px;

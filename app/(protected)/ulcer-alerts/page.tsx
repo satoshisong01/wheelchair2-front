@@ -23,10 +23,11 @@ interface DailyRow {
   latitude: number | null;
   longitude: number | null;
   ulcer_count: number;
+  slope_count: number;
 }
 
 // 필터 가능한 컬럼 키
-type ColumnKey = 'runtime' | 'operating' | 'distance' | 'location' | 'ulcer';
+type ColumnKey = 'runtime' | 'operating' | 'distance' | 'location' | 'ulcer' | 'slope';
 
 const COLUMN_LABELS: Record<ColumnKey, string> = {
   operating: '사용시간',
@@ -34,6 +35,7 @@ const COLUMN_LABELS: Record<ColumnKey, string> = {
   distance: '주행거리',
   location: '위경도',
   ulcer: '욕창 방지 횟수',
+  slope: '급경사 경고 횟수',
 };
 
 function formatDateStr(d: string) {
@@ -91,6 +93,7 @@ export default function DeviceUsagePage() {
     distance: true,
     location: true,
     ulcer: true,
+    slope: true,
   });
 
   const fetchWheelchairs = useCallback(async () => {
@@ -186,6 +189,7 @@ export default function DeviceUsagePage() {
         else if (c === 'distance') cols.push(formatDistance(r.distance_m));
         else if (c === 'location') cols.push(formatLocation(r.latitude, r.longitude));
         else if (c === 'ulcer') cols.push(`${r.ulcer_count}회`);
+        else if (c === 'slope') cols.push(`${r.slope_count}회`);
       }
       return [...base, ...cols];
     });
@@ -231,7 +235,7 @@ export default function DeviceUsagePage() {
     <div className={styles.container}>
       <h1 className={styles.pageTitle}>기기 사용 내역</h1>
       <p className={styles.description}>
-        기기와 기간을 선택하고 조회하면 날짜별 사용시간, 주행거리, 위경도, 욕창 방지 횟수를 확인할 수 있습니다.
+        기기와 기간을 선택하고 조회하면 날짜별 사용시간, 주행거리, 위경도, 욕창 방지 횟수, 급경사 경고 횟수를 확인할 수 있습니다.
         체크박스로 표시할 항목을 선택할 수 있습니다.
       </p>
 
@@ -351,6 +355,14 @@ export default function DeviceUsagePage() {
                     욕창 방지 횟수 (35° 2분 유지)
                   </th>
                 )}
+                {visibleCols.slope && (
+                  <th
+                    className={styles.thCount}
+                    title="해당 날짜에 발생한 급경사 경고(SLOPE_WARNING) 알림 횟수입니다."
+                  >
+                    급경사 경고 횟수
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -385,6 +397,9 @@ export default function DeviceUsagePage() {
                         `${r.ulcer_count}회`
                       )}
                     </td>
+                  )}
+                  {visibleCols.slope && (
+                    <td className={styles.tdCount}>{r.slope_count}회</td>
                   )}
                 </tr>
               ))}

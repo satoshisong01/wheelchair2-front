@@ -53,6 +53,7 @@ interface DailyRow {
   latitude: number | null;
   longitude: number | null;
   ulcer_count: number;
+  slope_count: number;
 }
 
 function assertSafe(value: string, regex: RegExp, label: string): void {
@@ -251,7 +252,9 @@ async function fetchTimestreamDaily(
 }
 
 /**
- * PostgreSQL에서 욕창 카운트 + 디바이스 시리얼 조회
+ * PostgreSQL에서 욕창 카운트 + 급경사 경고 횟수 + 디바이스 시리얼 조회
+ * - 욕창: posture_daily 일별 롤업
+ * - 급경사: alarms 테이블의 SLOPE_WARNING을 KST 일자별로 직접 COUNT
  */
 async function fetchPgData(
   wheelchairId: string,
@@ -259,6 +262,7 @@ async function fetchPgData(
   to: string,
 ): Promise<{
   ulcerMap: Map<string, number>;
+  slopeMap: Map<string, number>;
   serialMap: Map<string, string>;
 }> {
   // 욕창 카운트
@@ -287,6 +291,43 @@ async function fetchPgData(
     ulcerMap.set(`${r.wid}|${dateStr}`, Number(r.count ?? 0));
   }
 
+  // 급경사 경고 횟수 (alarms 테이블 SLOPE_WARNING / SLOPE → KST 일자별 COUNT)
+  //   욕창(posture_daily)과 달리 전용 롤업이 없어 원본 알람에서 직접 집계한다.
+  //   KST 하루 경계: [from 00:00 KST, (to+1) 00:00 KST)
+  let slopeSql: string;
+  let slopeParams: string[];
+  if (wheelchairId === 'ALL') {
+    slopeSql = `
+      SELECT wheelchair_id::text AS wid,
+             to_char((alarm_time AT TIME ZONE 'Asia/Seoul'), 'YYYY-MM-DD') AS day,
+             COUNT(*)::int AS count
+      FROM alarms
+      WHERE UPPER(alarm_type) IN ('SLOPE_WARNING', 'SLOPE')
+        AND alarm_time >= ($1::date)::timestamp AT TIME ZONE 'Asia/Seoul'
+        AND alarm_time <  (($2::date) + 1)::timestamp AT TIME ZONE 'Asia/Seoul'
+      GROUP BY wheelchair_id, day
+    `;
+    slopeParams = [from, to];
+  } else {
+    slopeSql = `
+      SELECT wheelchair_id::text AS wid,
+             to_char((alarm_time AT TIME ZONE 'Asia/Seoul'), 'YYYY-MM-DD') AS day,
+             COUNT(*)::int AS count
+      FROM alarms
+      WHERE wheelchair_id = $1
+        AND UPPER(alarm_type) IN ('SLOPE_WARNING', 'SLOPE')
+        AND alarm_time >= ($2::date)::timestamp AT TIME ZONE 'Asia/Seoul'
+        AND alarm_time <  (($3::date) + 1)::timestamp AT TIME ZONE 'Asia/Seoul'
+      GROUP BY wheelchair_id, day
+    `;
+    slopeParams = [wheelchairId, from, to];
+  }
+  const slopeRes = await pool.query(slopeSql, slopeParams);
+  const slopeMap = new Map<string, number>();
+  for (const r of slopeRes.rows) {
+    slopeMap.set(`${r.wid}|${r.day}`, Number(r.count ?? 0));
+  }
+
   // 디바이스 시리얼
   let serialSql: string;
   let serialParams: any[];
@@ -303,7 +344,7 @@ async function fetchPgData(
     serialMap.set(r.id, r.device_serial || r.id);
   }
 
-  return { ulcerMap, serialMap };
+  return { ulcerMap, slopeMap, serialMap };
 }
 
 export async function GET(req: NextRequest) {
@@ -335,14 +376,19 @@ export async function GET(req: NextRequest) {
       fetchPgData(wheelchairId, from, to),
     ]);
 
-    // 두 데이터 셋의 모든 (wcId, date) 키 통합
-    const allKeys = new Set<string>([...tsMap.keys(), ...pgData.ulcerMap.keys()]);
+    // 데이터 셋의 모든 (wcId, date) 키 통합 (Timestream · 욕창 · 급경사)
+    const allKeys = new Set<string>([
+      ...tsMap.keys(),
+      ...pgData.ulcerMap.keys(),
+      ...pgData.slopeMap.keys(),
+    ]);
 
     const rows: DailyRow[] = [];
     for (const key of allKeys) {
       const [wcId, date] = key.split('|');
       const tsEntry = tsMap.get(key) || {};
       const ulcerCount = pgData.ulcerMap.get(key) ?? 0;
+      const slopeCount = pgData.slopeMap.get(key) ?? 0;
       const deviceSerial = pgData.serialMap.get(wcId) || wcId;
 
       // 정합성 보정: 주행은 사용의 부분집합이므로 주행시간 ≤ 사용시간.
@@ -369,6 +415,7 @@ export async function GET(req: NextRequest) {
         latitude: tsEntry.latitude ?? null,
         longitude: tsEntry.longitude ?? null,
         ulcer_count: ulcerCount,
+        slope_count: slopeCount,
       });
     }
 

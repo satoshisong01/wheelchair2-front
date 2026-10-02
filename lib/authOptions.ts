@@ -171,6 +171,9 @@ export const authOptions: NextAuthOptions = {
         token.name = userNameFromDB;
         token.wheelchairId = (user as any).wheelchairId;
         token.deviceId = (user as any).deviceId;
+        // 🧪 [KTC 자체테스트] 아래 [B] 좀비세션체크가 조회할 테이블을 구분하기 위한 출처 기록.
+        //    device_auths 계정은 role=ADMIN이어도(테스트계정) users 테이블엔 없으므로 role만으로 판단하면 안 됨.
+        token.authSource = account?.provider === 'kakao' ? 'users' : 'device_auths';
 
         // ⭐️ [핵심 수정 3] 관리자 로그인 성공 시 감사 로그 기록 (기기 로그인은 authorize에서 처리)
         if (token.role === 'ADMIN' || token.role === 'MASTER') {
@@ -198,8 +201,15 @@ export const authOptions: NextAuthOptions = {
 
       // [B] 세션 유효성 검사 및 갱신 (기존 로직 유지, token.id는 UUID)
       if (token.id) {
-        // 1. 기기 사용자가 아닌 경우 (카카오 유저 확인)
-        if (token.role !== 'DEVICE_USER') {
+        // 1. users 테이블 소속 계정만 확인 (카카오 유저 확인).
+        //    🧪 role이 아니라 authSource로 분기 — device_auths 계정은 role=ADMIN이어도
+        //    users 테이블엔 존재하지 않는 게 정상이라, role만 보면 정상 세션이 오탐 무효화됨.
+        //    이 배포 이전에 발급된 기존 세션은 authSource가 없으므로, 그 경우엔 기존 로직
+        //    (role !== DEVICE_USER면 확인)을 그대로 적용해 보호 공백이 생기지 않게 한다.
+        const shouldCheckUsersTable =
+          token.authSource === 'users' ||
+          (token.authSource === undefined && token.role !== 'DEVICE_USER');
+        if (shouldCheckUsersTable) {
           try {
             // DB에 해당 ID가 존재하는지 가볍게 확인 (UUID 사용)
             const exists = await query(`SELECT 1 FROM users WHERE id = $1`, [token.id]);

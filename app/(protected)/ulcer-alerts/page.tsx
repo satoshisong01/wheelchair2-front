@@ -170,7 +170,7 @@ export default function DeviceUsagePage() {
     [modelById],
   );
 
-  const handleExcelDownload = useCallback(() => {
+  const handleExcelDownload = useCallback(async () => {
     if (rows.length === 0) return;
 
     // 헤더: 기본 + 활성 컬럼
@@ -213,14 +213,32 @@ export default function DeviceUsagePage() {
     );
     const csv = '﻿' + csvRows.join('\r\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const safeLabel = deviceLabel.replace(/[/\\?%*:|"<>]/g, '_');
+    const filename = `기기사용내역_${safeLabel}_${fromDate}_${toDate}.csv`;
+
+    // 📱 안드로이드 PWA(홈화면 설치·standalone) 대응: 이 모드는 주소창·다운로드바가
+    //    없어 <a download> + blob URL 클릭이 조용히 무시되는 경우가 있음.
+    //    파일 공유(Web Share API)를 지원하면 OS 공유시트로 저장하게 하고,
+    //    미지원 환경(대부분 데스크톱)에서는 기존 <a download> 방식으로 폴백.
+    const file = new File([blob], filename, { type: 'text/csv' });
+    if (navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: filename });
+        return;
+      } catch (err: unknown) {
+        // 사용자가 공유시트를 취소한 경우 → 추가 동작 없이 종료
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+        // 그 외 실패 시 아래 앵커 다운로드로 폴백
+      }
+    }
+
+    // 📱 iOS Safari 등 대응: DOM에 붙지 않은 <a> 클릭은 일부 모바일 브라우저에서
+    //    무시됨 → body에 붙였다가 클릭 후 제거. revokeObjectURL도 클릭 직후 바로
+    //    호출하면 비동기 다운로드가 끊길 수 있어 지연 처리.
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    const safeLabel = deviceLabel.replace(/[/\\?%*:|"<>]/g, '_');
-    a.download = `기기사용내역_${safeLabel}_${fromDate}_${toDate}.csv`;
-    // 📱 모바일(특히 iOS Safari·인앱브라우저) 대응: DOM에 붙지 않은 <a> 클릭은
-    //    일부 모바일 브라우저에서 무시됨 → body에 붙였다가 클릭 후 제거.
-    //    revokeObjectURL도 클릭 직후 바로 호출하면 비동기 다운로드가 끊길 수 있어 지연 처리.
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

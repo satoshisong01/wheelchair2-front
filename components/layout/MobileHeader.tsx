@@ -64,9 +64,9 @@ export default function MobileHeader() {
           <span className="text-xs font-semibold ml-1 whitespace-nowrap">로그아웃</span>
         </button>
 
-        {/* 권한에 따라 아이콘 변경 */}
-        {isDeviceUser ? (
-          // 🟢 [수정] SVG 삭제 -> 심플한 이모지 적용
+        {/* 기기 사용자만 마이페이지 아이콘 표시. 관리자는 하단 네비게이션에
+            모든 메뉴(마이페이지 제외 전체)가 이미 있어 별도 아이콘 없음. */}
+        {isDeviceUser && (
           <Link
             href="/mypage"
             className={styles.iconBtn}
@@ -75,9 +75,6 @@ export default function MobileHeader() {
           >
             ⚙️
           </Link>
-        ) : (
-          // 관리자: 햄버거 메뉴
-          <button className={styles.iconBtn}>☰</button>
         )}
       </div>
     </header>

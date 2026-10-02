@@ -28,7 +28,7 @@ export const authOptions: NextAuthOptions = {
             throw new Error('로그인 시도 횟수를 초과하여 계정이 일시적으로 잠겼습니다. 잠시 후 다시 시도해주세요.');
           }
           // 쿼리 문자열 정리 (이전 단계에서 해결됨)
-          const sql = `SELECT id, password, wheelchair_id, device_id FROM device_auths WHERE device_id = $1`;
+          const sql = `SELECT id, password, wheelchair_id, device_id, role FROM device_auths WHERE device_id = $1`;
           const result = await query(sql, [credentials.deviceId]);
           const device = result.rows[0];
           if (!device) throw new Error('등록되지 않은 기기입니다.');
@@ -39,9 +39,11 @@ export const authOptions: NextAuthOptions = {
           }
           await resetLoginFailures(lockKey); // 🔒 [IA-07] 성공 시 실패 카운트 초기화
 
+          // 🧪 [KTC 자체테스트] device_auths.role이 채워진 특수 계정(예: 관리자 테스트 계정)만
+          //    해당 role을 쓰고, 일반 기기 계정(role=NULL)은 기존과 동일하게 DEVICE_USER 고정.
           const userPayload = {
             id: String(device.id),
-            role: 'DEVICE_USER',
+            role: device.role || 'DEVICE_USER',
             wheelchairId: device.wheelchair_id,
             deviceId: device.device_id,
             name: `Device-${device.device_id}`,

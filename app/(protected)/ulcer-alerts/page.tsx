@@ -218,8 +218,13 @@ export default function DeviceUsagePage() {
     a.href = url;
     const safeLabel = deviceLabel.replace(/[/\\?%*:|"<>]/g, '_');
     a.download = `기기사용내역_${safeLabel}_${fromDate}_${toDate}.csv`;
+    // 📱 모바일(특히 iOS Safari·인앱브라우저) 대응: DOM에 붙지 않은 <a> 클릭은
+    //    일부 모바일 브라우저에서 무시됨 → body에 붙였다가 클릭 후 제거.
+    //    revokeObjectURL도 클릭 직후 바로 호출하면 비동기 다운로드가 끊길 수 있어 지연 처리.
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }, [rows, isFullQuery, activeCols, fromDate, toDate, selectedId, wheelchairs, getDeviceLabel]);
 
   if (status === 'loading' || !session) {

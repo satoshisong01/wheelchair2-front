@@ -62,6 +62,26 @@ function formatDistance(m: number | null): string {
   return `${Math.round(m)} m`;
 }
 
+// 📱 Play Store 앱(React Native WebView) 환경 감지 — 이 WebView엔 다운로드 기능이
+//   없어, 파일을 base64로 인코딩해 네이티브 앱에 postMessage로 전달해야 저장 가능.
+function getReactNativeWebView(): { postMessage: (msg: string) => void } | null {
+  const rn = (window as { ReactNativeWebView?: { postMessage: (msg: string) => void } })
+    .ReactNativeWebView;
+  return rn ?? null;
+}
+
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = String(reader.result ?? '');
+      resolve(result.split(',')[1] ?? ''); // "data:...;base64,XXXX" → "XXXX"
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
 function formatLocation(lat: number | null, lon: number | null): string {
   if (lat === null || lon === null || lat === undefined || lon === undefined) return '-';
   return `${lat.toFixed(5)}, ${lon.toFixed(5)}`;
@@ -215,6 +235,17 @@ export default function DeviceUsagePage() {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const safeLabel = deviceLabel.replace(/[/\\?%*:|"<>]/g, '_');
     const filename = `기기사용내역_${safeLabel}_${fromDate}_${toDate}.csv`;
+
+    // 📱 Play Store 앱(WebView) 환경: 네이티브 브릿지로 전달 — 앱이 기기 다운로드
+    //    폴더에 저장. 이 경로의 WebView는 Web Share API도 동작하지 않아 바로 처리.
+    const rnWebView = getReactNativeWebView();
+    if (rnWebView) {
+      const base64 = await blobToBase64(blob);
+      rnWebView.postMessage(
+        JSON.stringify({ type: 'DOWNLOAD_FILE', filename, mimeType: 'text/csv', base64 }),
+      );
+      return;
+    }
 
     // 📱 안드로이드 PWA(홈화면 설치·standalone) 대응: 이 모드는 주소창·다운로드바가
     //    없어 <a download> + blob URL 클릭이 조용히 무시되는 경우가 있음.

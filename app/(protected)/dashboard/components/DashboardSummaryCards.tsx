@@ -31,9 +31,12 @@ function isDataFresh(w: DashboardWheelchair): boolean {
 export function DashboardSummaryCards({
   wheelchairs,
   onSelectWheelchair,
+  loading = false,
 }: {
   wheelchairs: DashboardWheelchair[];
   onSelectWheelchair?: (wc: DashboardWheelchair) => void;
+  /** 목록을 아직 불러오는 중 — 개수 대신 '-' 표시 (0대로 보이지 않게) */
+  loading?: boolean;
 }) {
   const [modalState, setModalState] = useState<{
     open: boolean;
@@ -171,7 +174,7 @@ export function DashboardSummaryCards({
               />
             </div>
             <div className={styles.summaryCardValue}>
-              {item.value} <span>{item.unit}</span>
+              {loading ? '-' : item.value} <span>{item.unit}</span>
             </div>
           </div>
           <div className={styles.iconWrapper}>

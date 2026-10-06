@@ -35,6 +35,8 @@ interface AlertListProps {
   onViewAllClick?: () => void;
   // 지정하면 앞(최신)에서부터 이 개수만 렌더 — 전체보기 모달에는 전체 alarms 전달
   maxItems?: number;
+  // 목록이 비었을 때 문구 — 아직 불러오는 중이면 바꿔 넘겨 '알람 없음'과 구분
+  emptyText?: string;
 }
 
 // --- 헬퍼 함수들 ---
@@ -93,6 +95,7 @@ export default function AlertList({
   onAlarmClick,
   onViewAllClick,
   maxItems,
+  emptyText = '알람이 없습니다',
 }: AlertListProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const visibleAlarms = maxItems === undefined ? alarms : alarms.slice(0, maxItems);
@@ -167,7 +170,7 @@ export default function AlertList({
 
         {alarms.length === 0 && (
           <div className={styles.emptyState}>
-            <p className={styles.emptyText}>알람이 없습니다</p>
+            <p className={styles.emptyText}>{emptyText}</p>
           </div>
         )}
       </div>

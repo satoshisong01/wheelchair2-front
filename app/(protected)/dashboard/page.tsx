@@ -22,6 +22,9 @@ const SOCKET_SERVER_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://broker.
 // 첫 화면 부담을 줄이려 경고·알림은 최신 50건씩만 먼저 받음 (전체 목록은 전체보기 모달을 열 때 조회)
 const INLINE_ALARM_LIMIT = 50;
 
+// 첫 조회가 끝나기 전 빈 목록 자리에 보일 문구 ('알람이 없습니다' 등 빈 상태와 구분)
+const LOADING_TEXT = '불러오는 중...';
+
 type Alarm = {
   id: number | string;
   wheelchairId: string;
@@ -45,6 +48,9 @@ export default function DashboardPage() {
   const [selectedWheelchair, setSelectedWheelchair] = useState<DashboardWheelchair | null>(null);
   const [wheelchairs, setWheelchairs] = useState<DashboardWheelchair[]>([]);
   const [alarms, setAlarms] = useState<Alarm[]>([]);
+  // 첫 조회가 끝났는지 (성공·실패 무관) — 끝나기 전엔 '0대'·'알람이 없습니다' 같은 빈 상태 대신 로딩 표시
+  const [wheelchairsLoaded, setWheelchairsLoaded] = useState(false);
+  const [alarmsLoaded, setAlarmsLoaded] = useState(false);
   // 전체보기 모달용 분류별 전체 목록 (null이면 아직 조회 전 → 모달에 최근 목록 표시)
   const [fullAlarms, setFullAlarms] = useState<Record<AlarmCategory, Alarm[] | null>>({
     critical: null,
@@ -103,6 +109,8 @@ export default function DashboardPage() {
         } catch (e) {
           console.error(e);
         }
+        // finally 대신 뒤에 둠 — try/finally가 있으면 React Compiler 기반 lint(react-hooks)가 이 컴포넌트를 건너뜀
+        setWheelchairsLoaded(true);
       };
       const fetchAlarms = async () => {
         try {
@@ -110,12 +118,14 @@ export default function DashboardPage() {
             fetch(`/api/alarms?category=critical&limit=${INLINE_ALARM_LIMIT}`),
             fetch(`/api/alarms?category=info&limit=${INLINE_ALARM_LIMIT}`),
           ]);
-          if (!criticalRes.ok || !infoRes.ok) return;
-          const merged: Alarm[] = [...(await criticalRes.json()), ...(await infoRes.json())];
-          setAlarms(merged.sort((a, b) => getAlarmTimeMs(b) - getAlarmTimeMs(a)));
+          if (criticalRes.ok && infoRes.ok) {
+            const merged: Alarm[] = [...(await criticalRes.json()), ...(await infoRes.json())];
+            setAlarms(merged.sort((a, b) => getAlarmTimeMs(b) - getAlarmTimeMs(a)));
+          }
         } catch (e) {
           console.error(e);
         }
+        setAlarmsLoaded(true);
       };
       // 세션 갱신(탭 포커스 등)으로 다시 불러올 때는 전체보기 목록도 다음에 열 때 새로 조회
       fullAlarmsRequestedRef.current = { critical: false, info: false };
@@ -226,8 +236,9 @@ export default function DashboardPage() {
     }
   }, [status, session]);
 
-  // 3. 전체보기 모달을 처음 열 때 해당 분류의 전체 목록 조회
+  // 3. 전체보기 모달을 처음 열 때 해당 분류의 전체 목록 조회 (세션 확인 중에 열었으면 인증된 뒤 조회)
   useEffect(() => {
+    if (status !== 'authenticated') return;
     const loadFullAlarms = async (category: AlarmCategory, attempt = 0): Promise<void> => {
       fullAlarmsRequestedRef.current = { ...fullAlarmsRequestedRef.current, [category]: true };
       const countAtStart = socketAlarmCountRef.current[category];
@@ -247,7 +258,7 @@ export default function DashboardPage() {
     };
     if (isWarningModalOpen && !fullAlarmsRequestedRef.current.critical) loadFullAlarms('critical');
     if (isAlertModalOpen && !fullAlarmsRequestedRef.current.info) loadFullAlarms('info');
-  }, [isWarningModalOpen, isAlertModalOpen]);
+  }, [isWarningModalOpen, isAlertModalOpen, status]);
 
   // 세션 확인 중(loading)에도 빈 데이터로 같은 화면을 그림 — 지도 영역이 정적 HTML에 실려 첫 페인트에 그려지고(LCP),
   //   인증 후에도 트리가 같아 MapView가 다시 마운트되지 않음 (데이터 조회·소켓은 위 effect에서 인증·권한 확인 후에만)
@@ -291,7 +302,7 @@ export default function DashboardPage() {
       <div className={styles.dashboardHeader}>
         <h1 className={styles.headerTitle}>커넥티드 모빌리티</h1>
         <div className={styles.headerCount}>
-          <span>{wheelchairs.length}</span> wheelchair
+          <span>{wheelchairsLoaded ? wheelchairs.length : '-'}</span> wheelchair
         </div>
       </div>
       <div className={styles.topRow}>
@@ -304,6 +315,7 @@ export default function DashboardPage() {
         </div>
         <DashboardSummaryCards
             wheelchairs={wheelchairs}
+            loading={!wheelchairsLoaded}
             onSelectWheelchair={(wc) => router.push(`/wheelchair-info?id=${wc.id}`)}
           />
       </div>
@@ -313,6 +325,7 @@ export default function DashboardPage() {
           <AlertList
             title="경고 EVENT"
             alarms={criticalAlarms}
+            emptyText={alarmsLoaded ? undefined : LOADING_TEXT}
             showViewAllButton={true}
             onViewAllClick={() => setIsWarningModalOpen(true)}
             onAlarmClick={handleAlarmClick}
@@ -322,6 +335,7 @@ export default function DashboardPage() {
           <AlertList
             title="알림 EVENT"
             alarms={infoAlarms}
+            emptyText={alarmsLoaded ? undefined : LOADING_TEXT}
             showViewAllButton={true}
             onViewAllClick={() => setIsAlertModalOpen(true)}
             onAlarmClick={handleAlarmClick}
@@ -336,6 +350,7 @@ export default function DashboardPage() {
               wheelchairs={wheelchairs}
               selectedWheelchair={selectedWheelchair}
               onSelectWheelchair={handleWheelchairSelect}
+              emptyText={wheelchairsLoaded ? undefined : LOADING_TEXT}
             />
           </div>
         </div>

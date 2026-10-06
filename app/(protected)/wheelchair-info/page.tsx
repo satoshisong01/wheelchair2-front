@@ -109,6 +109,8 @@ function WheelchairInfoContent() {
   const currentIdRef = useRef<string | null>(null);
   /** 선택 휠체어별 ulcer_count 추적 — 증가 시 POSTURE_ADVICE 해소·팝업 종료 */
   const prevUlcerCountForAdviceRef = useRef<number | null>(null);
+  /** 휠체어 선택 요청 순번 (effect 1·드롭다운 선택 공용) — 요청이 겹치면 마지막 응답이 아니라 마지막 요청의 결과만 반영 */
+  const selectRequestSeqRef = useRef(0);
 
   const userRole = (session?.user?.role as string) || '';
   const isManager = userRole === 'ADMIN' || userRole === 'MASTER';
@@ -121,7 +123,13 @@ function WheelchairInfoContent() {
     let cancelled = false;
 
     const fetchData = async () => {
+      const requestSeq = ++selectRequestSeqRef.current;
       setIsLoading(true);
+      // 이전 선택 비우기 — URL만 바뀌어 이 페이지가 그대로 남을 때(같은 경로 링크, 뒤로/앞으로) 이전 휠체어가 로딩 중에
+      //   그대로 보이며 조작되지 않게 화면 틀로 돌리고, 새 id의 소켓 데이터가 이전 휠체어 패널에 섞이지 않게 함
+      currentIdRef.current = null;
+      setDetailData(null);
+      setPostureAdviceAt(null);
       try {
         // 1. 휠체어 목록 가져오기
         const listRes = await fetch(`/api/wheelchairs?t=${Date.now()}`);
@@ -137,13 +145,11 @@ function WheelchairInfoContent() {
         }
 
         if (targetId) {
-            currentIdRef.current = String(targetId);
           const selectedWc = list.find(
             (wc: any) => String(wc.id) === String(targetId),
           ) as WheelchairDetailData;
 
           if (selectedWc) {
-            prevUlcerCountForAdviceRef.current = null;
             let fetchedAlarms: any[] = [];
             try {
               // 3. 알람 가져오기
@@ -166,10 +172,14 @@ function WheelchairInfoContent() {
             }
 
             if (cancelled) return; // 🔒 오래된 실행이 최신 선택을 덮어쓰지 않도록 (간헐적 오선택 방지)
+            if (requestSeq !== selectRequestSeqRef.current) return; // 🔒 그 뒤에 드롭다운으로 고른 휠체어를 덮어쓰지 않도록
 
             // POSTURE_ADVICE는 "수신 시점"에만 팝업을 띄우도록 합니다.
             setPostureAdviceAt(null);
 
+            // 선택 적용 — 소켓 병합 대상 id·욕창 카운트 추적도 화면 데이터와 같은 시점에 바꿈
+            currentIdRef.current = String(targetId);
+            prevUlcerCountForAdviceRef.current = null;
             setDetailData({
               ...selectedWc,
               alarms: fetchedAlarms,
@@ -180,7 +190,9 @@ function WheelchairInfoContent() {
       } catch (e) {
         console.error(e);
       } finally {
-        setIsLoading(false);
+        // 취소된 실행은 로딩 상태를 건드리지 않음 — 새 로딩이 진행 중인데 끝난 것으로 보고
+        //   빈 화면('등록된 휠체어가 없습니다', 지도 언마운트)을 잠깐 띄우지 않게 (새 실행이 끝날 때 내림)
+        if (!cancelled) setIsLoading(false);
       }
     };
     fetchData();
@@ -193,8 +205,7 @@ function WheelchairInfoContent() {
   const handleSelectWheelchair = async (id: string) => {
     const selected = allWheelchairs.find((wc) => String(wc.id) === String(id));
     if (selected) {
-      currentIdRef.current = String(id);
-      prevUlcerCountForAdviceRef.current = null;
+      const requestSeq = ++selectRequestSeqRef.current;
       setPostureAdviceAt(null);
 
       let fetchedAlarms: any[] = [];
@@ -215,9 +226,16 @@ function WheelchairInfoContent() {
         }
       } catch (e) {}
 
+      // 🔒 그 뒤에 시작된 선택 요청(드롭다운·URL)이 있으면 이 결과는 버림 — 마지막 요청 우선
+      if (requestSeq !== selectRequestSeqRef.current) return;
+
       // POSTURE_ADVICE는 소켓 수신 시점에만 팝업을 띄웁니다.
       setPostureAdviceAt(null);
 
+      // 선택 적용 — 소켓 병합 대상 id·욕창 카운트 추적도 화면 데이터와 같은 시점에 바꿈
+      //   (알람 조회 중엔 화면에 보이는 이전 휠체어의 소켓 데이터가 계속 병합됨)
+      currentIdRef.current = String(id);
+      prevUlcerCountForAdviceRef.current = null;
       setDetailData({
         ...selected,
         alarms: fetchedAlarms,
@@ -439,7 +457,15 @@ function WheelchairInfoContent() {
   //   데이터가 와도 MapView가 같은 자리에 남아 다시 마운트되지 않음
   //   (열·영역 컨테이너의 flex 비율이 지도 크기를 정하므로 컨테이너는 항상 그리고, 내용만 데이터가 있을 때 그림)
   if (!detailData && status !== 'loading' && !isLoading) {
-    return <div className={styles.loadingContainer}>등록된 휠체어가 없습니다.</div>;
+    return (
+      <div className={styles.loadingContainer}>
+        {/* 이 화면에서도 URL(?id=) 변경을 받아야 새로고침 없이 다른 휠체어로 이동할 수 있음 */}
+        <Suspense fallback={null}>
+          <SearchParamsBridge onChange={setUrlId} />
+        </Suspense>
+        등록된 휠체어가 없습니다.
+      </div>
+    );
   }
 
   const isCritical = (alarm: any) => {
@@ -487,7 +513,7 @@ function WheelchairInfoContent() {
           disableDropdown={!isManager}
         />
       ) : (
-        <div className={styles.infoBarPlaceholder} />
+        <div className={styles.infoBarPlaceholder}>휠체어 정보를 불러오는 중...</div>
       )}
       <div className={styles.mainContent}>
         <div className={styles.leftColumn}>

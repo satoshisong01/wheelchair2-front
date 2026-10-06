@@ -11,6 +11,8 @@ interface BatteryStatusProps {
     e: React.MouseEvent,
     wheelchair: DashboardWheelchair
   ) => void;
+  // 목록이 비었을 때 문구 — 아직 불러오는 중이면 바꿔 넘겨 '연결된 휠체어 없음'과 구분
+  emptyText?: string;
 }
 
 // --- 헬퍼 함수들 (배터리 값을 기준으로 UI 클래스 결정) ---
@@ -35,6 +37,7 @@ export default function BatteryStatus({
   wheelchairs,
   selectedWheelchair,
   onSelectWheelchair,
+  emptyText = '연결된 휠체어가 없습니다.',
 }: BatteryStatusProps) {
   // --- 🔽🔽🔽 [신규 추가] ‼️ 선택 여부 확인 ‼️ 🔽🔽🔽 ---
   const isWheelchairSelected = !!selectedWheelchair; // --- 🔼🔼🔼 [신규 추가] 🔼🔼🔼 ---
@@ -94,7 +97,7 @@ export default function BatteryStatus({
 
       {wheelchairs.length === 0 && (
         <div className={styles.emptyState}>
-          <p className={styles.emptyText}>연결된 휠체어가 없습니다.</p>
+          <p className={styles.emptyText}>{emptyText}</p>
         </div>
       )}
     </div>

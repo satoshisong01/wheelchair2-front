@@ -18,6 +18,27 @@
   justify-content: center;
 }
 
+/* SDK 스크립트 로드 실패 — 자리표시 이미지를 빼서 실패한 지도가 불러온 것처럼 보이지 않게 (회색 배경은 유지) */
+.mapContainer.mapContainerError {
+  background-image: none;
+}
+
+/* 지도 상태 문구 (불러오는 중/실패) — 지도 컨테이너의 형제 요소로 가운데에 띄움. 클릭은 아래로 통과, .controls(z-index 10) 아래 */
+.mapStatus {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  pointer-events: none;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  background-color: rgba(255, 255, 255, 0.85);
+  color: #4b5563;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+
 .loadingContent {
   text-align: center;
 }

@@ -29,6 +29,14 @@
   background-color: #007bff;
   border-radius: 0.5rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  /* 로딩 문구 — 한 줄, 가운데 (높이는 위 고정값 그대로) */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
 }
 .infoBarLeft {
   display: flex;

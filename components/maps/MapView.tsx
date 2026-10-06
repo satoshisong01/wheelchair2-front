@@ -66,8 +66,20 @@ export default function MapView({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<KakaoMapInstance | null>(null); // 🚨 [FIX] markersRef의 Key 타입을 number 대신 string | number로 유연하게 변경
   const markersRef = useRef<{ [key: string | number]: KakaoMapMarker }>({});
+  // 최신 휠체어 목록·선택 — 지도 생성 콜백(kakao.maps.load)은 데이터가 오기 전 렌더에서 만들어져 그때의 빈 목록을 붙잡고 있으므로,
+  //   마커 갱신·지도 생성은 props 대신 이 ref에서 읽음 (콜백을 기다리는 사이 도착한 데이터를 놓치지 않게)
+  const wheelchairsRef = useRef(wheelchairs);
+  const selectedWheelchairRef = useRef(selectedWheelchair);
+  // props → ref 동기화 — 아래 지도·마커 effect보다 먼저 선언해야 같은 커밋에서 최신 값을 읽음
+  useEffect(() => {
+    wheelchairsRef.current = wheelchairs;
+    selectedWheelchairRef.current = selectedWheelchair;
+  }, [wheelchairs, selectedWheelchair]);
   // SDK <Script>는 클라이언트 렌더에서만 그림 (SSR되면 next/script가 SDK preload를 <head>에 실음 — useIsClient 주석 참고)
   const isClient = useIsClient();
+  // 지도 상태 문구용 — 자리표시 이미지가 실제(흐린) 지도처럼 보여서, SDK가 늦거나 실패하면 문구로 알림
+  const [isMapReady, setIsMapReady] = useState(false); // 지도 생성 완료
+  const [mapError, setMapError] = useState(false); // SDK 스크립트 로드 실패
   const [isScriptLoaded, setIsScriptLoaded] = useState(false); // --- 🔽🔽🔽 [수정 1] `updateMarkers`를 `initializeMap`보다 먼저 선언 🔽🔽🔽 ---
   /**
    * [18주차] 휠체어 데이터(실시간)가 변경될 때마다 마커를 업데이트하는 함수
@@ -75,7 +87,15 @@ export default function MapView({
 
   const updateMarkers = (map: KakaoMapInstance, kakao: KakaoMapsSDK) => {
     const currentMarkers = markersRef.current;
-    wheelchairs.forEach((wheelchair) => {
+    const currentWheelchairs = wheelchairsRef.current;
+    // 목록에서 빠진 휠체어의 마커 제거 — 휠체어정보 페이지는 보는 휠체어가 바뀌어도 MapView가 그대로 남아 이전 휠체어 마커가 남음
+    const currentIds = new Set(currentWheelchairs.map((wheelchair) => String(wheelchair.id)));
+    Object.keys(currentMarkers).forEach((markerId) => {
+      if (currentIds.has(markerId)) return;
+      currentMarkers[markerId].setMap(null);
+      delete currentMarkers[markerId];
+    });
+    currentWheelchairs.forEach((wheelchair) => {
       const lat = wheelchair.status?.latitude;
       const lng = wheelchair.status?.longitude;
       if (!lat || !lng) return; // 🚨 [FIX] wheelchair.id를 string으로 변환하여 안전하게 사용
@@ -121,6 +141,14 @@ export default function MapView({
       };
 
       const map = new kakao.maps.Map(mapContainer, mapOption);
+      setIsMapReady(true);
+      // 지도가 데이터보다 늦게 만들어진 경우 — 그 사이 선택 effect는 지도가 없어 이동하지 못했으므로 선택된 휠체어 위치로 맞춤
+      const selected = selectedWheelchairRef.current;
+      const selectedLat = selected?.status?.latitude;
+      const selectedLng = selected?.status?.longitude;
+      if (selectedLat && selectedLng) {
+        map.setCenter(new kakao.maps.LatLng(selectedLat, selectedLng));
+      }
       mapRef.current = map; // 마커 업데이트 (초기 로드) - 이제 이 함수는 위에 선언되어 있습니다.
 
       updateMarkers(map, kakao); // [회색 지도 버그 수정] 렌더링 딜레이 후 relayout
@@ -216,12 +244,25 @@ export default function MapView({
         <Script
           src={KAKAO_MAP_SDK_URL} // [수정] onLoad는 이제 state만 true로 변경
           onLoad={() => setIsScriptLoaded(true)}
-          onError={(e) => console.error('Kakao 지도 스크립트 로드 실패:', e)}
+          onError={(e) => {
+            console.error('Kakao 지도 스크립트 로드 실패:', e);
+            setMapError(true);
+          }}
           strategy="afterInteractive"
         />
       )}
       {/* [수정] id="map" 대신 ref={mapContainerRef} 사용 */}
-      <div ref={mapContainerRef} className={styles.mapContainer} />
+      {/* 로드 실패 시 자리표시 이미지를 뺌 (실패한 지도가 불러온 것처럼 보이지 않게) — 이 요소의 인라인 style은 카카오가 쓰므로 클래스로 지정 */}
+      <div
+        ref={mapContainerRef}
+        className={mapError ? `${styles.mapContainer} ${styles.mapContainerError}` : styles.mapContainer}
+      />
+      {/* 지도 상태 문구 — 카카오 컨테이너 안이 아니라 형제 요소로 둠 (컨테이너 내부는 카카오가 그림) */}
+      {!isMapReady && (
+        <div className={styles.mapStatus}>
+          {mapError ? '지도를 불러오지 못했습니다' : '지도 불러오는 중...'}
+        </div>
+      )}
       <div className={styles.controls}>
         <button className={styles.controlButton}>전체보기</button>
       </div>

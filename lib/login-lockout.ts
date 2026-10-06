@@ -13,6 +13,10 @@ try {
     redis = new Redis({
       url: process.env.UPSTASH_REDIS_REST_URL,
       token: process.env.UPSTASH_REDIS_REST_TOKEN,
+      // 장애 시 빠르게 fail-open: 재시도 1회(0.1초) + 요청당 2초 제한
+      // (기본값 5회 지수 백오프면 Upstash 장애 시 로그인 1회가 13초까지 지연됐음)
+      retry: { retries: 1, backoff: () => 100 },
+      signal: () => AbortSignal.timeout(2000),
     });
   }
 } catch {

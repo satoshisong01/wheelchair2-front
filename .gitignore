@@ -29,6 +29,10 @@
 #docs
 docs/*
 
+# KTC 자체시험 도구·결과 (테스트 계정 비밀번호·운영 접속정보 포함 — 공개 레포라 커밋 금지)
+/ktc-self-test/
+/results/
+
 # debug
 npm-debug.log*
 yarn-debug.log*

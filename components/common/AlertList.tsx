@@ -33,6 +33,8 @@ interface AlertListProps {
   showViewAllButton?: boolean;
   onAlarmClick?: (alarm: AlarmItem) => void;
   onViewAllClick?: () => void;
+  // 지정하면 앞(최신)에서부터 이 개수만 렌더 — 전체보기 모달에는 전체 alarms 전달
+  maxItems?: number;
 }
 
 // --- 헬퍼 함수들 ---
@@ -90,8 +92,10 @@ export default function AlertList({
   showViewAllButton = false,
   onAlarmClick,
   onViewAllClick,
+  maxItems,
 }: AlertListProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const visibleAlarms = maxItems === undefined ? alarms : alarms.slice(0, maxItems);
 
   const handleViewAll = () => {
     if (onViewAllClick) {
@@ -116,7 +120,7 @@ export default function AlertList({
         </div>
 
         <div className={styles.list}>
-          {alarms.map((alarm, index) => {
+          {visibleAlarms.map((alarm, index) => {
             // Key 생성 (Date.now 제거됨)
             const uniqueKey = alarm.id
               ? `${alarm.id}-${index}`

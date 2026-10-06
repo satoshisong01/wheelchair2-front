@@ -22,6 +22,17 @@ export interface Alarm {
   [key: string]: any;
 }
 
+const SOUND_NAMES = ['alarm', 'ding', 'chair'] as const;
+const SOUND_PRELOAD_IDLE_TIMEOUT_MS = 2000;
+
+// 선로딩 전이라도 그 자리에서 만들어 돌려줌 — 알림음이 빠지지 않도록
+function getSoundAudio(audioMap: Record<string, HTMLAudioElement>, name: string): HTMLAudioElement {
+  if (!audioMap[name]) {
+    audioMap[name] = new Audio(`/sounds/${name}.mp3`);
+  }
+  return audioMap[name];
+}
+
 export function useMyWheelchair() {
   const { data: session } = useSession();
 
@@ -50,17 +61,32 @@ export function useMyWheelchair() {
     dataRef.current = data;
   }, [data]);
 
-  // 🔊 Audio 미리 생성 + 무음 unlock
+  // 🔊 Audio 미리 생성(페이지 load 후 유휴 시점) + 무음 unlock
   const audioMapRef = useRef<Record<string, HTMLAudioElement>>({});
   const audioUnlockedRef = useRef(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    ['alarm', 'ding', 'chair'].forEach((name) => {
-      if (!audioMapRef.current[name]) {
-        audioMapRef.current[name] = new Audio(`/sounds/${name}.mp3`);
+    const preloadSounds = () => {
+      SOUND_NAMES.forEach((name) => getSoundAudio(audioMapRef.current, name));
+    };
+    // mp3 다운로드가 첫 화면(지도) 로딩과 대역폭을 다투지 않도록 load 후 유휴 시점까지 미룸
+    let idleId: number | null = null;
+    let timerId: number | null = null;
+    const schedulePreload = () => {
+      if (typeof window.requestIdleCallback === 'function') {
+        idleId = window.requestIdleCallback(preloadSounds, {
+          timeout: SOUND_PRELOAD_IDLE_TIMEOUT_MS,
+        });
+      } else {
+        timerId = window.setTimeout(preloadSounds, SOUND_PRELOAD_IDLE_TIMEOUT_MS);
       }
-    });
+    };
+    if (document.readyState === 'complete') {
+      schedulePreload();
+    } else {
+      window.addEventListener('load', schedulePreload, { once: true });
+    }
     const unlock = () => {
       if (audioUnlockedRef.current) return;
       // AudioContext unlock
@@ -73,6 +99,7 @@ export function useMyWheelchair() {
         source.start(0);
       } catch (_) {}
       // Audio 객체도 무음 unlock
+      preloadSounds(); // 선로딩 전에 터치해도 세 소리 모두 unlock 되도록 먼저 생성
       Object.values(audioMapRef.current).forEach((audio) => {
         audio.volume = 0;
         audio.play().then(() => {
@@ -102,6 +129,9 @@ export function useMyWheelchair() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     return () => {
+      window.removeEventListener('load', schedulePreload);
+      if (idleId !== null) window.cancelIdleCallback(idleId);
+      if (timerId !== null) window.clearTimeout(timerId);
       window.removeEventListener('click', unlock);
       window.removeEventListener('touchstart', unlock);
       window.removeEventListener('online', handleOnline);
@@ -111,7 +141,7 @@ export function useMyWheelchair() {
 
   const triggerMobileAlert = (sound: 'alarm' | 'ding' | 'chair' = 'alarm') => {
     try {
-      const audio = audioMapRef.current[sound];
+      const audio = getSoundAudio(audioMapRef.current, sound);
       if (audio) {
         audio.currentTime = 0;
         audio.volume = 1.0;

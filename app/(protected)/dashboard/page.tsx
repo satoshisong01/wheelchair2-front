@@ -16,8 +16,12 @@ import EventModal from '../../../components/common/EventModal';
 import { DashboardSummaryCards } from './components/DashboardSummaryCards';
 import { WheelchairInfoModal } from './components/WheelchairInfoModal';
 import LoadingSpinner from '../../../components/ui/LoadingSpinner';
+import { AlarmCategory, isCriticalAlarmType } from '@/lib/alarm-categories';
 
 const SOCKET_SERVER_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://broker.firstcorea.com';
+
+// 첫 화면 부담을 줄이려 경고·알림은 최신 50건씩만 먼저 받음 (전체 목록은 전체보기 모달을 열 때 조회)
+const INLINE_ALARM_LIMIT = 50;
 
 type Alarm = {
   id: number | string;
@@ -32,6 +36,9 @@ type Alarm = {
   [key: string]: any;
 };
 
+// 시간 정보가 없거나 잘못된 알람은 가장 오래된 것으로 정렬
+const getAlarmTimeMs = (alarm: Alarm) => new Date(alarm.alarmTime ?? 0).getTime() || 0;
+
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -39,6 +46,17 @@ export default function DashboardPage() {
   const [selectedWheelchair, setSelectedWheelchair] = useState<DashboardWheelchair | null>(null);
   const [wheelchairs, setWheelchairs] = useState<DashboardWheelchair[]>([]);
   const [alarms, setAlarms] = useState<Alarm[]>([]);
+  // 전체보기 모달용 분류별 전체 목록 (null이면 아직 조회 전 → 모달에 최근 목록 표시)
+  const [fullAlarms, setFullAlarms] = useState<Record<AlarmCategory, Alarm[] | null>>({
+    critical: null,
+    info: null,
+  });
+  const fullAlarmsRequestedRef = useRef<Record<AlarmCategory, boolean>>({
+    critical: false,
+    info: false,
+  });
+  // 분류별 소켓 알람 수신 횟수 — 전체 목록 조회 중 도착한 알람이 응답에서 빠졌는지 판단용
+  const socketAlarmCountRef = useRef<Record<AlarmCategory, number>>({ critical: 0, info: 0 });
 
   // 소켓 알람 보강용: 최신 wheelchairs 목록을 ref로 유지 (소켓 핸들러 클로저의 stale 방지)
   const wheelchairsRef = useRef<DashboardWheelchair[]>([]);
@@ -89,12 +107,19 @@ export default function DashboardPage() {
       };
       const fetchAlarms = async () => {
         try {
-          const res = await fetch('/api/alarms');
-          if (res.ok) setAlarms(await res.json());
+          const [criticalRes, infoRes] = await Promise.all([
+            fetch(`/api/alarms?category=critical&limit=${INLINE_ALARM_LIMIT}`),
+            fetch(`/api/alarms?category=info&limit=${INLINE_ALARM_LIMIT}`),
+          ]);
+          if (!criticalRes.ok || !infoRes.ok) return;
+          const merged: Alarm[] = [...(await criticalRes.json()), ...(await infoRes.json())];
+          setAlarms(merged.sort((a, b) => getAlarmTimeMs(b) - getAlarmTimeMs(a)));
         } catch (e) {
           console.error(e);
         }
       };
+      // 세션 갱신(탭 포커스 등)으로 다시 불러올 때는 전체보기 목록도 다음에 열 때 새로 조회
+      fullAlarmsRequestedRef.current = { critical: false, info: false };
       fetchWheelchairs();
       fetchAlarms();
     }
@@ -166,6 +191,15 @@ export default function DashboardPage() {
           : newAlarmData;
         setAlarms((prevAlarms) => [enriched, ...prevAlarms]);
 
+        // 이미 불러온 전체보기 목록에도 추가 (조회 중이면 수신 횟수 비교로 다시 조회됨)
+        const category = isCriticalAlarmType(enriched.alarmType) ? 'critical' : 'info';
+        const counts = socketAlarmCountRef.current;
+        socketAlarmCountRef.current = { ...counts, [category]: counts[category] + 1 };
+        setFullAlarms((prev) => {
+          const list = prev[category];
+          return list ? { ...prev, [category]: [enriched, ...list] } : prev;
+        });
+
         const type = (newAlarmData.alarmType || '').toUpperCase();
 
         const CRITICAL_KEYWORDS = ['FALL', 'ROLLOVER', 'CRITICAL', 'EMERGENCY', 'WARNING'];
@@ -192,6 +226,29 @@ export default function DashboardPage() {
       };
     }
   }, [status, session]);
+
+  // 3. 전체보기 모달을 처음 열 때 해당 분류의 전체 목록 조회
+  useEffect(() => {
+    const loadFullAlarms = async (category: AlarmCategory, attempt = 0): Promise<void> => {
+      fullAlarmsRequestedRef.current = { ...fullAlarmsRequestedRef.current, [category]: true };
+      const countAtStart = socketAlarmCountRef.current[category];
+      try {
+        const res = await fetch(`/api/alarms?category=${category}`);
+        if (!res.ok) throw new Error(`전체 알람 조회 실패 (${res.status})`);
+        const rows: Alarm[] = await res.json();
+        // 조회 중 같은 분류 소켓 알람이 왔으면 응답에 빠졌을 수 있어 다시 조회 (기기 오작동으로 알람이 쏟아져도 무한 반복하지 않게 2회까지)
+        if (socketAlarmCountRef.current[category] !== countAtStart && attempt < 2) {
+          return loadFullAlarms(category, attempt + 1);
+        }
+        setFullAlarms((prev) => ({ ...prev, [category]: rows }));
+      } catch (e) {
+        fullAlarmsRequestedRef.current = { ...fullAlarmsRequestedRef.current, [category]: false };
+        console.error(e);
+      }
+    };
+    if (isWarningModalOpen && !fullAlarmsRequestedRef.current.critical) loadFullAlarms('critical');
+    if (isAlertModalOpen && !fullAlarmsRequestedRef.current.info) loadFullAlarms('info');
+  }, [isWarningModalOpen, isAlertModalOpen]);
 
   if (status === 'loading') return <LoadingSpinner />;
 
@@ -227,7 +284,8 @@ export default function DashboardPage() {
     router.push(`/wheelchair-info?id=${selectedWheelchair.id}`);
   };
 
-  const CRITICAL_KEYWORDS = ['FALL', 'CRITICAL', 'EMERGENCY', 'WARNING', 'FATAL', 'ROLLOVER'];
+  const criticalAlarms = alarms.filter((a) => isCriticalAlarmType(a.alarmType));
+  const infoAlarms = alarms.filter((a) => !isCriticalAlarmType(a.alarmType));
 
   return (
     <div className={styles.container}>
@@ -255,9 +313,7 @@ export default function DashboardPage() {
         <div className={styles.eventSection}>
           <AlertList
             title="경고 EVENT"
-            alarms={alarms.filter((a) =>
-              CRITICAL_KEYWORDS.some((k) => (a.alarmType || '').includes(k)),
-            )}
+            alarms={criticalAlarms}
             showViewAllButton={true}
             onViewAllClick={() => setIsWarningModalOpen(true)}
             onAlarmClick={handleAlarmClick}
@@ -266,9 +322,7 @@ export default function DashboardPage() {
         <div className={styles.eventSection}>
           <AlertList
             title="알림 EVENT"
-            alarms={alarms.filter(
-              (a) => !CRITICAL_KEYWORDS.some((k) => (a.alarmType || '').includes(k)),
-            )}
+            alarms={infoAlarms}
             showViewAllButton={true}
             onViewAllClick={() => setIsAlertModalOpen(true)}
             onAlarmClick={handleAlarmClick}
@@ -292,17 +346,13 @@ export default function DashboardPage() {
         isOpen={isWarningModalOpen}
         onClose={() => setIsWarningModalOpen(false)}
         title="경고 EVENT"
-        alarms={alarms.filter((a) =>
-          CRITICAL_KEYWORDS.some((k) => (a.alarmType || '').includes(k)),
-        )}
+        alarms={fullAlarms.critical ?? criticalAlarms}
       />
       <EventModal
         isOpen={isAlertModalOpen}
         onClose={() => setIsAlertModalOpen(false)}
         title="알림 EVENT"
-        alarms={alarms.filter(
-          (a) => !CRITICAL_KEYWORDS.some((k) => (a.alarmType || '').includes(k)),
-        )}
+        alarms={fullAlarms.info ?? infoAlarms}
       />
       <WheelchairInfoModal
         isOpen={isInfoModalOpen}

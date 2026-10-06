@@ -24,6 +24,9 @@ const SOCKET_SERVER_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://broker.
 
 const CRITICAL_KEYWORDS = ['FALL', 'CRITICAL', 'EMERGENCY', 'WARNING', 'FATAL', 'COLLISION'];
 
+// 인라인 경고/알림 목록은 최신 50건만 렌더 (전체는 전체보기 모달)
+const INLINE_ALARM_LIMIT = 50;
+
 // 타입 정의
 type WheelchairDetailData = DashboardWheelchair & {
   alarms: Alarm[];
@@ -135,7 +138,7 @@ function WheelchairInfoContent() {
             let fetchedAlarms: any[] = [];
             try {
               // 3. 알람 가져오기
-              const alarmRes = await fetch(`/api/alarms?t=${Date.now()}`, {
+              const alarmRes = await fetch(`/api/alarms?t=${Date.now()}&wheelchairId=${encodeURIComponent(String(targetId))}`, {
                 cache: 'no-store',
                 headers: {
                   'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -187,7 +190,7 @@ function WheelchairInfoContent() {
 
       let fetchedAlarms: any[] = [];
       try {
-        const alarmRes = await fetch(`/api/alarms?t=${Date.now()}`, {
+        const alarmRes = await fetch(`/api/alarms?t=${Date.now()}&wheelchairId=${encodeURIComponent(id)}`, {
           cache: 'no-store',
           headers: {
             'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -497,7 +500,7 @@ function WheelchairInfoContent() {
                 </button>
               </div>
               <div className={styles.scrollableContent}>
-                <AlertList title="" alarms={warningEvents} />
+                <AlertList title="" alarms={warningEvents} maxItems={INLINE_ALARM_LIMIT} />
               </div>
             </div>
             <div className={`${styles.card} ${styles.eventCard}`}>
@@ -512,7 +515,7 @@ function WheelchairInfoContent() {
                 </button>
               </div>
               <div className={styles.scrollableContent}>
-                <AlertList title="" alarms={infoEvents} />
+                <AlertList title="" alarms={infoEvents} maxItems={INLINE_ALARM_LIMIT} />
               </div>
             </div>
           </div>

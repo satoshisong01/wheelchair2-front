@@ -4,6 +4,9 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Script from 'next/script';
 import { useMyWheelchair } from '../../../hooks/useMyWheelchair';
+import KakaoMapSdkPreload, {
+  KAKAO_MAP_SDK_SERVICES_URL,
+} from '@/components/maps/KakaoMapSdkPreload';
 import { ChevronLeft, MapPin, Navigation, Locate, RefreshCw } from 'lucide-react';
 
 export default function LocationPage() {
@@ -222,9 +225,10 @@ export default function LocationPage() {
     <div className="min-h-screen bg-white flex flex-col relative">
 
       {/* 1. 카카오맵 스크립트 로드 */}
+      <KakaoMapSdkPreload services />
       <Script
         key={scriptReloadKey}
-        src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=${process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY}&autoload=false&libraries=services`}
+        src={KAKAO_MAP_SDK_SERVICES_URL}
         onLoad={() => setIsScriptLoaded(true)}
         onError={() => {
           if (mapRetryCount < 2) retryMapLoad();

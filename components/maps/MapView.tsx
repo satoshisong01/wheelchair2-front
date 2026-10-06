@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import Script from 'next/script';
 import { DashboardWheelchair } from '@/types/wheelchair';
 import styles from './MapView.module.css';
+import { KAKAO_MAP_SDK_URL } from './KakaoMapSdkPreload';
 
 // ... (KakaoMapLatLng, KakaoMapMarker 인터페이스는 동일) ...
 interface KakaoMapLatLng {
@@ -55,8 +56,6 @@ interface MapViewProps {
   selectedWheelchair?: DashboardWheelchair | null;
   onSelectWheelchair: (wheelchair: DashboardWheelchair) => void; // 🚨 [FIX] onSelectWheelchair 타입 수정
 }
-
-const KAKAO_MAP_API_KEY = process.env.NEXT_PUBLIC_KAKAO_MAP_API_KEY;
 
 export default function MapView({
   wheelchairs,
@@ -186,7 +185,7 @@ export default function MapView({
   return (
     <div className={styles.container}>
       <Script
-        src={`//dapi.kakao.com/v2/maps/sdk.js?appkey=${KAKAO_MAP_API_KEY}&autoload=false`} // [수정] onLoad는 이제 state만 true로 변경
+        src={KAKAO_MAP_SDK_URL} // [수정] onLoad는 이제 state만 true로 변경
         onLoad={() => setIsScriptLoaded(true)}
         onError={(e) => console.error('Kakao 지도 스크립트 로드 실패:', e)}
         strategy="afterInteractive"

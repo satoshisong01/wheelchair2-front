@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import Script from 'next/script';
 import { DashboardWheelchair } from '@/types/wheelchair';
 import styles from './MapView.module.css';
-import { KAKAO_MAP_SDK_URL, useIsClient } from './KakaoMapSdkPreload';
+import { KAKAO_MAP_SDK_URL, useMapPlaceholderPainted } from './KakaoMapSdkPreload';
 
 // ... (KakaoMapLatLng, KakaoMapMarker 인터페이스는 동일) ...
 interface KakaoMapLatLng {
@@ -75,8 +75,9 @@ export default function MapView({
     wheelchairsRef.current = wheelchairs;
     selectedWheelchairRef.current = selectedWheelchair;
   }, [wheelchairs, selectedWheelchair]);
-  // SDK <Script>는 클라이언트 렌더에서만 그림 (SSR되면 next/script가 SDK preload를 <head>에 실음 — useIsClient 주석 참고)
-  const isClient = useIsClient();
+  // SDK <Script>는 자리표시 이미지가 한 번 그려진 뒤에만 그림 — SSR 시 SDK preload가 <head>에 실리지 않게,
+  //   지도가 첫 페인트 전에 자리표시 이미지(LCP)를 덮지 않게 (useMapPlaceholderPainted 주석 참고)
+  const isPlaceholderPainted = useMapPlaceholderPainted();
   // 지도 상태 문구용 — 자리표시 이미지가 실제(흐린) 지도처럼 보여서, SDK가 늦거나 실패하면 문구로 알림
   const [isMapReady, setIsMapReady] = useState(false); // 지도 생성 완료
   const [mapError, setMapError] = useState(false); // SDK 스크립트 로드 실패
@@ -240,7 +241,7 @@ export default function MapView({
   }, [selectedWheelchair]); // selectedWheelchair prop이 변경될 때마다 실행 // --- 🔼🔼🔼 [신규 추가] 🔼🔼🔼 --- // --- [수정] 4. JSX 렌더링 ---
   return (
     <div className={styles.container}>
-      {isClient && (
+      {isPlaceholderPainted && (
         <Script
           src={KAKAO_MAP_SDK_URL} // [수정] onLoad는 이제 state만 true로 변경
           onLoad={() => setIsScriptLoaded(true)}

@@ -6,7 +6,7 @@ import Script from 'next/script';
 import { useMyWheelchair } from '../../../hooks/useMyWheelchair';
 import KakaoMapSdkPreload, {
   KAKAO_MAP_SDK_SERVICES_URL,
-  useIsClient,
+  useMapPlaceholderPainted,
 } from '@/components/maps/KakaoMapSdkPreload';
 import { ChevronLeft, MapPin, Navigation, Locate, RefreshCw } from 'lucide-react';
 
@@ -34,8 +34,9 @@ export default function LocationPage() {
   const markerRef = useRef<any>(null);
 
   // 스크립트 로드 상태
-  // SDK <Script>는 클라이언트 렌더에서만 그림 (SSR되면 next/script가 SDK preload를 <head>에 실음 — useIsClient 주석 참고)
-  const isClient = useIsClient();
+  // SDK <Script>는 자리표시 이미지가 한 번 그려진 뒤에만 그림 — SSR 시 SDK preload가 <head>에 실리지 않게,
+  //   지도가 첫 페인트 전에 자리표시 이미지(LCP)를 덮지 않게 (useMapPlaceholderPainted 주석 참고)
+  const isPlaceholderPainted = useMapPlaceholderPainted();
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
   const [scriptReloadKey, setScriptReloadKey] = useState(0);
   const [mapRetryCount, setMapRetryCount] = useState(0);
@@ -229,7 +230,7 @@ export default function LocationPage() {
 
       {/* 1. 카카오맵 스크립트 로드 */}
       <KakaoMapSdkPreload />
-      {isClient && (
+      {isPlaceholderPainted && (
         <Script
           key={scriptReloadKey}
           src={KAKAO_MAP_SDK_SERVICES_URL}
@@ -242,11 +243,11 @@ export default function LocationPage() {
         />
       )}
 
-      {/* 2. 상단 헤더 */}
+      {/* 2. 상단 헤더 — 버튼에 backdrop-blur 넣지 말 것: 첫 페인트 때 흐림 처리 비용이 커서 첫 페인트(LCP)가 늦어짐 */}
       <div className="absolute top-0 left-0 right-0 z-20 p-4 flex justify-between items-start">
         <button
           onClick={() => router.back()}
-          className="bg-white/90 backdrop-blur-sm p-3 rounded-full shadow-md text-gray-700 active:scale-95 transition-transform"
+          className="bg-white/90 p-3 rounded-full shadow-md text-gray-700 active:scale-95 transition-transform"
         >
           <ChevronLeft className="w-9 h-9" />
         </button>
@@ -255,7 +256,7 @@ export default function LocationPage() {
         <button
           onClick={handleRefreshMap}
           disabled={isRefreshing}
-          className="bg-white/90 backdrop-blur-sm p-3 rounded-full shadow-md text-gray-700 active:scale-95 transition-transform disabled:opacity-50"
+          className="bg-white/90 p-3 rounded-full shadow-md text-gray-700 active:scale-95 transition-transform disabled:opacity-50"
         >
           <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
         </button>

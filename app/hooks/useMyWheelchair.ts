@@ -23,6 +23,9 @@ export interface Alarm {
 }
 
 const SOUND_NAMES = ['alarm', 'ding', 'chair'] as const;
+// load 직후 바로 유휴 시점을 잡지 않고 먼저 기다리는 시간 — 첫 실행에선 load(약 310ms)가 첫 페인트보다 먼저 올 수 있어,
+//   load 후 유휴 시점만 기다리면 mp3(약 280KB)를 첫 페인트 전에 받아 LCP(Lighthouse 시뮬레이션)에 섞임
+const SOUND_PRELOAD_DELAY_MS = 5000;
 const SOUND_PRELOAD_IDLE_TIMEOUT_MS = 2000;
 
 // 선로딩 전이라도 그 자리에서 만들어 돌려줌 — 알림음이 빠지지 않도록
@@ -61,7 +64,7 @@ export function useMyWheelchair() {
     dataRef.current = data;
   }, [data]);
 
-  // 🔊 Audio 미리 생성(페이지 load 후 유휴 시점) + 무음 unlock
+  // 🔊 Audio 미리 생성(페이지 load 후 일정 시간 뒤 유휴 시점) + 무음 unlock
   const audioMapRef = useRef<Record<string, HTMLAudioElement>>({});
   const audioUnlockedRef = useRef(false);
 
@@ -70,8 +73,10 @@ export function useMyWheelchair() {
     const preloadSounds = () => {
       SOUND_NAMES.forEach((name) => getSoundAudio(audioMapRef.current, name));
     };
-    // mp3 다운로드가 첫 화면(지도) 로딩과 대역폭을 다투지 않도록 load 후 유휴 시점까지 미룸
+    // mp3 다운로드가 첫 화면(지도) 로딩과 대역폭을 다투지 않도록 load 후 SOUND_PRELOAD_DELAY_MS 기다린 뒤 유휴 시점까지 미룸
+    // (그 전에 알람이 오면 triggerMobileAlert → getSoundAudio가 그 자리에서 만들어 재생)
     let idleId: number | null = null;
+    let delayTimerId: number | null = null;
     let timerId: number | null = null;
     const schedulePreload = () => {
       if (typeof window.requestIdleCallback === 'function') {
@@ -82,10 +87,13 @@ export function useMyWheelchair() {
         timerId = window.setTimeout(preloadSounds, SOUND_PRELOAD_IDLE_TIMEOUT_MS);
       }
     };
+    const schedulePreloadAfterDelay = () => {
+      delayTimerId = window.setTimeout(schedulePreload, SOUND_PRELOAD_DELAY_MS);
+    };
     if (document.readyState === 'complete') {
-      schedulePreload();
+      schedulePreloadAfterDelay();
     } else {
-      window.addEventListener('load', schedulePreload, { once: true });
+      window.addEventListener('load', schedulePreloadAfterDelay, { once: true });
     }
     const unlock = () => {
       if (audioUnlockedRef.current) return;
@@ -129,7 +137,8 @@ export function useMyWheelchair() {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     return () => {
-      window.removeEventListener('load', schedulePreload);
+      window.removeEventListener('load', schedulePreloadAfterDelay);
+      if (delayTimerId !== null) window.clearTimeout(delayTimerId);
       if (idleId !== null) window.cancelIdleCallback(idleId);
       if (timerId !== null) window.clearTimeout(timerId);
       window.removeEventListener('click', unlock);

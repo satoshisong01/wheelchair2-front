@@ -1,6 +1,6 @@
 import KakaoMapSdkPreload from '@/components/maps/KakaoMapSdkPreload';
 
-// 페이지는 세션 확인 전엔 지도를 SSR하지 않으므로, 지도 SDK 힌트는 이 레이아웃에서 HTML에 실음
+// 지도 자리표시 이미지 preload·카카오 서버 preconnect 힌트를 HTML <head>에 실음 (첫 페인트에 지도 영역이 그려지도록)
 export default function WheelchairInfoLayout({ children }: { children: React.ReactNode }) {
   return (
     <>

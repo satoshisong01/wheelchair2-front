@@ -15,7 +15,6 @@ import { DashboardWheelchair } from '@/types/wheelchair';
 import EventModal from '../../../components/common/EventModal';
 import { DashboardSummaryCards } from './components/DashboardSummaryCards';
 import { WheelchairInfoModal } from './components/WheelchairInfoModal';
-import LoadingSpinner from '../../../components/ui/LoadingSpinner';
 import { AlarmCategory, isCriticalAlarmType } from '@/lib/alarm-categories';
 
 const SOCKET_SERVER_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://broker.firstcorea.com';
@@ -250,10 +249,10 @@ export default function DashboardPage() {
     if (isAlertModalOpen && !fullAlarmsRequestedRef.current.info) loadFullAlarms('info');
   }, [isWarningModalOpen, isAlertModalOpen]);
 
-  if (status === 'loading') return <LoadingSpinner />;
-
+  // 세션 확인 중(loading)에도 빈 데이터로 같은 화면을 그림 — 지도 영역이 정적 HTML에 실려 첫 페인트에 그려지고(LCP),
+  //   인증 후에도 트리가 같아 MapView가 다시 마운트되지 않음 (데이터 조회·소켓은 위 effect에서 인증·권한 확인 후에만)
   // ⛔ 권한 없음 처리 (USER도 통과하도록 수정됨)
-  if (status !== 'authenticated' || !isAuthorized()) {
+  if (status === 'unauthenticated' || (status === 'authenticated' && !isAuthorized())) {
     return null; // 또는 <div>접근 권한이 없습니다.</div>
   }
 

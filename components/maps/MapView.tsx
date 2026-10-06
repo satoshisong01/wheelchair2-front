@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import Script from 'next/script';
 import { DashboardWheelchair } from '@/types/wheelchair';
 import styles from './MapView.module.css';
-import { KAKAO_MAP_SDK_URL } from './KakaoMapSdkPreload';
+import { KAKAO_MAP_SDK_URL, useIsClient } from './KakaoMapSdkPreload';
 
 // ... (KakaoMapLatLng, KakaoMapMarker 인터페이스는 동일) ...
 interface KakaoMapLatLng {
@@ -20,6 +20,7 @@ interface KakaoMapMarker {
 interface KakaoMapInstance {
   panTo(position: KakaoMapLatLng): void;
   setCenter(position: KakaoMapLatLng): void;
+  getCenter(): KakaoMapLatLng;
   relayout(): void;
 }
 // ... (KakaoMapsSDK, Window 타입 정의는 동일) ...
@@ -65,6 +66,8 @@ export default function MapView({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<KakaoMapInstance | null>(null); // 🚨 [FIX] markersRef의 Key 타입을 number 대신 string | number로 유연하게 변경
   const markersRef = useRef<{ [key: string | number]: KakaoMapMarker }>({});
+  // SDK <Script>는 클라이언트 렌더에서만 그림 (SSR되면 next/script가 SDK preload를 <head>에 실음 — useIsClient 주석 참고)
+  const isClient = useIsClient();
   const [isScriptLoaded, setIsScriptLoaded] = useState(false); // --- 🔽🔽🔽 [수정 1] `updateMarkers`를 `initializeMap`보다 먼저 선언 🔽🔽🔽 ---
   /**
    * [18주차] 휠체어 데이터(실시간)가 변경될 때마다 마커를 업데이트하는 함수
@@ -161,6 +164,31 @@ export default function MapView({
       mapRef.current = null;
     };
   }, [isScriptLoaded, mapContainerRef]); // 스크립트 또는 div가 준비되면 이 훅 실행
+
+  // 컨테이너 크기가 바뀌면 지도를 다시 배치(중심 유지) — 지도가 데이터보다 먼저 만들어지므로(첫 화면 LCP 개선)
+  //   이후 화면 틀이 채워지거나 창 크기가 바뀌면 지도 생성 때와 크기가 달라질 수 있음
+  useEffect(() => {
+    const container = mapContainerRef.current;
+    if (!container || typeof ResizeObserver === 'undefined') return;
+
+    let lastWidth = 0;
+    let lastHeight = 0;
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      // 1px 미만 변화(로딩 자리 → 실제 요소 교체 시 소수점 차이 등)는 무시 — 불필요한 setCenter로 진행 중인 panTo가 끊기지 않게
+      if (Math.abs(width - lastWidth) < 1 && Math.abs(height - lastHeight) < 1) return;
+      lastWidth = width;
+      lastHeight = height;
+
+      const map = mapRef.current;
+      if (!map) return;
+      const center = map.getCenter();
+      map.relayout();
+      map.setCenter(center);
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
   /**
    * [useEffect] 휠체어 목록(props)이 변경될 때마다 마커 업데이트 함수 호출
    */
@@ -184,12 +212,14 @@ export default function MapView({
   }, [selectedWheelchair]); // selectedWheelchair prop이 변경될 때마다 실행 // --- 🔼🔼🔼 [신규 추가] 🔼🔼🔼 --- // --- [수정] 4. JSX 렌더링 ---
   return (
     <div className={styles.container}>
-      <Script
-        src={KAKAO_MAP_SDK_URL} // [수정] onLoad는 이제 state만 true로 변경
-        onLoad={() => setIsScriptLoaded(true)}
-        onError={(e) => console.error('Kakao 지도 스크립트 로드 실패:', e)}
-        strategy="afterInteractive"
-      />
+      {isClient && (
+        <Script
+          src={KAKAO_MAP_SDK_URL} // [수정] onLoad는 이제 state만 true로 변경
+          onLoad={() => setIsScriptLoaded(true)}
+          onError={(e) => console.error('Kakao 지도 스크립트 로드 실패:', e)}
+          strategy="afterInteractive"
+        />
+      )}
       {/* [수정] id="map" 대신 ref={mapContainerRef} 사용 */}
       <div ref={mapContainerRef} className={styles.mapContainer} />
       <div className={styles.controls}>

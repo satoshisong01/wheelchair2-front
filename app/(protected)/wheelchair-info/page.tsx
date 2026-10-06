@@ -17,7 +17,6 @@ import { DrivingInfoPanel } from './components/DrivingInfoPanel';
 import { WheelchairStatePanel } from './components/WheelchairStatePanel';
 import { PostureControlPanel } from './components/PostureControlPanel';
 import { TopRightPanel } from './components/TopRightPanel';
-import LoadingSpinner from '@/components/ui/LoadingSpinner';
 import PostureSafetyMonitor from './components/PostureSafetyMonitor';
 
 const SOCKET_SERVER_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://broker.firstcorea.com';
@@ -60,9 +59,20 @@ type WheelchairDetailData = DashboardWheelchair & {
   };
 };
 
+// URL의 ?id=만 읽어 위로 올려 보냄 — useSearchParams는 정적 생성 시 가장 가까운 Suspense까지 CSR로 넘기므로(bailout),
+//   이 컴포넌트만 따로 Suspense로 감싸 페이지 틀(지도 영역)은 정적 HTML에 실리게 함
+function SearchParamsBridge({ onChange }: { onChange: (id: string | null) => void }) {
+  const id = useSearchParams().get('id');
+  useEffect(() => {
+    onChange(id);
+  }, [id, onChange]);
+  return null;
+}
+
 function WheelchairInfoContent() {
   const { data: session, status } = useSession();
-  const searchParams = useSearchParams();
+  // URL의 id (SearchParamsBridge가 채움) — undefined: 아직 모름, null: id 없음
+  const [urlId, setUrlId] = useState<string | null | undefined>(undefined);
 
   const [allWheelchairs, setAllWheelchairs] = useState<DashboardWheelchair[]>([]);
   const [detailData, setDetailData] = useState<WheelchairDetailData | null>(null);
@@ -105,8 +115,8 @@ function WheelchairInfoContent() {
 
   // 1. 초기 데이터 로딩
   useEffect(() => {
-    if (status !== 'authenticated') return;
-    // 🔒 [레이스 방지] 이 effect가 여러 번 실행될 때(status/searchParams 변화), 오래된 실행의
+    if (status !== 'authenticated' || urlId === undefined) return;
+    // 🔒 [레이스 방지] 이 effect가 여러 번 실행될 때(status/urlId 변화), 오래된 실행의
     //   비동기 결과가 최신 선택을 덮어쓰지 못하도록 취소 플래그로 가드한다.
     let cancelled = false;
 
@@ -121,7 +131,6 @@ function WheelchairInfoContent() {
         setAllWheelchairs(list);
 
         // 2. 현재 선택된 ID 결정
-        const urlId = searchParams.get('id');
         let targetId = urlId;
         if (!targetId && list.length > 0) {
           targetId = list[0].id;
@@ -178,7 +187,7 @@ function WheelchairInfoContent() {
     return () => {
       cancelled = true;
     };
-  }, [status, searchParams]);
+  }, [status, urlId]);
 
   // 2. 휠체어 선택 핸들러
   const handleSelectWheelchair = async (id: string) => {
@@ -426,19 +435,27 @@ function WheelchairInfoContent() {
     };
   }, [status]);
 
-  if (status === 'loading' || isLoading) return <LoadingSpinner />;
-  if (!detailData) return <div className={styles.loadingContainer}>등록된 휠체어가 없습니다.</div>;
+  // 세션·데이터를 기다리는 동안에도 같은 화면 틀을 그림 — 지도 영역이 정적 HTML에 실려 첫 페인트에 그려지고(LCP),
+  //   데이터가 와도 MapView가 같은 자리에 남아 다시 마운트되지 않음
+  //   (열·영역 컨테이너의 flex 비율이 지도 크기를 정하므로 컨테이너는 항상 그리고, 내용만 데이터가 있을 때 그림)
+  if (!detailData && status !== 'loading' && !isLoading) {
+    return <div className={styles.loadingContainer}>등록된 휠체어가 없습니다.</div>;
+  }
 
   const isCritical = (alarm: any) => {
     const type = (alarm.alarmType || alarm.type || '').toUpperCase();
     return CRITICAL_KEYWORDS.some((k) => type.includes(k));
   };
 
-  const warningEvents = detailData.alarms.filter(isCritical);
-  const infoEvents = detailData.alarms.filter((a) => !isCritical(a));
+  const alarms = detailData?.alarms ?? [];
+  const warningEvents = alarms.filter(isCritical);
+  const infoEvents = alarms.filter((a) => !isCritical(a));
 
   return (
     <div className={styles.container}>
+      <Suspense fallback={null}>
+        <SearchParamsBridge onChange={setUrlId} />
+      </Suspense>
       {detailData && (
         <PostureSafetyMonitor
           status={detailData.status}
@@ -462,92 +479,105 @@ function WheelchairInfoContent() {
             : '⚠️ 서버 연결이 끊겼습니다. 자동 재연결 시도 중...'}
         </div>
       )}
-      <InfoBar
-        wc={detailData}
-        allWheelchairs={allWheelchairs}
-        onSelectWheelchair={handleSelectWheelchair}
-        disableDropdown={!isManager}
-      />
+      {detailData ? (
+        <InfoBar
+          wc={detailData}
+          allWheelchairs={allWheelchairs}
+          onSelectWheelchair={handleSelectWheelchair}
+          disableDropdown={!isManager}
+        />
+      ) : (
+        <div className={styles.infoBarPlaceholder} />
+      )}
       <div className={styles.mainContent}>
         <div className={styles.leftColumn}>
           <div className={styles.mapArea}>
             <MapView
-              wheelchairs={[detailData]}
+              wheelchairs={detailData ? [detailData] : []}
               selectedWheelchair={detailData}
               onSelectWheelchair={() => {}}
             />
           </div>
           <div className={styles.bottomArea}>
-            <DrivingInfoPanel wc={detailData} />
-            <WheelchairStatePanel wc={detailData} />
+            {detailData && (
+              <>
+                <DrivingInfoPanel wc={detailData} />
+                <WheelchairStatePanel wc={detailData} />
+              </>
+            )}
           </div>
         </div>
         <div className={styles.rightColumn}>
-          <div className={styles.rightTop}>
-            <TopRightPanel wc={detailData} />
-            <PostureControlPanel wc={detailData} />
-          </div>
-          <div className={styles.eventArea}>
-            <div className={`${styles.card} ${styles.eventCard}`}>
-              <div className={styles.eventHeader}>
-                <h2 className={`${styles.sectionTitle} ${styles.warningTitle}`}>경고 EVENT</h2>
-                <button
-                  type="button"
-                  className={styles.viewAllLink}
-                  onClick={() => setIsWarningModalOpen(true)}
-                >
-                  전체보기 ⮞
-                </button>
+          {detailData && (
+            <>
+              <div className={styles.rightTop}>
+                <TopRightPanel wc={detailData} />
+                <PostureControlPanel wc={detailData} />
               </div>
-              <div className={styles.scrollableContent}>
-                <AlertList title="" alarms={warningEvents} maxItems={INLINE_ALARM_LIMIT} />
+              <div className={styles.eventArea}>
+                <div className={`${styles.card} ${styles.eventCard}`}>
+                  <div className={styles.eventHeader}>
+                    <h2 className={`${styles.sectionTitle} ${styles.warningTitle}`}>경고 EVENT</h2>
+                    <button
+                      type="button"
+                      className={styles.viewAllLink}
+                      onClick={() => setIsWarningModalOpen(true)}
+                    >
+                      전체보기 ⮞
+                    </button>
+                  </div>
+                  <div className={styles.scrollableContent}>
+                    <AlertList title="" alarms={warningEvents} maxItems={INLINE_ALARM_LIMIT} />
+                  </div>
+                </div>
+                <div className={`${styles.card} ${styles.eventCard}`}>
+                  <div className={styles.eventHeader}>
+                    <h2 className={`${styles.sectionTitle} ${styles.infoTitle}`}>알림 EVENT</h2>
+                    <button
+                      type="button"
+                      className={styles.viewAllLink}
+                      onClick={() => setIsInfoModalOpen(true)}
+                    >
+                      전체보기 ⮞
+                    </button>
+                  </div>
+                  <div className={styles.scrollableContent}>
+                    <AlertList title="" alarms={infoEvents} maxItems={INLINE_ALARM_LIMIT} />
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className={`${styles.card} ${styles.eventCard}`}>
-              <div className={styles.eventHeader}>
-                <h2 className={`${styles.sectionTitle} ${styles.infoTitle}`}>알림 EVENT</h2>
-                <button
-                  type="button"
-                  className={styles.viewAllLink}
-                  onClick={() => setIsInfoModalOpen(true)}
-                >
-                  전체보기 ⮞
-                </button>
-              </div>
-              <div className={styles.scrollableContent}>
-                <AlertList title="" alarms={infoEvents} maxItems={INLINE_ALARM_LIMIT} />
-              </div>
-            </div>
-          </div>
+            </>
+          )}
         </div>
       </div>
 
-      <EventModal
-        isOpen={isWarningModalOpen}
-        onClose={() => setIsWarningModalOpen(false)}
-        title="경고 EVENT"
-        alarms={warningEvents.map((a) => ({
-          ...a,
-          deviceSerial: a.wheelchair?.device_serial || detailData.device_serial,
-        }))}
-      />
-      <EventModal
-        isOpen={isInfoModalOpen}
-        onClose={() => setIsInfoModalOpen(false)}
-        title="알림 EVENT"
-        alarms={infoEvents.map((a) => ({
-          ...a,
-          deviceSerial: a.wheelchair?.device_serial || detailData.device_serial,
-        }))}
-      />
+      {detailData && (
+        <>
+          <EventModal
+            isOpen={isWarningModalOpen}
+            onClose={() => setIsWarningModalOpen(false)}
+            title="경고 EVENT"
+            alarms={warningEvents.map((a) => ({
+              ...a,
+              deviceSerial: a.wheelchair?.device_serial || detailData.device_serial,
+            }))}
+          />
+          <EventModal
+            isOpen={isInfoModalOpen}
+            onClose={() => setIsInfoModalOpen(false)}
+            title="알림 EVENT"
+            alarms={infoEvents.map((a) => ({
+              ...a,
+              deviceSerial: a.wheelchair?.device_serial || detailData.device_serial,
+            }))}
+          />
+        </>
+      )}
     </div>
   );
 }
 
+// 본문에서 useSearchParams를 직접 쓰지 말 것 — 정적 HTML에서 페이지 틀(지도 영역)이 빠짐 (SearchParamsBridge 참고)
 export default function WheelchairInfoPage() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <WheelchairInfoContent />
-    </Suspense>
-  );
+  return <WheelchairInfoContent />;
 }

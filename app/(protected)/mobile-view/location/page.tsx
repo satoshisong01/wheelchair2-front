@@ -6,6 +6,7 @@ import Script from 'next/script';
 import { useMyWheelchair } from '../../../hooks/useMyWheelchair';
 import KakaoMapSdkPreload, {
   KAKAO_MAP_SDK_SERVICES_URL,
+  useIsClient,
 } from '@/components/maps/KakaoMapSdkPreload';
 import { ChevronLeft, MapPin, Navigation, Locate, RefreshCw } from 'lucide-react';
 
@@ -33,6 +34,8 @@ export default function LocationPage() {
   const markerRef = useRef<any>(null);
 
   // 스크립트 로드 상태
+  // SDK <Script>는 클라이언트 렌더에서만 그림 (SSR되면 next/script가 SDK preload를 <head>에 실음 — useIsClient 주석 참고)
+  const isClient = useIsClient();
   const [isScriptLoaded, setIsScriptLoaded] = useState(false);
   const [scriptReloadKey, setScriptReloadKey] = useState(0);
   const [mapRetryCount, setMapRetryCount] = useState(0);
@@ -225,17 +228,19 @@ export default function LocationPage() {
     <div className="min-h-screen bg-white flex flex-col relative">
 
       {/* 1. 카카오맵 스크립트 로드 */}
-      <KakaoMapSdkPreload services />
-      <Script
-        key={scriptReloadKey}
-        src={KAKAO_MAP_SDK_SERVICES_URL}
-        onLoad={() => setIsScriptLoaded(true)}
-        onError={() => {
-          if (mapRetryCount < 2) retryMapLoad();
-          else setAddress('지도 스크립트 로드에 실패했습니다. 새로고침 버튼을 눌러주세요.');
-        }}
-        strategy="afterInteractive"
-      />
+      <KakaoMapSdkPreload />
+      {isClient && (
+        <Script
+          key={scriptReloadKey}
+          src={KAKAO_MAP_SDK_SERVICES_URL}
+          onLoad={() => setIsScriptLoaded(true)}
+          onError={() => {
+            if (mapRetryCount < 2) retryMapLoad();
+            else setAddress('지도 스크립트 로드에 실패했습니다. 새로고침 버튼을 눌러주세요.');
+          }}
+          strategy="afterInteractive"
+        />
+      )}
 
       {/* 2. 상단 헤더 */}
       <div className="absolute top-0 left-0 right-0 z-20 p-4 flex justify-between items-start">
@@ -256,8 +261,11 @@ export default function LocationPage() {
         </button>
       </div>
 
-      {/* 3. 지도 영역 */}
-      <div ref={mapContainerRef} className="w-full h-[65vh] bg-gray-100 relative">
+      {/* 3. 지도 영역 — 자리표시 이미지(첫 페인트 LCP)는 반드시 클래스로: 카카오 SDK가 이 요소의 인라인 style을 덮어씀 */}
+      <div
+        ref={mapContainerRef}
+        className="w-full h-[65vh] bg-gray-100 bg-[url(/images/map-placeholder.webp)] bg-cover bg-center relative"
+      >
         {(!isScriptLoaded || !isMapReady || loading) && (
           <div className="absolute inset-0 flex items-center justify-center text-gray-400">
             {loading ? '휠체어 위치 불러오는 중...' : '지도 로딩 중...'}

@@ -11,10 +11,14 @@ import { parseJsonBody } from '@/lib/validate';
 // AWS Timestream 클라이언트 설정
 const queryClient = new TimestreamQueryClient({
   region: process.env.AWS_REGION || 'ap-northeast-1',
-  credentials: {
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || '',
-  },
+  // 정적 키가 없으면(EC2) credentials를 생략해 SDK가 인스턴스 IAM 역할을 쓰게 함
+  credentials:
+    process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY
+      ? {
+          accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+          secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+        }
+      : undefined,
 });
 
 // Google Gemini AI 설정

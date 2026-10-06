@@ -22,13 +22,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
-import { Pool } from 'pg';
-import { getDbSslOption } from '@/lib/db';
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: getDbSslOption(),
-});
+import pool from '@/lib/db';
 
 export async function POST() {
   try {

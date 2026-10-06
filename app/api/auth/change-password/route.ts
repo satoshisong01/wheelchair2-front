@@ -3,18 +3,12 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
-import { Pool } from 'pg';
 import bcrypt from 'bcrypt'; // 🔒 [보안] bcrypt로 일원화 (로그인 검증과 동일 라이브러리)
 import { createAuditLog } from '@/lib/log'; // ⭐️ [추가] 활동 로그 함수 임포트
 import { validatePassword } from '@/lib/password'; // 🔒 [IA-05] 비밀번호 강도 검증
-import { getDbSslOption } from '@/lib/db';
+import pool from '@/lib/db';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/validate';
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: getDbSslOption(),
-});
 
 export async function POST(req: Request) {
   try {
@@ -83,25 +77,25 @@ export async function POST(req: Request) {
         hashedNewPassword,
         userId,
       ]);
-
-      // ⭐️ [핵심 추가] 비밀번호 변경 성공 로그 기록
-      await createAuditLog({
-        userId: userId,
-        userRole: userRole,
-        action: 'USER_UPDATE',
-        details: {
-          target: '비밀번호',
-          status: 'Success',
-          targetUserId: userId,
-          deviceId: deviceId, // 로그 추적을 위해 기기 ID 포함
-        },
-        deviceSerial: deviceId, // AuditLog 테이블의 device_serial 필드에도 기록
-      });
-
-      return NextResponse.json({ message: '비밀번호가 변경되었습니다.' });
     } finally {
       client.release();
     }
+
+    // ⭐️ [핵심 추가] 비밀번호 변경 성공 로그 기록 (createAuditLog도 같은 DB 풀 사용 → 연결 반납 후 기록)
+    await createAuditLog({
+      userId: userId,
+      userRole: userRole,
+      action: 'USER_UPDATE',
+      details: {
+        target: '비밀번호',
+        status: 'Success',
+        targetUserId: userId,
+        deviceId: deviceId, // 로그 추적을 위해 기기 ID 포함
+      },
+      deviceSerial: deviceId, // AuditLog 테이블의 device_serial 필드에도 기록
+    });
+
+    return NextResponse.json({ message: '비밀번호가 변경되었습니다.' });
   } catch (error) {
     console.error('[API/change-password] Error:', error);
 

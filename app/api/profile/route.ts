@@ -3,17 +3,11 @@
 //   (의료정보 수집 기능 제거 — 최소 수집 원칙)
 
 import { NextResponse } from 'next/server';
-import { Pool } from 'pg';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/authOptions';
-import { getDbSslOption } from '@/lib/db';
+import pool from '@/lib/db';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/validate';
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: getDbSslOption(),
-});
 
 // 1. GET: 프로필 조회 (기존 로직 유지)
 export async function GET() {
@@ -58,16 +52,16 @@ export async function GET() {
 
 // 2. POST: 프로필 + 휠체어 통합 등록/수정 (트랜잭션 적용)
 export async function POST(request: Request) {
+  // 1. 세션 확인 — 세션 확인도 같은 DB 풀을 쓰므로 연결을 잡기 전에 먼저 수행(중첩 대기 방지)
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.dbUserId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const userId = session.user.dbUserId;
+
   const client = await pool.connect(); // 트랜잭션을 위해 클라이언트 연결
 
   try {
-    // 1. 세션 확인
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.dbUserId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-    const userId = session.user.dbUserId;
-
     // 2. 요청 데이터 파싱 + 검증 (정상 입력은 그대로 통과, 과대 크기/타입만 차단)
     const parsed = await parseJsonBody(
       request,

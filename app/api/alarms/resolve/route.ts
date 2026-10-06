@@ -1,15 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/authOptions';
-import { Pool } from 'pg';
-import { getDbSslOption } from '@/lib/db';
+import pool from '@/lib/db';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/validate';
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: getDbSslOption(),
-});
 
 export async function POST(req: Request) {
   try {

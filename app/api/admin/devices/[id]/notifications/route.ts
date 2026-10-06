@@ -5,16 +5,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
-import { Pool } from 'pg';
 import { createAuditLog } from '@/lib/log';
-import { getDbSslOption } from '@/lib/db';
+import pool from '@/lib/db';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/validate';
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: getDbSslOption(),
-});
 
 type NotificationType = 'emergency' | 'battery' | 'posture';
 

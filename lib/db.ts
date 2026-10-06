@@ -105,9 +105,9 @@ const pool =
     ssl: getDbSslOption(),
 
     // 🟢 [추가] DB 연결 폭주 및 좀비 방지 설정
-    max: 20, // 최대 동시 연결 수 (t3.micro/small 기준 20~50 적당)
+    max: 10, // RDS max_connections 79를 알람 워커·Vercel과 공유 → PM2 2프로세스 × 10 = 20개로 제한
     idleTimeoutMillis: 30000, // 30초 이상 안 쓰면 연결 강제 회수 (좀비 방지 핵심!)
-    connectionTimeoutMillis: 2000, // 2초 안에 연결 못 하면 에러 뱉고 포기 (무한 로딩 방지)
+    connectionTimeoutMillis: 5000, // 모든 라우트가 이 풀 하나를 공유 → 바로 실패하지 않고 5초까지 빈 연결 대기
   });
 
 // 개발 모드에서 재시작 시 커넥션 풀 유지

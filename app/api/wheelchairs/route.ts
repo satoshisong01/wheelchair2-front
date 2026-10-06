@@ -2,22 +2,15 @@
 // 📝 설명: 최신 DB 구조(JOIN) 조회 + 기기 등록(POST) 기능 포함 (최종본)
 
 import { NextResponse, NextRequest } from 'next/server';
-import { Pool } from 'pg';
 import * as dotenv from 'dotenv';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { createAuditLog } from '@/lib/log';
-import { getDbSslOption } from '@/lib/db';
+import pool from '@/lib/db';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/validate';
 
 dotenv.config();
-
-// 워커와 동일한 DB 설정
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: getDbSslOption(),
-});
 
 // 1. 휠체어 목록 조회 (GET) — 인증 필수 (ADMIN/MASTER만 허용)
 export async function GET() {

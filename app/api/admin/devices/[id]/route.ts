@@ -2,19 +2,13 @@
 // 📝 설명: GET, PATCH, DELETE 모든 기능을 포함하며 TypeORM 제거 및 Raw SQL 적용 완료
 
 import { NextResponse } from 'next/server';
-import { Pool } from 'pg';
 import { getServerSession } from 'next-auth';
 // 🚨 authOptions 경로 확인 필수
 import { authOptions } from '@/lib/authOptions';
-import { getDbSslOption } from '@/lib/db';
+import pool from '@/lib/db';
 import { createAuditLog } from '@/lib/log';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/validate';
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: getDbSslOption(),
-});
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -136,17 +130,20 @@ export async function DELETE(
   request: Request,
   { params }: RouteParams
 ) {
-  const client = await pool.connect(); // 트랜잭션을 위해 클라이언트 연결
-  try {
-    const session = await getServerSession(authOptions);
-    if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'MASTER')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  // 세션 확인도 같은 DB 풀을 쓰므로 연결을 잡기 전에 먼저 수행(중첩 대기 방지)
+  const session = await getServerSession(authOptions);
+  if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'MASTER')) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-    const { id } = await params;
-    const adminUserId = session.user.dbUserId;
-    const adminEmail = session.user.email;
-    
+  const { id } = await params;
+  const adminUserId = session.user.dbUserId;
+  const adminEmail = session.user.email;
+
+  const client = await pool.connect(); // 트랜잭션을 위해 클라이언트 연결
+  let serial = '';
+  let model = '';
+  try {
     await client.query('BEGIN'); // 트랜잭션 시작
 
     // ⭐️ [핵심 FIX 1] 삭제 전에 시리얼 번호 조회
@@ -162,8 +159,8 @@ export async function DELETE(
       return NextResponse.json({ message: '삭제할 기기를 찾을 수 없습니다.' }, { status: 404 });
     }
 
-    const serial = lookupResult.rows[0].device_serial;
-    const model = lookupResult.rows[0].model_name;
+    serial = lookupResult.rows[0].device_serial;
+    model = lookupResult.rows[0].model_name;
 
     // 3. wheelchairs를 참조하는 모든 테이블을 동적으로 조회 후 삭제
     const fkLookup = await client.query(`
@@ -196,22 +193,6 @@ export async function DELETE(
     await client.query('DELETE FROM wheelchairs WHERE id = $1', [id]);
 
     await client.query('COMMIT'); // 커밋
-
-    // 🔒 [UC-04] 기기 삭제 감사기록 — 표준 스키마(createAuditLog)로 통일
-    //   (기존 직접 INSERT는 구컬럼(action_type/admin_user_id) 기준이라 현행 스키마와 불일치)
-    await createAuditLog({
-      userId: String(adminUserId ?? adminEmail ?? 'unknown'),
-      userRole: session.user.role,
-      action: 'DEVICE_DELETE',
-      details: { wheelchairId: id, serial, model, adminEmail },
-      deviceSerial: serial,
-      userName: session.user.name || undefined,
-    });
-
-    console.log(`[Admin] Device Deleted: ${serial} by ${adminEmail}`);
-
-    return NextResponse.json({ message: `기기 (${serial})가 성공적으로 삭제되었습니다.` });
-
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
     console.error('Device Delete Error:', error);
@@ -219,4 +200,20 @@ export async function DELETE(
   } finally {
     client.release(); // 연결 해제
   }
+
+  // 🔒 [UC-04] 기기 삭제 감사기록 — 표준 스키마(createAuditLog)로 통일
+  //   (기존 직접 INSERT는 구컬럼(action_type/admin_user_id) 기준이라 현행 스키마와 불일치)
+  //   createAuditLog도 같은 DB 풀을 쓰므로 연결 반납 후 기록
+  await createAuditLog({
+    userId: String(adminUserId ?? adminEmail ?? 'unknown'),
+    userRole: session.user.role,
+    action: 'DEVICE_DELETE',
+    details: { wheelchairId: id, serial, model, adminEmail },
+    deviceSerial: serial,
+    userName: session.user.name || undefined,
+  });
+
+  console.log(`[Admin] Device Deleted: ${serial} by ${adminEmail}`);
+
+  return NextResponse.json({ message: `기기 (${serial})가 성공적으로 삭제되었습니다.` });
 }

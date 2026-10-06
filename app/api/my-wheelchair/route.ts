@@ -2,15 +2,9 @@
 // 📝 설명: 정비 이력(maintenance_logs) 완전 제거, 권한 체크 완화
 
 import { NextResponse } from 'next/server';
-import { Pool } from 'pg';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/authOptions';
-import { getDbSslOption } from '@/lib/db';
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: getDbSslOption(),
-});
+import pool from '@/lib/db';
 
 export async function GET(request: Request) {
   try {

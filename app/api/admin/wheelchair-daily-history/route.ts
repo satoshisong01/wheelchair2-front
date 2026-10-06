@@ -19,14 +19,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
-import { Pool } from 'pg';
 import { TimestreamQueryClient, QueryCommand } from '@aws-sdk/client-timestream-query';
-import { getDbSslOption } from '@/lib/db';
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: getDbSslOption(),
-});
+import pool from '@/lib/db';
 
 const queryClient = new TimestreamQueryClient({
   region: process.env.AWS_REGION || 'ap-northeast-1',

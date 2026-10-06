@@ -4,16 +4,10 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/validate';
-import { Pool } from 'pg';
 import { getServerSession } from 'next-auth';
 // 🚨 authOptions 경로 확인 (lib/authOptions 또는 app/api/auth/[...nextauth]/route)
 import { authOptions } from '@/lib/authOptions';
-import { getDbSslOption } from '@/lib/db';
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: getDbSslOption(),
-});
+import pool from '@/lib/db';
 
 interface RouteParams {
   params: Promise<{ wheelchairId: string }>;

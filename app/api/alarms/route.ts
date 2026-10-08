@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { query } from '@/lib/db';
 import { AlarmCategory, CRITICAL_ALARM_KEYWORDS } from '@/lib/alarm-categories';
+import { logServerError } from '@/lib/server-log';
 
 // 선택 쿼리 파라미터는 화이트리스트 검증 후 플레이스홀더로만 SQL에 전달
 const UUID_REGEX = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
@@ -133,7 +134,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(result.rows);
   } catch (error) {
-    console.error('❌ Alarm API Failed:', error);
+    logServerError('Alarm API Failed', error);
     return NextResponse.json(
       { message: '알림 목록 로딩 실패' },
       { status: 500 }

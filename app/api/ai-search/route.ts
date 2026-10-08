@@ -7,6 +7,8 @@ import { GoogleGenAI } from '@google/genai';
 import { TimestreamQueryClient, QueryCommand } from '@aws-sdk/client-timestream-query';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
+import { createAuditLog } from '@/lib/log';
+import { logServerError, summarizeError } from '@/lib/server-log';
 
 // 🔒 [보안] AI가 생성한 SQL에서 차단해야 할 위험 키워드 (Prompt Injection 방어 강화)
 const FORBIDDEN_SQL_PATTERNS = [
@@ -28,6 +30,43 @@ const FORBIDDEN_SQL_PATTERNS = [
 
 // 🔒 [보안] 허용된 테이블 식별자만 참조하도록 강제
 const REQUIRED_TABLE_REF = /"WheelchairDB"\."WheelchairMetricsTable"/;
+const ALLOWED_TABLE_REF = '"WheelchairDB"."WheelchairMetricsTable"';
+// 점(.)으로 이은 식별자 쌍("A"."B", A.B, "A".B, A."B") — Timestream은 테이블을 DB.테이블로만 참조
+const DOTTED_IDENTIFIER = /(?:"[^"]*"|\b[A-Za-z_]\w*)\s*\.\s*(?:"[^"]*"|[A-Za-z_]\w*)/g;
+// FROM/JOIN 바로 뒤에 오는 참조 대상
+const FROM_JOIN_TARGET = /\b(?:from|join)\s+("[^"]*"\s*\.\s*"[^"]*"|\(|[^\s,()]+)/gi;
+
+// 🔒 [보안] 질문 단계에서 SQL 구분자·주석 기호를 미리 차단
+const QUESTION_SQL_META = /;|--|\/\*/;
+
+// 🔒 [보안] AI 생성 SQL의 반환 행 수·Timestream 응답 대기 상한 (과도한 조회·장시간 점유 방지)
+const MAX_RESULT_ROWS = 1000;
+const QUERY_TIMEOUT_MS = 10_000;
+
+// 🔒 [보안] 생성 SQL의 모든 테이블 참조가 허용 테이블인지 전수 검사
+//   (포함 여부만 보면 서브쿼리·UNION으로 다른 테이블을 끼워 넣어도 통과됨)
+function referencesOnlyAllowedTable(sql: string): boolean {
+  // 문자열 리터럴 안의 글자는 식별자가 아니므로 비우고 검사
+  const code = sql.replace(/'(?:[^']|'')*'/g, "''");
+  const dottedRefs: string[] = code.match(DOTTED_IDENTIFIER) ?? [];
+  if (dottedRefs.some((ref) => ref.replace(/\s+/g, '') !== ALLOWED_TABLE_REF)) return false;
+
+  // EXTRACT(HOUR FROM time)의 FROM은 테이블 참조가 아니므로 빼고 FROM/JOIN 대상을 확인
+  const withoutExtract = code.replace(/\bextract\s*\(\s*[A-Za-z_]+\s+from\b/gi, 'extract(');
+  for (const match of withoutExtract.matchAll(FROM_JOIN_TARGET)) {
+    const target = match[1].replace(/\s+/g, '');
+    if (target !== '(' && target !== ALLOWED_TABLE_REF) return false;
+  }
+  return true;
+}
+
+// 🔒 [보안] 끝에 LIMIT이 없으면 상한을 붙이고, 상한보다 크면 상한으로 낮춘다
+function enforceRowLimit(sql: string): string {
+  const trailingLimit = sql.match(/\blimit\s+(\d+)\s*$/i);
+  if (!trailingLimit) return `${sql}\nLIMIT ${MAX_RESULT_ROWS}`;
+  if (Number(trailingLimit[1]) <= MAX_RESULT_ROWS) return sql;
+  return `${sql.slice(0, trailingLimit.index)}LIMIT ${MAX_RESULT_ROWS}`;
+}
 
 // [LOG 1] 파일 시작
 console.log('--- [START] AI Dashboard API Route Load (Full Logic) ---');
@@ -65,6 +104,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: '접근 권한이 없습니다.' }, { status: 403 });
   }
 
+  // 🔒 [감사] AI 질의 기록 — 질문·SQL 원문은 남기지 않고 길이·결과 건수·성공 여부만
+  let questionLength = 0;
+  const auditAiQuery = (details: Record<string, unknown>) =>
+    createAuditLog({
+      userId: session.user.id,
+      userRole,
+      action: 'AI_QUERY',
+      details: { ...details, questionLength },
+    });
+
   // [LOG 3] POST 함수 진입
   console.log('[LOG 3] POST function entered.');
   try {
@@ -81,12 +130,21 @@ export async function POST(request: NextRequest) {
     if (question.length > 500) {
       return NextResponse.json({ message: '질문은 500자 이내로 입력해주세요.' }, { status: 400 });
     }
+    // 🔒 [보안] SQL 구분자·주석 기호가 든 질문은 AI 호출 전에 차단
+    if (QUESTION_SQL_META.test(question)) {
+      return NextResponse.json(
+        { message: '질문에 사용할 수 없는 기호(; -- /*)가 포함되어 있습니다.' },
+        { status: 400 },
+      );
+    }
+    questionLength = question.length;
 
     if (!API_KEY) {
       console.error('[LOG FAIL B] CRITICAL: API key is empty! Check .env.local.');
+      // 🔒 [보안] 설정 파일명 등 내부 구성은 응답에 노출하지 않음
       return NextResponse.json(
         {
-          message: 'AI 서비스 키가 .env.local에 설정되지 않았거나 로드되지 않았습니다.',
+          message: 'AI 서비스를 일시적으로 사용할 수 없습니다.',
         },
         { status: 500 },
       );
@@ -102,7 +160,7 @@ export async function POST(request: NextRequest) {
       - Table: "WheelchairMetricsTable"
       - Common Columns:
         - time (Timestamp)
-        - device_serial (Varchar): Device IMEI (e.g., '01222611455')
+        - device_serial (Varchar): Device IMEI (e.g., '01200000000')
         - measure_name (Varchar): Identifies the type of data
         - measure_value::double (Double): The actual value
       
@@ -113,6 +171,7 @@ export async function POST(request: NextRequest) {
 
       [SQL Rules for Timestream]
       - ALWAYS use double quotes for Database and Table names: "WheelchairDB"."WheelchairMetricsTable".
+      - Do NOT use table aliases or alias-qualified column names (e.g., t.time); reference columns directly.
       - When aggregating by time, use 'BIN(time, 1h)' for hourly or 'BIN(time, 1d)' for daily.
       - To filter by metric, use: WHERE measure_name = 'target_metric'.
       - For relative time filtering, **DO NOT USE INTERVAL**. Use **date_add('day', -1, now())** to calculate a date offset.
@@ -141,6 +200,7 @@ export async function POST(request: NextRequest) {
     if (generatedSql.trim().length === 0) {
       // SQL을 생성해야 하는데, 빈 응답이 온 경우
       console.error('[LOG FAIL D] Gemini returned empty response or invalid content.');
+      await auditAiQuery({ status: 'Failed', reason: 'EMPTY_SQL' });
       return NextResponse.json(
         {
           message: 'Gemini가 데이터베이스 질문과 무관한 요청에는 SQL을 생성할 수 없습니다.',
@@ -166,6 +226,7 @@ export async function POST(request: NextRequest) {
 
     // 🔒 [보안] 1단계 — SELECT 문으로 시작해야 함
     if (!generatedSql.toLowerCase().trim().startsWith('select')) {
+      await auditAiQuery({ status: 'Failed', reason: 'NOT_SELECT' });
       return NextResponse.json(
         {
           message: '생성된 쿼리가 SELECT 문이 아니거나, 데이터베이스 질문이 아닙니다.',
@@ -180,6 +241,7 @@ export async function POST(request: NextRequest) {
     for (const pattern of FORBIDDEN_SQL_PATTERNS) {
       if (pattern.test(generatedSql)) {
         console.warn('[Security] Forbidden SQL pattern detected:', pattern);
+        await auditAiQuery({ status: 'Failed', reason: 'FORBIDDEN_PATTERN' });
         return NextResponse.json(
           {
             message: '허용되지 않은 쿼리가 감지되었습니다.',
@@ -191,8 +253,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 🔒 [보안] 3단계 — 허용된 테이블만 참조하도록 강제
-    if (!REQUIRED_TABLE_REF.test(generatedSql)) {
+    // 🔒 [보안] 3단계 — 허용된 테이블만 참조하도록 강제 (포함 여부 + 모든 참조 전수 검사)
+    if (!REQUIRED_TABLE_REF.test(generatedSql) || !referencesOnlyAllowedTable(generatedSql)) {
+      await auditAiQuery({ status: 'Failed', reason: 'TABLE_NOT_ALLOWED' });
       return NextResponse.json(
         {
           message: '허용되지 않은 테이블 참조입니다.',
@@ -204,8 +267,10 @@ export async function POST(request: NextRequest) {
     } // 6. SQL 실행 (Timestream)
 
     console.log('[LOG 13] Attempting to send query to Timestream...');
-    const command = new QueryCommand({ QueryString: generatedSql });
-    const tsResponse = await queryClient.send(command);
+    const command = new QueryCommand({ QueryString: enforceRowLimit(generatedSql) });
+    const tsResponse = await queryClient.send(command, {
+      abortSignal: AbortSignal.timeout(QUERY_TIMEOUT_MS),
+    });
     console.log('[LOG 14] Timestream query successful.'); // 7. 결과값 보기 좋게 변환 (JSON)
 
     console.log('[LOG 15] Formatting results.');
@@ -221,15 +286,20 @@ export async function POST(request: NextRequest) {
       return obj;
     });
 
+    await auditAiQuery({ status: 'Success', resultCount: formattedData.length });
+
     console.log('[LOG 16] Returning final response (200 OK).');
+    // 🔒 [보안] 생성 SQL(DB·테이블 구조)은 응답에 싣지 않음
     return NextResponse.json({
       question: question,
-      sql: generatedSql,
       data: formattedData,
     });
   } catch (error: unknown) {
     // 🔒 [보안] 내부 에러 상세는 서버 로그에만, 클라이언트에는 일반 메시지만 노출
-    console.error('[API /ai-search] Error:', error);
+    logServerError('[API /ai-search] Error', error);
+    // 감사로그에는 오류 원문 대신 오류 코드(없으면 오류 이름)만 남김
+    const { code, name } = summarizeError(error);
+    await auditAiQuery({ status: 'Failed', reason: 'ERROR', errorCode: code ?? name });
 
     return NextResponse.json(
       {

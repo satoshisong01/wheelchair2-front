@@ -8,6 +8,14 @@ import { authOptions } from '@/lib/authOptions';
 import pool from '@/lib/db';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/validate';
+import { logServerError } from '@/lib/server-log';
+
+// YYYY-MM-DD 형식이면서 실제 있는 날짜인지 (예: 2026-02-30 거부)
+function isValidDateString(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
 
 // 1. GET: 프로필 조회 (기존 로직 유지)
 export async function GET() {
@@ -42,7 +50,7 @@ export async function GET() {
       createdAt: user.created_at,
     });
   } catch (error) {
-    console.error('[API /profile] GET Error:', error);
+    logServerError('[API /profile] GET Error', error);
     return NextResponse.json(
       { error: 'Internal Server Error' },
       { status: 500 }
@@ -71,7 +79,8 @@ export async function POST(request: Request) {
         location2: z.string().max(200).nullish(), // 시/군/구
         deviceSerial: z.string().min(1).max(100),
         modelName: z.string().max(200).nullish(),
-        purchaseDate: z.any().optional(),
+        // 🔒 구매일은 비우거나 YYYY-MM-DD 실제 날짜만 (잘못된 값의 DB 형변환 오류(500) 방지)
+        purchaseDate: z.union([z.literal(''), z.string().refine(isValidDateString)]).nullish(),
       }),
     );
     if ('error' in parsed) {
@@ -133,7 +142,6 @@ export async function POST(request: Request) {
         purchaseDate ? new Date(purchaseDate) : null,
         wheelchairId,
       ]);
-      console.log(`[API /profile] 기존 휠체어 업데이트: ${deviceSerial}`);
     } else {
       // 새 기기 -> 생성
       const insertWcQuery = `
@@ -147,7 +155,6 @@ export async function POST(request: Request) {
         purchaseDate ? new Date(purchaseDate) : null,
       ]);
       wheelchairId = insertResult.rows[0].id;
-      console.log(`[API /profile] 새 휠체어 생성: ${deviceSerial}`);
     }
 
     // C-2. 유저-휠체어 연결 (user_wheelchair 테이블)
@@ -174,7 +181,7 @@ export async function POST(request: Request) {
       errorMessage = '이미 등록된 시리얼 번호입니다.';
     }
 
-    console.error('[API /profile] POST Error:', error);
+    logServerError('[API /profile] POST Error', error);
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   } finally {
     client.release(); // 연결 해제

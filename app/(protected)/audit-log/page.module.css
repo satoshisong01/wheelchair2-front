@@ -121,6 +121,63 @@
   padding: 40px;
 }
 
+/* 🔒 [uc_log_01] 결과 열 + 이벤트 ID·범주 보조 표기 */
+.thOutcome,
+.tdOutcome {
+  white-space: nowrap;
+  width: 60px;
+  font-weight: bold;
+}
+
+.subText {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: normal;
+  color: #888;
+  word-break: break-all;
+}
+
+/* 🔒 [uc_log_06] 페이지 이동 */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.pageButton {
+  padding: 6px 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.pageButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pageInfo {
+  font-size: 14px;
+  color: #111;
+}
+
+/* 로그인 화면 알림 문구 설정 이동 링크 */
+.settingsLink {
+  display: inline-block;
+  margin-bottom: 16px;
+  font-size: 14px;
+  color: #007bff;
+  text-decoration: none;
+}
+
+.settingsLink:hover {
+  text-decoration: underline;
+}
+
 /* 📱 모바일 반응형 (768px 이하) */
 @media (max-width: 768px) {
   .container {

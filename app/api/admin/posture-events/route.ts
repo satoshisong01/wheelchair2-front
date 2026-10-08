@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { query } from '@/lib/db';
+import { logServerError } from '@/lib/server-log';
 
 // 🔒 SQL Injection 방어: 입력값 화이트리스트 검증
 const UUID_REGEX = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
@@ -72,7 +73,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(events);
   } catch (error) {
     // 🔒 내부 오류 상세를 클라이언트에 노출하지 않음 (서버 로그에만 기록)
-    console.error('[admin/posture-events] Error:', error);
+    logServerError('[admin/posture-events] Error', error);
     return NextResponse.json({ message: 'Server Error' }, { status: 500 });
   }
 }

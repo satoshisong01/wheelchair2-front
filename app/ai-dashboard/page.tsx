@@ -111,23 +111,12 @@ export default function AiDashboard() {
             boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
           }}
         >
-          {/* SQL 쿼리 보여주기 */}
-          <h3 style={{ color: '#666', fontSize: '14px', marginBottom: '10px' }}>
-            AI가 생성한 SQL 쿼리:
-          </h3>
-          <div
-            style={{
-              background: '#282c34',
-              color: '#abb2bf',
-              padding: '15px',
-              borderRadius: '8px',
-              fontFamily: 'monospace',
-              fontSize: '14px',
-              overflowX: 'auto',
-            }}
-          >
-            {result.sql}
-          </div>
+          {/* 서버 안내 문구(차단 사유·오류 등). 생성 SQL은 보안상 응답에 싣지 않으므로 표시하지 않음 */}
+          {result.message && (
+            <p style={{ color: '#b45309', fontSize: '14px', marginBottom: '10px' }}>
+              {String(result.message)}
+            </p>
+          )}
 
           {/* ★ [수정 1] 데이터 개수 표시 부분 안전 처리 (? 추가) */}
           <h3

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/authOptions';
 import pool from '@/lib/db';
+import { logServerError } from '@/lib/server-log';
 
 export async function GET(req: Request) {
   let client;
@@ -125,7 +126,7 @@ export async function GET(req: Request) {
       },
     });
   } catch (error) {
-    console.error('🚨 [API] 기기 정보 조회 에러:', error);
+    logServerError('[API] 기기 정보 조회 에러', error);
     return NextResponse.json({ message: 'Server Error' }, { status: 500 });
   } finally {
     if (client) client.release();

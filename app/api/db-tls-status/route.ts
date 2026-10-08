@@ -9,5 +9,10 @@ export async function GET() {
   if (!session) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
-  return NextResponse.json(getDbTlsStatus());
+  const status = getDbTlsStatus();
+  // 🔒 서버 파일 경로는 내부 구성 정보라 'file'로만 표시 (응답 형식은 동일)
+  return NextResponse.json({
+    ...status,
+    caSource: status.caSource.startsWith('file:') ? 'file' : status.caSource,
+  });
 }

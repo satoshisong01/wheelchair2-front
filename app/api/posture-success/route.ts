@@ -23,6 +23,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import pool from '@/lib/db';
+import { logServerError } from '@/lib/server-log';
 
 export async function POST() {
   try {
@@ -63,7 +64,7 @@ export async function POST() {
       client.release();
     }
   } catch (error) {
-    console.error('posture-success API error:', error);
+    logServerError('posture-success API error', error);
     return NextResponse.json({ message: 'Server Error' }, { status: 500 });
   }
 }

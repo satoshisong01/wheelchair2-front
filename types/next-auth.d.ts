@@ -1,56 +1,69 @@
-// 📍 경로: types/next-auth.d.ts (또는 프로젝트 루트)
+// 📍 경로: types/next-auth.d.ts — next-auth 세션·토큰 타입 확장
+// (기존 '@/entities/User' import는 파일 삭제(7c4f9bd)로 깨져 role이 사실상 any였음 → 실제 역할 값으로 정의)
 
-import { UserRole } from '@/entities/User'; // ‼️ 저희가 만든 UserRole Enum 임포트
-import NextAuth, { DefaultSession, DefaultUser } from 'next-auth';
-import { JWT, DefaultJWT } from 'next-auth/jwt';
+import { DefaultSession, DefaultUser } from 'next-auth';
+import { DefaultJWT } from 'next-auth/jwt';
 
-// ‼️ [수정] JWT 토큰에 추가될 필드 정의
+// DB에 실제로 저장되는 역할 값(users.role + 기기 계정 DEVICE_USER).
+// lib/authOptions.ts APP_ROLES·middleware.ts KNOWN_ROLES 런타임 목록과 같게 유지할 것
+export type AppRole =
+  | 'GUEST'
+  | 'NEW_USER'
+  | 'PENDING'
+  | 'REJECTED'
+  | 'USER'
+  | 'ADMIN'
+  | 'MASTER'
+  | 'DEVICE_USER';
+
+// JWT 토큰(서버 암호화 쿠키)에 담는 필드
 declare module 'next-auth/jwt' {
   interface JWT extends DefaultJWT {
-    id: string; // ‼️ [추가] Next-Auth의 기본 user.id (string)
-    role: UserRole | 'DEVICE_USER'; // ‼️ 'DEVICE_USER' 또는 Enum
-    dbUserId: number; // ‼️ [추가] 관리자 DB ID (number)
+    id?: string; // users.id 또는 device_auths.id (UUID)
+    role?: AppRole;
+    authSource?: 'users' | 'device_auths'; // 계정 출처(재확인할 테이블)
+    mustChangePassword?: boolean; // 기기 계정 초기 비밀번호 변경 필요
+    loginAt?: number; // 로그인 시각(ms) — 유휴 잠금 기록을 세션별로 구분
+    accountCheckedAt?: number; // 계정 존재·역할을 DB에서 마지막으로 확인한 시각(ms)
     organization?: string | null;
     phoneNumber?: string | null;
-    kakaoId?: string;
+    rejectionReason?: string | null;
 
     // 기기 사용자용
-    wheelchairId?: number;
-    wheelchairIdentifier?: string; // ‼️ [수정] nickname -> identifier
-    deviceId?: string;
+    wheelchairId?: string | null; // wheelchairs.id (UUID)
+    deviceId?: string; // 기기 로그인 ID
   }
 }
 
-// ‼️ [수정] useSession()의 session.user 객체에 추가될 필드 정의
+// useSession()·getServerSession()의 session.user
 declare module 'next-auth' {
   interface Session {
     user: {
-      id: string; // ‼️ [추가] Next-Auth의 기본 user.id (string)
-      role: UserRole | 'DEVICE_USER';
-      dbUserId: number;
+      id: string;
+      role: AppRole;
+      mustChangePassword?: boolean;
+      loginAt?: number;
+      dbUserId?: number; // 세션 콜백이 채우지 않음(구 코드 참조용)
       organization?: string | null;
       phoneNumber?: string | null;
       kakaoId?: string;
 
       // 기기 사용자용
-      wheelchairId?: number;
+      wheelchairId?: string | null;
       wheelchairIdentifier?: string;
       deviceId?: string;
     } & DefaultSession['user']; // (기존 name, email, image 포함)
   }
 
-  // ‼️ [수정] authorize 콜백이 반환하는 'user' 객체 타입
+  // authorize 콜백이 반환하는 'user' 객체
   interface User extends DefaultUser {
-    // (id, name, email, image는 DefaultUser에 이미 string으로 있음)
-    role?: UserRole | 'DEVICE_USER';
-    wheelchairId?: number;
+    role?: AppRole;
+    wheelchairId?: string | null;
     wheelchairIdentifier?: string;
     deviceId?: string;
+    mustChangePassword?: boolean;
     kakaoId?: string;
     organization?: string | null;
     phoneNumber?: string | null;
-    // ‼️ [삭제] hasMedicalInfo 제거
   }
 }
-
-

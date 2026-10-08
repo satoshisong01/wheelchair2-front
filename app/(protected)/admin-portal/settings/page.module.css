@@ -1,0 +1,106 @@
+/* app/(protected)/admin-portal/settings/page.module.css */
+
+.container {
+  padding: 30px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.pageTitle {
+  font-size: 24px;
+  font-weight: bold;
+  border-bottom: 2px solid black;
+  padding-bottom: 10px;
+  margin-bottom: 16px;
+}
+
+.description {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #333;
+  margin-bottom: 16px;
+}
+
+.loadingText {
+  color: #111;
+  margin-top: 20px;
+}
+
+.textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: vertical;
+  background: #fff;
+  color: #111;
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+.counter {
+  text-align: right;
+  font-size: 12px;
+  color: #666;
+  margin-top: 4px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.primaryButton,
+.secondaryButton {
+  padding: 8px 18px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primaryButton {
+  border: none;
+  background-color: #007bff;
+  color: #fff;
+}
+
+.secondaryButton {
+  border: 1px solid #ccc;
+  background-color: #fff;
+  color: #111;
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.noticeOk,
+.noticeError {
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+.noticeOk {
+  color: #28a745;
+}
+
+.noticeError {
+  color: #dc3545;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 15px;
+  }
+}

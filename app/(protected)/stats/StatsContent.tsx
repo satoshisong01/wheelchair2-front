@@ -227,9 +227,6 @@ export default function StatsContent() {
 
       const apiData: AggregatedData[] = responseBody.data;
       const aiComment = responseBody.comment;
-      const queryResult = responseBody.query;
-
-      console.log('🤖 [Timestream Query]:', queryResult);
 
       if (!Array.isArray(apiData) || apiData.length === 0) {
         setApiRawData([]);

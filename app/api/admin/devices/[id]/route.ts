@@ -9,10 +9,16 @@ import pool from '@/lib/db';
 import { createAuditLog } from '@/lib/log';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/validate';
+import { logServerError } from '@/lib/server-log';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
+
+// 🔒 [입력검증] 경로의 기기(휠체어) ID는 UUID만 허용 (그 외 값은 DB 형변환 오류(500) 대신 400)
+const UUID_REGEX = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
+const invalidIdResponse = () =>
+  NextResponse.json({ error: 'Invalid device ID' }, { status: 400 });
 
 // 1. 상세 조회 (GET)
 export async function GET(
@@ -26,6 +32,7 @@ export async function GET(
     }
 
     const { id } = await params;
+    if (!UUID_REGEX.test(id)) return invalidIdResponse();
     
     // 기기 정보 + 인증 정보 조인 조회
     const query = `
@@ -59,7 +66,7 @@ export async function GET(
 
     return NextResponse.json(responseData);
   } catch (error) {
-    console.error('Device Detail Error:', error);
+    logServerError('Device Detail Error', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
@@ -76,6 +83,7 @@ export async function PATCH(
     }
 
     const { id } = await params;
+    if (!UUID_REGEX.test(id)) return invalidIdResponse();
     const parsed = await parseJsonBody(
       request,
       z.object({
@@ -105,8 +113,9 @@ export async function PATCH(
     }
 
     // 🔒 [UC-04] 기기 정보 수정 감사기록 (DB 영속 — 기존 console.log만으로는 감사기록 미생성)
+    //   행위자는 세션 사용자 ID로 기록 (dbUserId는 세션에 없어 이메일 평문이 남던 문제 수정)
     await createAuditLog({
-      userId: String(session.user.dbUserId ?? session.user.email ?? 'unknown'),
+      userId: String(session.user.id ?? 'unknown'),
       userRole: session.user.role,
       action: 'DEVICE_UPDATE',
       details: {
@@ -120,7 +129,7 @@ export async function PATCH(
 
     return NextResponse.json(result.rows[0]);
   } catch (error) {
-    console.error('Device Update Error:', error);
+    logServerError('Device Update Error', error);
     return NextResponse.json({ error: 'Update Failed' }, { status: 500 });
   }
 }
@@ -137,7 +146,8 @@ export async function DELETE(
   }
 
   const { id } = await params;
-  const adminUserId = session.user.dbUserId;
+  if (!UUID_REGEX.test(id)) return invalidIdResponse();
+  const adminUserId = session.user.id;
   const adminEmail = session.user.email;
 
   const client = await pool.connect(); // 트랜잭션을 위해 클라이언트 연결
@@ -195,7 +205,7 @@ export async function DELETE(
     await client.query('COMMIT'); // 커밋
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
-    console.error('Device Delete Error:', error);
+    logServerError('Device Delete Error', error);
     return NextResponse.json({ error: 'Delete Failed' }, { status: 500 });
   } finally {
     client.release(); // 연결 해제
@@ -205,7 +215,7 @@ export async function DELETE(
   //   (기존 직접 INSERT는 구컬럼(action_type/admin_user_id) 기준이라 현행 스키마와 불일치)
   //   createAuditLog도 같은 DB 풀을 쓰므로 연결 반납 후 기록
   await createAuditLog({
-    userId: String(adminUserId ?? adminEmail ?? 'unknown'),
+    userId: String(adminUserId ?? 'unknown'),
     userRole: session.user.role,
     action: 'DEVICE_DELETE',
     details: { wheelchairId: id, serial, model, adminEmail },
@@ -213,7 +223,8 @@ export async function DELETE(
     userName: session.user.name || undefined,
   });
 
-  console.log(`[Admin] Device Deleted: ${serial} by ${adminEmail}`);
+  // 🔒 운영 로그에는 관리자 이메일을 남기지 않음 (행위자는 감사로그로 추적)
+  console.log(`[Admin] Device Deleted: ${serial}`);
 
   return NextResponse.json({ message: `기기 (${serial})가 성공적으로 삭제되었습니다.` });
 }

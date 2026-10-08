@@ -9,6 +9,10 @@ import { createAuditLog } from '@/lib/log';
 import pool from '@/lib/db';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/validate';
+import { logServerError } from '@/lib/server-log';
+
+// 🔒 [입력검증] 경로의 휠체어 ID는 UUID만 허용 (그 외 값은 DB 형변환 오류(500) 대신 400)
+const UUID_REGEX = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 
 type NotificationType = 'emergency' | 'battery' | 'posture';
 
@@ -38,7 +42,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
 
   const { id: wheelchairId } = await params;
 
-  if (!wheelchairId) {
+  if (!wheelchairId || !UUID_REGEX.test(wheelchairId)) {
     return NextResponse.json(
       { message: '휠체어 ID가 필요합니다.' },
       { status: 400 }
@@ -56,7 +60,8 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   if ('error' in parsed) return parsed.error;
   const { type, enabled } = parsed.data;
 
-  if (!type || !(type in COLUMN_MAP) || typeof enabled !== 'boolean') {
+  // 🔒 in 연산자는 프로토타입 키(constructor 등)도 통과시키므로 자기 속성만 허용
+  if (!type || !Object.hasOwn(COLUMN_MAP, type) || typeof enabled !== 'boolean') {
     return NextResponse.json(
       { message: 'type 또는 enabled 값이 올바르지 않습니다.' },
       { status: 400 }
@@ -81,8 +86,8 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // 감사 로그 (실패해도 응답은 성공)
-    createAuditLog({
+    // 감사 로그 (실패해도 응답은 성공 — createAuditLog가 내부에서 재시도·경보 후 예외를 삼킴)
+    await createAuditLog({
       userId: adminUserId,
       userRole: role,
       action: 'DEVICE_NOTIFICATION_TOGGLE',
@@ -98,7 +103,7 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
       },
     });
   } catch (error) {
-    console.error('[Admin notification toggle] Error:', error);
+    logServerError('[Admin notification toggle] Error', error);
     return NextResponse.json(
       { message: '알림 설정 변경에 실패했습니다.' },
       { status: 500 }

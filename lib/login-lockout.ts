@@ -1,6 +1,7 @@
 // lib/login-lockout.ts — 로그인 연속 실패 시 계정 잠금 (의료기기 사이버보안 요구사항 IA-07)
 // Upstash Redis 기반. Redis 미설정/장애 시에는 잠금을 적용하지 않고 통과(fail-open)하여
 // 정상 사용자의 로그인을 차단하지 않는다. (무차별 대입은 미들웨어 Rate Limit으로 별도 방어)
+// 키 접두어로 용도를 나눈다: 기기 로그인 'dev:<기기ID>', 비밀번호 변경의 현재 비밀번호 확인 'pwchg:<계정ID>'
 
 import { Redis } from '@upstash/redis';
 
@@ -33,15 +34,19 @@ export async function isLoginLocked(key: string): Promise<boolean> {
   }
 }
 
-/** 로그인 실패 1회 기록. 임계치 도달 시 잠금 설정 */
-export async function recordLoginFailure(key: string): Promise<void> {
-  if (!redis) return;
+/** 로그인 실패 1회 기록. 임계치 도달 시 잠금 설정 — 이번 실패로 잠겼으면 true (감사기록용) */
+export async function recordLoginFailure(key: string): Promise<boolean> {
+  if (!redis) return false;
   try {
     const n = await redis.incr(`login:fail:${key}`);
     if (n === 1) await redis.expire(`login:fail:${key}`, LOCK_SECONDS);
-    if (n >= MAX_FAILS) await redis.set(`login:lock:${key}`, '1', { ex: LOCK_SECONDS });
+    if (n >= MAX_FAILS) {
+      await redis.set(`login:lock:${key}`, '1', { ex: LOCK_SECONDS });
+      return true;
+    }
+    return false;
   } catch {
-    /* fail-open */
+    return false; // fail-open
   }
 }
 

@@ -7,6 +7,7 @@ import { GoogleGenAI } from '@google/genai';
 import { TimestreamQueryClient, QueryCommand } from '@aws-sdk/client-timestream-query';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/validate';
+import { logServerError } from '@/lib/server-log';
 
 // AWS Timestream 클라이언트 설정
 const queryClient = new TimestreamQueryClient({
@@ -69,7 +70,7 @@ async function fetchTimestreamData(
   binUnit: string,
   startHour: string = '00',
   endHour: string = '23',
-): Promise<{ data: any[]; query: string }> {
+): Promise<{ data: any[] }> {
   // 🔒 모든 입력값을 화이트리스트로 엄격 검증
   if (deviceId !== 'ALL') assertSafeString(deviceId, DEVICE_ID_REGEX, 'deviceId');
   assertSafeString(startDate, DATE_REGEX, 'startDate');
@@ -158,7 +159,7 @@ async function fetchTimestreamData(
     (a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime(),
   );
 
-  return { data: formattedData, query: trimmedQuery };
+  return { data: formattedData };
 }
 
 // --- AI 분석 함수 ---
@@ -219,9 +220,10 @@ async function generateAnalysisComment(
        다른 지표들과의 관계를 통해 사용자 운행 습관의 특이점(예: 급격한 속도 변화, 장거리 운행 집중)을 해석하세요.
   `;
 
+  // 🔒 [개인정보] 외부 AI에는 기기 식별자를 보내지 않음(집계값·기간만 전달)
   const prompt = `
         당신은 휠체어 데이터 분석가입니다. 다음 JSON 데이터 배열을 분석하여 
-        기기 ${deviceId}의 ${dateRange} 기간에 대한 데이터를 분석하고 **가장 중요한 패턴과 인사이트**를 한국어로 작성해주세요.
+        선택된 기기의 ${dateRange} 기간에 대한 데이터를 분석하고 **가장 중요한 패턴과 인사이트**를 한국어로 작성해주세요.
         
         [분석 조건]:
         1. 조회 모드는 **${mode}**이며, 집계 단위는 **${unit}**입니다.
@@ -246,7 +248,7 @@ async function generateAnalysisComment(
     });
     return aiResult.text.trim();
   } catch (error) {
-    console.error('Gemini Analysis Error:', error);
+    logServerError('Gemini Analysis Error', error);
     return 'AI 분석 서버 연결에 실패했습니다. 잠시 후 다시 시도해주세요.';
   }
 }
@@ -268,13 +270,14 @@ export async function POST(request: NextRequest) {
     const parsed = await parseJsonBody(
       request,
       z.object({
-        mode: z.string().max(50).optional(),
+        // 🔒 AI 프롬프트에 들어가는 값이라 화면이 쓰는 값만 허용
+        mode: z.enum(['RANGE', 'COMPARE']).optional(),
         startDate: z.string().max(100).optional(),
         endDate: z.string().max(100).optional(),
         compareDates: z.array(z.string()).optional(),
         deviceId: z.string().max(100).nullish(),
         metric: z.string().max(50).optional(),
-        unit: z.string().max(50).optional(),
+        unit: z.enum(['hourly', 'daily']).optional(),
         startHour: z.string().max(100).optional(),
         endHour: z.string().max(100).optional(),
       }),
@@ -311,7 +314,6 @@ export async function POST(request: NextRequest) {
     }
 
     let allFormattedData: any[] = [];
-    let finalQuery = '';
 
     // 시간 단위 (비교 모드는 무조건 1시간 단위)
     const binUnit = mode === 'COMPARE' || timeUnit === 'hourly' ? '1h' : '1d';
@@ -341,7 +343,6 @@ export async function POST(request: NextRequest) {
       const dataB = resultB.data.map((d: any) => ({ ...d, source: dateB }));
 
       allFormattedData = [...dataA, ...dataB];
-      finalQuery = `${resultA.query}\n-- AND\n${resultB.query}`;
     } else {
       // RANGE 모드
       const result = await fetchTimestreamData(
@@ -356,7 +357,6 @@ export async function POST(request: NextRequest) {
         ...d,
         source: 'range',
       }));
-      finalQuery = result.query;
     }
 
     // ⭐️ AI 분석 호출: 모든 지표 데이터가 담긴 allFormattedData를 전달합니다.
@@ -369,14 +369,14 @@ export async function POST(request: NextRequest) {
       { startDate, endDate, compareDates },
     );
 
+    // 🔒 [보안] Timestream 쿼리문(DB·테이블 구조)은 응답에 싣지 않음
     return NextResponse.json({
       data: allFormattedData,
       comment: analysisComment,
-      query: finalQuery,
     });
   } catch (error: unknown) {
     // 🔒 [보안] 내부 에러 상세는 서버 로그에만, 클라이언트에는 일반 메시지만 노출
-    console.error('[API /stats] Error:', error);
+    logServerError('[API /stats] Error', error);
     return NextResponse.json(
       { message: '통계 조회 중 오류가 발생했습니다.', data: [] },
       { status: 500 },

@@ -26,6 +26,10 @@ interface DailyRow {
   slope_count: number;
 }
 
+// 조회 기간 상한 — 서버(api/admin/wheelchair-daily-history)와 같은 기준(종료일-시작일 일수)
+const MAX_RANGE_DAYS = 366;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 // 필터 가능한 컬럼 키
 type ColumnKey = 'runtime' | 'operating' | 'distance' | 'location' | 'ulcer' | 'slope';
 
@@ -141,6 +145,11 @@ export default function DeviceUsagePage() {
     async (full: boolean) => {
       if (!fromDate || !toDate) return;
       if (!full && !selectedId) return;
+      // 서버가 거부(400)할 기간은 조회 전에 안내 — 빈 표만 보이면 데이터가 없는 것으로 오해함
+      if ((Date.parse(toDate) - Date.parse(fromDate)) / DAY_MS > MAX_RANGE_DAYS) {
+        alert(`조회 기간은 최대 ${MAX_RANGE_DAYS}일입니다. 기간을 나눠 조회해 주세요.`);
+        return;
+      }
 
       setLoading(true);
       try {
@@ -150,7 +159,13 @@ export default function DeviceUsagePage() {
           to: toDate,
         });
         const res = await fetch(`/api/admin/wheelchair-daily-history?${params}`);
-        if (!res.ok) throw new Error('조회 실패');
+        if (!res.ok) {
+          // 서버가 알려 준 사유(기간 오류·권한 등)를 그대로 안내
+          const body = await res.json().catch(() => null);
+          alert(body?.message || '기기 사용 내역을 불러오지 못했습니다.');
+          setRows([]);
+          return;
+        }
         const data = await res.json();
         setRows(Array.isArray(data) ? data : []);
         setIsFullQuery(full);

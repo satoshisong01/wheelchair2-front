@@ -9,8 +9,12 @@ import { createAuditLog } from '@/lib/log';
 import pool from '@/lib/db';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/validate';
+import { logServerError, summarizeError } from '@/lib/server-log';
 
 dotenv.config();
+
+// 🔒 [입력검증] 시리얼은 통계·각도 API와 같은 문자셋(영숫자·_-, 1~64자) — 제어문자·따옴표 차단
+const DEVICE_SERIAL_REGEX = /^[A-Za-z0-9_-]{1,64}$/;
 
 // 1. 휠체어 목록 조회 (GET) — 인증 필수 (ADMIN/MASTER만 허용)
 export async function GET() {
@@ -121,7 +125,7 @@ export async function GET() {
       headers: { 'Cache-Control': 'no-store, max-age=0' },
     });
   } catch (error) {
-    console.error('API Error:', error);
+    logServerError('API Error', error);
     return NextResponse.json(
       { error: 'Failed to fetch wheelchairs' },
       { status: 500 }
@@ -146,7 +150,7 @@ export async function POST(req: Request) {
     const parsed = await parseJsonBody(
       req,
       z.object({
-        device_serial: z.string().min(1).max(100),
+        device_serial: z.string().regex(DEVICE_SERIAL_REGEX),
         model_name: z.string().min(1).max(200),
       }),
       '시리얼 번호와 모델명이 필요합니다.',
@@ -183,14 +187,16 @@ export async function POST(req: Request) {
 
     return NextResponse.json(newDevice);
   } catch (error) {
-    console.error('Insert Error:', error);
+    logServerError('Insert Error', error);
     // ⭐️ [추가] DB 오류 발생 시에도 로그 기록 (선택 사항이지만, 문제 추적에 유용)
+    //   🔒 감사로그(관리자 화면 열람)에는 오류 원문 대신 오류 코드(없으면 오류 이름)만 저장
     if (userId && userRole) {
+      const { code, name } = summarizeError(error);
       await createAuditLog({
         userId: userId,
         userRole: userRole,
         action: 'DEVICE_REGISTER',
-        details: { status: 'Failed', error: (error as Error).message },
+        details: { status: 'Failed', errorCode: code ?? name },
       });
     }
 

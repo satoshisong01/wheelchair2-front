@@ -5,6 +5,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/authOptions';
 import pool from '@/lib/db';
+import { logServerError } from '@/lib/server-log';
 
 export async function GET(request: Request) {
   try {
@@ -65,7 +66,11 @@ export async function GET(request: Request) {
         .query(`SELECT * FROM alarms WHERE wheelchair_id = $1 ORDER BY alarm_time DESC`, [
           myWheelchairId,
         ])
-        .catch(() => ({ rows: [] })), // 알람 테이블 없어도 에러 안 나게 처리
+        // 알람 테이블 없어도 에러 안 나게 처리 — 단 실패 사실은 서버 로그에 남김(무음 처리 방지)
+        .catch((alarmError) => {
+          logServerError('[API /my-wheelchair] 알람 조회 실패', alarmError);
+          return { rows: [] };
+        }),
     ]);
 
     // 데이터가 없으면 빈 껍데기 반환 (값 없음은 0이 아니라 null → 화면에서 '-' 표시)
@@ -121,7 +126,7 @@ export async function GET(request: Request) {
     return NextResponse.json(responseData);
   } catch (error: unknown) {
     // 🔒 [보안] 내부 에러 상세는 서버 로그에만, 클라이언트에는 일반 메시지만 노출
-    console.error('[API /my-wheelchair] Error:', error);
+    logServerError('[API /my-wheelchair] Error', error);
     return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 });
   }
 }

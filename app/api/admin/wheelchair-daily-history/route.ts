@@ -21,6 +21,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { TimestreamQueryClient, QueryCommand } from '@aws-sdk/client-timestream-query';
 import pool from '@/lib/db';
+import { logServerError } from '@/lib/server-log';
 
 const queryClient = new TimestreamQueryClient({
   region: process.env.AWS_REGION || 'ap-northeast-1',
@@ -40,6 +41,16 @@ const TABLE_NAME = 'WheelchairMetricsTable';
 // 🔒 SQL Injection 방어: 입력값 화이트리스트 검증
 const UUID_REGEX = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
+// 🔒 조회 기간 상한 — 전체 기기 × 장기간이면 Timestream 3개 쿼리가 대량 스캔하므로 1년(+윤일)으로 제한
+const MAX_RANGE_DAYS = 366;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// 형식 검증을 통과한 from·to의 순서·기간만 확인
+function isAllowedRange(from: string, to: string): boolean {
+  const days = (Date.parse(to) - Date.parse(from)) / DAY_MS;
+  return days >= 0 && days <= MAX_RANGE_DAYS;
+}
 
 interface DailyRow {
   wheelchair_id: string;
@@ -192,7 +203,7 @@ async function fetchTimestreamDaily(
     });
   } catch (e) {
     // 증분 집계만 생략되고 위경도·욕창 데이터는 정상 표시됨
-    console.error('[wheelchair-daily-history] 일별 증분 집계 실패:', e);
+    logServerError('[wheelchair-daily-history] 일별 증분 집계 실패', e);
   }
 
   // OPT가 없는 날짜(수집 이전 과거)는 '데이터 수신 흔적'으로 사용시간을 추정해 채운다.
@@ -243,7 +254,7 @@ async function fetchTimestreamDaily(
       }
     });
   } catch (e) {
-    console.error('[wheelchair-daily-history] 사용시간 추정(데이터 수신 기반) 실패:', e);
+    logServerError('[wheelchair-daily-history] 사용시간 추정(데이터 수신 기반) 실패', e);
   }
 
   return result;
@@ -362,10 +373,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ message: 'from, to 가 필요합니다.' }, { status: 400 });
     }
 
+    // ⚠️ 형식 오류는 기존대로 500 경로 유지 (KTC 6-2 JMeter 시험이 잘못된 날짜 → 500을 기대)
     assertSafe(from, DATE_REGEX, 'from');
     assertSafe(to, DATE_REGEX, 'to');
     if (wheelchairId !== 'ALL') {
       assertSafe(wheelchairId, UUID_REGEX, 'wheelchairId');
+    }
+    // 🔒 형식은 맞지만 없는 날짜(예: 13월)·from > to·기간 초과는 400
+    if (!isAllowedRange(from, to)) {
+      return NextResponse.json({ message: '조회 기간이 올바르지 않습니다.' }, { status: 400 });
     }
 
     // 병렬 조회
@@ -427,7 +443,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(rows);
   } catch (error: any) {
-    console.error('[wheelchair-daily-history] Error:', error);
+    logServerError('[wheelchair-daily-history] Error', error);
     // 🔒 내부 오류 상세(스택·SQL·드라이버 메시지)를 클라이언트에 노출하지 않음 (서버 로그에만 기록)
     return NextResponse.json({ message: 'Server Error' }, { status: 500 });
   }

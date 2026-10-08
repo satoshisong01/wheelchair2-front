@@ -12,9 +12,10 @@ export async function POST() {
   cookieStore.delete('next-auth.callback-url');
 
   // 보안 쿠키(HTTPS) 삭제 (Vercel 배포 시 주로 이거임)
-  cookieStore.delete('__Secure-next-auth.session-token');
-  cookieStore.delete('__Secure-next-auth.callback-url');
-  cookieStore.delete('__Host-next-auth.csrf-token');
+  // 🔒 __Secure-/__Host- 접두사 쿠키는 Secure·Path=/ 속성이 같아야 브라우저가 삭제를 받아들임
+  cookieStore.delete({ name: '__Secure-next-auth.session-token', path: '/', secure: true });
+  cookieStore.delete({ name: '__Secure-next-auth.callback-url', path: '/', secure: true });
+  cookieStore.delete({ name: '__Host-next-auth.csrf-token', path: '/', secure: true });
 
   // 2. 로그아웃 성공 응답
   return NextResponse.json({ message: 'Logged out successfully' });

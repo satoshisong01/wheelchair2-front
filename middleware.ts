@@ -11,7 +11,74 @@ const RATE_LIMIT_PATHS = [
   '/api/auth/change-password',
   '/api/auth/profile-submit',
   '/api/auth/re-apply',
+  '/api/ai-search', // 반복 호출로 외부 AI 비용이 소진되지 않게
+  '/api/admin/users', // 회원 승인·역할 변경
 ];
+
+// 🔒 [UC-03] 비로그인 허용 페이지(허용목록). 나머지 앱 페이지는 토큰이 없으면 '/'(기기 로그인 화면)로 보낸다
+const PUBLIC_PAGES = ['/', '/login', '/privacy', '/account-deletion'];
+
+// 정적 자산(public/ 폴더·Next 내부 경로) — 인증 없이 통과
+const STATIC_PREFIXES = ['/_next', '/__next', '/images', '/sounds', '/icons', '/download'];
+const STATIC_FILE_PATTERN = /\.[A-Za-z0-9]+$/; // favicon.ico, *.png, *.svg, *.webp, *.apk ...
+
+// 앱에 실제로 있는 페이지(최상위 경로). 로그인·역할 차단은 이 페이지들에만 적용하고,
+// 없는 경로는 그대로 통과시켜 Next가 404를 돌려주게 한다(KTC 6-1 '없는 경로 → 404' 응답 유지).
+// ⚠️ 페이지를 새로 만들면 여기에 추가해야 로그인 보호가 적용된다.
+const APP_PAGES = [
+  '/admin-portal',
+  '/ai-dashboard',
+  '/audit-log',
+  '/dashboard',
+  '/device-admin',
+  '/device-management',
+  '/mobile-view',
+  '/mypage',
+  '/pending',
+  '/register-check',
+  '/stats',
+  '/ulcer-alerts',
+  '/user-management',
+  '/welcome',
+  '/wheelchair-info',
+];
+
+// 🔒 실제로 쓰는 역할 값만 인정(목록 밖 역할은 비로그인과 같게 취급 — fail-closed).
+//    types/next-auth.d.ts AppRole·lib/authOptions.ts APP_ROLES와 같게 유지
+const KNOWN_ROLES = ['GUEST', 'NEW_USER', 'PENDING', 'REJECTED', 'USER', 'ADMIN', 'MASTER', 'DEVICE_USER'];
+
+// 역할별로 들어갈 수 있는 페이지(이 외의 앱 페이지는 역할별 첫 화면으로). ADMIN·MASTER·USER는 모바일 뷰만 제외
+const ROLE_PAGES: Record<string, string[]> = {
+  DEVICE_USER: ['/mobile-view', '/mypage'],
+  GUEST: ['/welcome', '/pending'],
+  NEW_USER: ['/welcome', '/pending'],
+  PENDING: ['/pending'],
+  REJECTED: ['/pending', '/welcome'], // 거절 사유 확인 후 정보 수정·재신청
+};
+
+// 역할별 첫 화면 ('/'·'/login'에 로그인 상태로 오거나 허용되지 않은 페이지에 접근할 때)
+const ROLE_HOME: Record<string, string> = {
+  DEVICE_USER: '/mobile-view',
+  GUEST: '/welcome',
+  NEW_USER: '/welcome',
+  PENDING: '/pending',
+  REJECTED: '/pending',
+  ADMIN: '/dashboard',
+  MASTER: '/dashboard',
+  USER: '/dashboard',
+};
+
+// 🔒 [uc_auth_04] 초기 비밀번호 변경 전에 허용하는 화면·API
+const FORCE_PASSWORD_PAGE = '/mypage';
+const FORCE_PASSWORD_REDIRECT = '/mypage?force=1';
+const FORCE_PASSWORD_API_PREFIX = '/api/auth/'; // 세션·로그아웃·change-password
+
+// '/mypage'와 '/mypage/...'는 매칭, '/mypage2'는 매칭하지 않음
+const matchesPath = (pathname: string, base: string): boolean =>
+  pathname === base || pathname.startsWith(`${base}/`);
+
+const isStaticAsset = (pathname: string): boolean =>
+  STATIC_PREFIXES.some((p) => matchesPath(pathname, p)) || STATIC_FILE_PATTERN.test(pathname);
 
 function getClientIp(req: NextRequest): string {
   // 🔒 Vercel/프록시가 실제 연결 IP로 설정하는 x-real-ip 우선.
@@ -21,6 +88,19 @@ function getClientIp(req: NextRequest): string {
   const xff = req.headers.get('x-forwarded-for');
   if (xff) return xff.split(',')[0].trim();
   return '127.0.0.1';
+}
+
+function redirectTo(req: NextRequest, path: string): NextResponse {
+  return NextResponse.redirect(new URL(path, req.url));
+}
+
+// 세션 토큰 읽기 — 깨진 Authorization 헤더 등으로 getToken이 예외를 던져도 500 대신 비로그인으로 처리
+async function readToken(req: NextRequest) {
+  try {
+    return await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  } catch {
+    return null;
+  }
 }
 
 export async function middleware(req: NextRequest) {
@@ -75,106 +155,72 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // API 경로는 페이지 리다이렉트 로직을 적용하지 않음 (각 API에서 자체 인증 처리)
+  // API 인증은 각 API가 처리. 단, 초기 비밀번호 변경 전 계정은 /api/auth/* 외 API를 403으로 막는다
   if (pathname.startsWith('/api/')) {
+    if (!pathname.startsWith(FORCE_PASSWORD_API_PREFIX)) {
+      const apiToken = await readToken(req);
+      if (apiToken?.mustChangePassword === true) {
+        return new NextResponse(
+          JSON.stringify({ message: '초기 비밀번호를 변경해야 서비스를 이용할 수 있습니다.' }),
+          { status: 403, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+    }
     return NextResponse.next();
   }
 
-  // 1. 토큰(세션) 확인
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  // 정적 자산은 인증 없이 통과 (토큰 복호화 생략)
+  if (isStaticAsset(pathname)) {
+    return NextResponse.next();
+  }
 
-  // 🔒 [보안] 개발 환경에서만 디버깅 로그 출력 (운영 환경에서 사용자 역할 노출 방지)
-  if (process.env.NODE_ENV !== 'production') {
-    console.log(`🛡️ [Middleware] Path: ${pathname} | UserRole: ${token?.role || 'None'}`);
+  // 1. 토큰(세션) 확인 — 목록 밖 역할의 토큰은 비로그인과 같게 취급
+  const token = await readToken(req);
+  const role = typeof token?.role === 'string' && KNOWN_ROLES.includes(token.role) ? token.role : null;
+  const mustChangePassword = role !== null && token?.mustChangePassword === true;
+
+  // 1-1. 로그인 화면('/', '/login'): 로그인 상태면 역할별 첫 화면으로 (비밀번호 변경 대상은 변경 화면으로)
+  if (pathname === '/' || pathname === '/login') {
+    if (!role) return NextResponse.next();
+    if (mustChangePassword) return redirectTo(req, FORCE_PASSWORD_REDIRECT);
+    return redirectTo(req, ROLE_HOME[role]);
+  }
+
+  // 1-2. 그 밖의 공개 페이지(개인정보 처리방침 등)는 누구나
+  if (PUBLIC_PAGES.some((p) => matchesPath(pathname, p))) {
+    return NextResponse.next();
+  }
+
+  // 1-3. 앱에 없는 경로는 Next가 404를 돌려주도록 통과
+  if (!APP_PAGES.some((p) => matchesPath(pathname, p))) {
+    return NextResponse.next();
   }
 
   // ============================================================
-  // CASE 1: 로그인이 되어 있는 상태 (Token O)
+  // 이하: 앱 페이지
   // ============================================================
-  if (token) {
-    const role = token.role as string;
 
-    // 1-1. 이미 로그인했는데, 또 로그인 페이지('/')나 '/login'에 왔을 때 -> 제자리로 보냄
-    if (pathname === '/' || pathname === '/login') {
-      // 📱 (1) 기기 사용자 -> [신규] 모바일 앱 전용 화면으로 이동
-      if (role === 'DEVICE_USER') {
-        return NextResponse.redirect(new URL('/mobile-view', req.url));
-      }
-
-      // (2) 신규 가입자 -> Welcome 페이지
-      if (role === 'GUEST' || role === 'NEW_USER') {
-        return NextResponse.redirect(new URL('/welcome', req.url));
-      }
-
-      // (3) 승인 대기중 -> 대기 페이지
-      if (role === 'PENDING') {
-        return NextResponse.redirect(new URL('/pending', req.url));
-      }
-
-      // (4) 승인 거절됨 -> 대기 페이지
-      if (role === 'REJECTED') {
-        return NextResponse.redirect(new URL('/pending', req.url));
-      }
-
-      // 🖥️ (5) 관리자/마스터/일반유저 -> [기존 유지] 관리자 대시보드로 이동
-      if (role === 'ADMIN' || role === 'MASTER' || role === 'USER') {
-        return NextResponse.redirect(new URL('/dashboard', req.url));
-      }
-    }
-
-    // 1-2. 역할에 맞지 않는 페이지 접근 차단 (보안 & 길 안내)
-
-    // 🔒 기기 사용자가 관리자 화면에 접근하려 할 때 -> 모바일 뷰로 납치
-    if (role === 'DEVICE_USER') {
-      // 관리자용 페이지 목록
-      const adminPaths = ['/dashboard', '/wheelchair-info', '/admin', '/statistics'];
-
-      if (adminPaths.some((path) => pathname.startsWith(path))) {
-        return NextResponse.redirect(new URL('/mobile-view', req.url));
-      }
-    }
-
-    // 🔒 관리자가 모바일 뷰에 접근하려 할 때 -> 대시보드로 납치 (화면 혼선 방지)
-    if (
-      (role === 'ADMIN' || role === 'MASTER' || role === 'USER') &&
-      pathname.startsWith('/mobile-view')
-    ) {
-      return NextResponse.redirect(new URL('/dashboard', req.url));
-    }
-
-    // GUEST, PENDING 처리 (기존 유지)
-    if (
-      (role === 'GUEST' || role === 'NEW_USER') &&
-      !pathname.startsWith('/welcome') &&
-      !pathname.startsWith('/pending')
-    ) {
-      return NextResponse.redirect(new URL('/welcome', req.url));
-    }
-    if (role === 'PENDING' && !pathname.startsWith('/pending')) {
-      return NextResponse.redirect(new URL('/pending', req.url));
-    }
+  // 2. 비로그인(또는 목록 밖 역할) -> 루트('/')로 튕겨냄
+  if (!role) {
+    return redirectTo(req, '/');
   }
 
-  // ============================================================
-  // CASE 2: 로그인이 안 된 상태 (Token X)
-  // ============================================================
-  else {
-    // 로그인이 필요한 페이지들 목록 (mobile-view 추가됨)
-    const protectedPaths = [
-      '/mobile-view', // 👈 신규 추가
-      '/dashboard',
-      '/admin',
-      '/welcome',
-      '/pending',
-      '/statistics',
-      '/wheelchair-info',
-    ];
+  // 3. 초기 비밀번호 변경 전이면 마이페이지(변경 화면)만 허용
+  if (mustChangePassword) {
+    return matchesPath(pathname, FORCE_PASSWORD_PAGE)
+      ? NextResponse.next()
+      : redirectTo(req, FORCE_PASSWORD_REDIRECT);
+  }
 
-    // 보호된 페이지에 접근하려고 하면 -> 루트('/')로 튕겨냄
-    const isProtected = protectedPaths.some((path) => pathname.startsWith(path));
-    if (isProtected) {
-      return NextResponse.redirect(new URL('/', req.url));
-    }
+  // 4. 역할에 맞지 않는 페이지 접근 차단 (보안 & 길 안내)
+  const allowedPages = ROLE_PAGES[role];
+  if (allowedPages && !allowedPages.some((p) => matchesPath(pathname, p))) {
+    return redirectTo(req, ROLE_HOME[role]);
+  }
+
+  // 🔒 관리자가 모바일 뷰에 접근하려 할 때 -> 대시보드로 (화면 혼선 방지)
+  if ((role === 'ADMIN' || role === 'MASTER' || role === 'USER') && matchesPath(pathname, '/mobile-view')) {
+    return redirectTo(req, '/dashboard');
   }
 
   // 아무 문제 없으면 통과

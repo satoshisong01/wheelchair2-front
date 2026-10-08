@@ -1,9 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // 🔒 응답 헤더 X-Powered-By(Next.js) 제거 — 서버 기술 노출 최소화 (EC2는 Nginx에서도 숨김)
+  poweredByHeader: false,
+
   // 0. Vercel 서버리스 함수 번들에 RDS CA 파일 포함 (getDbSslOption이 런타임에 fs로 읽음)
-  //    → 이게 잡히면 DATABASE_CA_CERT 붙여넣기 없이 파일만으로 검증 가능
+  //    → CA가 없으면 lib/db.ts가 DB 연결을 차단하므로 DB를 쓰는 API 함수에는 반드시 포함되어야 함
   outputFileTracingIncludes: {
     '/api/**': ['./certs/rds-global-bundle.pem'],
+    // 로그인 배너를 DB에서 읽는 '/'·'/login'(ISR)도 lib/db를 불러옴 — CA가 없으면 lib/db가 연결을 막으므로 함께 포함 (Vercel 함수 번들용)
+    '/': ['./certs/rds-global-bundle.pem'],
+    '/login': ['./certs/rds-global-bundle.pem'],
   },
 
   // 1. 보안 헤더 설정
@@ -18,15 +24,20 @@ const nextConfig = {
     const connectSrc = isProd
       ? "connect-src 'self' https: wss: https://broker.firstcorea.com https://broker.firstcorea.com:8080 wss://broker.firstcorea.com wss://broker.firstcorea.com:8080"
       : "connect-src 'self' https: http: wss: ws: https://broker.firstcorea.com https://broker.firstcorea.com:8080 wss://broker.firstcorea.com wss://broker.firstcorea.com:8080";
+    // 🔒 운영 이미지는 https만 허용 (개발 http://localhost는 기존 동작 유지)
+    const imgSrc = isProd
+      ? "img-src 'self' data: blob: https:"
+      : "img-src 'self' data: blob: https: http:";
     const csp = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://dapi.kakao.com https://t1.daumcdn.net https://*.kakaocdn.net https://*.vercel-insights.com https://*.googleapis.com https://vercel.live https://*.vercel.live",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "img-src 'self' data: blob: https: http:",
+      imgSrc,
       "font-src 'self' data: https://fonts.gstatic.com",
       // 🔌 Socket.io / API / 외부 서비스 연결 허용
       connectSrc,
-      "frame-src 'self' https:",
+      // 🔒 앱은 iframe을 쓰지 않음(카카오 지도는 DOM 렌더링, 카카오 로그인은 전체 페이지 이동) → 자기 출처만
+      "frame-src 'self'",
       "media-src 'self' blob: data:",
       "object-src 'none'",
       "base-uri 'self'",
@@ -48,35 +59,14 @@ const nextConfig = {
             key: 'Strict-Transport-Security',
             value: 'max-age=63072000; includeSubDomains; preload',
           },
+          // 🔒 다른 출처 창과 window 참조를 분리 (앱은 팝업을 쓰지 않음)
+          { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+          // 🔒 다른 사이트가 우리 리소스를 끌어다 쓰지 못하게 함
+          //    (COEP require-corp는 CORP 없는 카카오 지도 리소스를 막아 지도가 멈추므로 제외)
+          { key: 'Cross-Origin-Resource-Policy', value: 'same-origin' },
         ],
       },
     ];
-  },
-
-  // 2. ‼️ [필수] TypeORM Webpack 빌드 오류 해결
-  webpack: (config, { isServer }) => {
-    if (isServer) {
-      const optionalDrivers = [
-        'react-native-sqlite-storage',
-        'sqlite3',
-        'mysql',
-        'mysql2',
-        'oracledb',
-        'pg-native',
-        'better-sqlite3',
-        '@sap/hana-client/extension/Stream', // ‼️ 정확한 경로 추가
-        '@sap/hana-client',
-      ];
-
-      config.externals = [...(config.externals || []), ...optionalDrivers];
-    }
-
-    config.ignoreWarnings = [
-      ...(config.ignoreWarnings || []),
-      /the request of a dependency is an expression/,
-    ];
-
-    return config;
   },
 };
 

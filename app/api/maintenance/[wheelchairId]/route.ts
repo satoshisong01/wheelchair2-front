@@ -8,9 +8,21 @@ import { getServerSession } from 'next-auth';
 // 🚨 authOptions 경로 확인 (lib/authOptions 또는 app/api/auth/[...nextauth]/route)
 import { authOptions } from '@/lib/authOptions';
 import pool from '@/lib/db';
+import { createAuditLog } from '@/lib/log';
+import { logServerError } from '@/lib/server-log';
 
 interface RouteParams {
   params: Promise<{ wheelchairId: string }>;
+}
+
+// 🔒 [입력검증] 경로의 휠체어 ID는 UUID만 허용 (그 외 값은 DB 형변환 오류(500) 대신 400)
+const UUID_REGEX = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
+
+// YYYY-MM-DD 형식이면서 실제 있는 날짜인지 (예: 2026-02-30 거부)
+function isValidDateString(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
 
 // 1. 조회 (GET)
@@ -29,8 +41,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const userRole = session.user.role;
 
     // 🚨 [변경] UUID 사용 (parseInt 제거)
-    // 간단한 유효성 검사 (빈 문자열 체크 정도)
-    if (!wheelchairId) {
+    if (!wheelchairId || !UUID_REGEX.test(wheelchairId)) {
       return NextResponse.json(
         { error: 'Invalid wheelchair ID' },
         { status: 400 }
@@ -68,7 +79,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 
     return NextResponse.json(result.rows);
   } catch (error) {
-    console.error(`[API /maintenance/GET] Error:`, error);
+    logServerError('[API /maintenance/GET] Error', error);
     return NextResponse.json(
       { error: 'Internal Server Error' },
       { status: 500 }
@@ -93,11 +104,18 @@ export async function POST(request: Request, { params }: RouteParams) {
       );
     }
 
-    // 2. 요청 Body 파싱 + 검증
+    if (!UUID_REGEX.test(wheelchairId)) {
+      return NextResponse.json(
+        { error: 'Invalid wheelchair ID' },
+        { status: 400 }
+      );
+    }
+
+    // 2. 요청 Body 파싱 + 검증 (보고일자는 YYYY-MM-DD 실제 날짜만)
     const parsed = await parseJsonBody(
       request,
       z.object({
-        reportDate: z.string().min(1).max(200),
+        reportDate: z.string().refine(isValidDateString),
         description: z.string().min(1).max(10000),
         technician: z.string().max(200).nullish(),
       }),
@@ -147,9 +165,17 @@ export async function POST(request: Request, { params }: RouteParams) {
       technician || null,
     ]);
 
+    // 🔒 [감사] 정비 이력 등록 기록 — 정비 내용 본문은 남기지 않음
+    await createAuditLog({
+      userId: session.user.id,
+      userRole: session.user.role,
+      action: 'MAINTENANCE_CREATE',
+      details: { wheelchairId, reportDate, maintenanceId: result.rows[0]?.id },
+    });
+
     return NextResponse.json(result.rows[0], { status: 201 });
   } catch (error) {
-    console.error(`[API /maintenance/POST] Error:`, error);
+    logServerError('[API /maintenance/POST] Error', error);
     return NextResponse.json(
       { error: 'Internal Server Error' },
       { status: 500 }

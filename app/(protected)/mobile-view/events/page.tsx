@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { formatInTimeZone } from 'date-fns-tz';
 import { ko } from 'date-fns/locale/ko';
 import { ChevronLeft, Bell, AlertTriangle, Zap, Info, CheckCircle2, Check } from 'lucide-react';
-import { useMyWheelchair } from '../../../hooks/useMyWheelchair';
+import { useMyWheelchair, type Alarm } from '../../../hooks/useMyWheelchair';
 
 export default function EventsPage() {
   const router = useRouter();
@@ -13,7 +13,15 @@ export default function EventsPage() {
   const { alarms, setAlarms, loading } = useMyWheelchair();
 
   // ⭐️ 알람 확인 처리 함수 (개별/전체 공용)
-  const handleResolve = async (alarmId?: string | number, all = false) => {
+  const handleResolve = async (alarm?: Alarm, all = false) => {
+    // 실시간(소켓)으로 받은 알람은 DB id가 없어 서버가 개별 확인을 받지 않으므로(400) 화면에서만 확인 처리.
+    //   DB에는 미확인으로 남아 목록을 다시 불러오면 id와 함께 다시 보이고, 그때 확인하면 DB에 반영된다.
+    //   id 비교 대신 같은 항목인지로 찾아 id 없는 다른 알람까지 함께 숨기지 않게 한다
+    if (!all && (alarm?.id === undefined || alarm.id === null)) {
+      setAlarms((prev) => prev.map((a) => (a === alarm ? { ...a, is_resolved: true } : a)));
+      return;
+    }
+    const alarmId = alarm?.id;
     try {
       const res = await fetch('/api/alarms/resolve', {
         method: 'POST',
@@ -159,7 +167,7 @@ export default function EventsPage() {
                   </div>
 
                   <button
-                    onClick={() => handleResolve(alarm.id)}
+                    onClick={() => handleResolve(alarm)}
                     className="absolute bottom-3 right-3 p-1.5 bg-gray-100 rounded-full text-gray-400 cursor-pointer hover:bg-green-100 hover:text-green-600 transition-colors active:scale-90"
                   >
                     <Check className="w-4 h-4" />

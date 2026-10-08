@@ -11,6 +11,7 @@ import {
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
+import { validatePassword } from '@/lib/password'; // 🔒 [IA-05] 비밀번호 강도 검증
 
 type DeviceView = {
   id: string;
@@ -139,8 +140,10 @@ export default function DeviceManagementPage() {
       return;
     }
 
-    if (formState.password.length < 6) {
-      setFormError('비밀번호는 최소 6자 이상이어야 합니다.');
+    // 🔒 [IA-05] 서버와 같은 비밀번호 정책으로 미리 확인 (거부 문구는 정책 단일 문구)
+    const pwCheck = validatePassword(formState.password);
+    if (!pwCheck.ok) {
+      setFormError(pwCheck.message || '비밀번호 정책을 확인해주세요.');
       setIsSubmitting(false);
       return;
     }

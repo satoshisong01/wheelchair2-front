@@ -14,6 +14,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { TimestreamQueryClient, QueryCommand } from '@aws-sdk/client-timestream-query';
 import { query } from '@/lib/db';
+import { logServerError } from '@/lib/server-log';
 
 const queryClient = new TimestreamQueryClient({
   region: process.env.AWS_REGION || 'ap-northeast-1',
@@ -173,7 +174,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(result);
   } catch (error) {
     // 🔒 내부 오류 상세를 클라이언트에 노출하지 않음 (서버 로그에만 기록)
-    console.error('[admin/posture-events/angles] Error:', error);
+    logServerError('[admin/posture-events/angles] Error', error);
     return NextResponse.json({ message: 'Server Error' }, { status: 500 });
   }
 }

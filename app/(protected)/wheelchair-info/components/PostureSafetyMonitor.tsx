@@ -43,7 +43,6 @@ export default function PostureSafetyMonitor({
   const latestStatusRef = useRef(status);
   const lastChangeTime = useRef<number>(0);
   const prevStatus = useRef<MonitorProps['status']>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const isArmed = postureAdviceAt != null;
   const COOLDOWN_MS = 30_000; // 짧은 시간에 POSTURE_ADVICE가 반복될 때 중복 팝업 방지
@@ -57,10 +56,6 @@ export default function PostureSafetyMonitor({
 
   const stopAlarm = useCallback(() => {
     setShowAlarm(false);
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-    }
     updateLastChangeTime();
   }, [updateLastChangeTime]);
 
@@ -68,13 +63,6 @@ export default function PostureSafetyMonitor({
     setShowAlarm((prev) => {
       if (!prev) {
         console.log('🚨 알람 발동!');
-        // 알람 발동 시에만 audio 생성 및 재생
-        if (!audioRef.current) {
-          audioRef.current = new Audio('/sounds/alarm.mp3');
-          audioRef.current.loop = true;
-          audioRef.current.volume = 1.0;
-        }
-        audioRef.current.play().catch(() => {});
         return true;
       }
       return prev;
@@ -91,7 +79,7 @@ export default function PostureSafetyMonitor({
     }, 0);
   }, [stopAlarm]);
 
-  // 1. 오디오 초기화 (알람 발동 시에만 생성)
+  // 1. 오디오 재생: 자세 권고 소리는 page.tsx의 chair.mp3 1번으로 통일 — 여기서 경보음(alarm.mp3)까지 틀면 두 소리가 겹쳐 제거했습니다.
   // 2. 오디오 잠금 해제 — 무음 AudioContext로 unlock (소리 안 남)
   useEffect(() => {
     const unlockAudio = () => {

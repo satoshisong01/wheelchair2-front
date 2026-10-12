@@ -82,3 +82,24 @@
   font-size: 0.875rem; /* 14px */
   color: #4b5563; /* gray-600 */
 }
+
+/* 더보기 버튼 (전체보기 목록을 20건씩 이어서 불러옴) */
+.loadMoreButton {
+  display: block;
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  border: 1px solid #e5e7eb; /* gray-200 */
+  border-radius: 0.375rem;
+  background-color: #f9fafb; /* gray-50 */
+  color: #374151; /* gray-700 */
+  font-weight: 600;
+  cursor: pointer;
+}
+.loadMoreButton:hover:not(:disabled) {
+  background-color: #f3f4f6; /* gray-100 */
+}
+.loadMoreButton:disabled {
+  color: #9ca3af; /* gray-400 */
+  cursor: default;
+}

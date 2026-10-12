@@ -59,14 +59,15 @@ function AdminPortalContent() {
         <div className={styles.deviceLoginLink}>
           <a href="/">일반 기기 로그인 페이지로 돌아가기</a>
         </div>
-        {/* 안드로이드 앱 다운로드 링크 */}
+        {/* 안드로이드 앱 설치 링크 (Google Play로만 배포) */}
         <div className={styles.deviceLoginLink}>
           <a
-            href="/download/app-release.apk"
+            href="https://play.google.com/store/apps/details?id=com.wheelchairapp"
             target="_blank"
             rel="noopener noreferrer"
           >
-            안드로이드 앱(APK) 다운로드
+            안드로이드 앱 (Google Play)
+            <span className="sr-only"> (새 창)</span>
           </a>
         </div>
       </div>

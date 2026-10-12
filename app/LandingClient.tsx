@@ -14,7 +14,7 @@ export default function LandingClient({ bannerText }: LandingClientProps) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // 📱 앱(WebView) 내부 실행 여부 감지 — 앱에서는 APK 다운로드 버튼 숨김 (Google Play 정책: 외부 APK 배포 유도 금지)
+  // 📱 앱(WebView) 내부 실행 여부 감지 — 앱에서는 앱 설치(Google Play) 안내 숨김 (이미 앱으로 접속 중)
   const [isInApp, setIsInApp] = useState(false);
   useEffect(() => {
     if (typeof window !== 'undefined' && (window as { ReactNativeWebView?: unknown }).ReactNativeWebView) {
@@ -142,18 +142,21 @@ export default function LandingClient({ bannerText }: LandingClientProps) {
           </button>
         </div>
 
-        {/* 안드로이드 앱 다운로드 — 앱(WebView) 내부에서는 숨김 (Google Play 정책: 외부 APK 배포 유도 금지)
+        {/* 안드로이드 앱 설치 안내 — 앱은 Google Play로만 배포(웹 APK 배포 폐지), 앱(WebView) 내부에서는 숨김
             🔒 [uc_conf_01] 인증 전 화면에 소프트웨어 버전 문자열을 노출하지 않음(버전 문구 제거) */}
         {!isInApp && (
           <div className="mt-6 text-center">
-            <p className="text-xs text-gray-500 mb-2">
-              안드로이드 기기에서 앱으로 사용하시려면 아래에서 APK를 다운로드하세요.
+            <p className="text-xs text-gray-500 mb-2 break-keep">
+              안드로이드 기기에서 앱으로 사용하시려면 Google&nbsp;Play에서 설치하세요.
             </p>
             <a
-              href="/download/app-release.apk"
+              href="https://play.google.com/store/apps/details?id=com.wheelchairapp"
+              target="_blank"
+              rel="noopener noreferrer"
               className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
             >
-              안드로이드 앱 다운로드
+              Google Play에서 앱 설치
+              <span className="sr-only"> (새 창)</span>
             </a>
           </div>
         )}

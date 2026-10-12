@@ -19,7 +19,7 @@ const RATE_LIMIT_PATHS = [
 const PUBLIC_PAGES = ['/', '/login', '/privacy', '/account-deletion'];
 
 // 정적 자산(public/ 폴더·Next 내부 경로) — 인증 없이 통과
-const STATIC_PREFIXES = ['/_next', '/__next', '/images', '/sounds', '/icons', '/download'];
+const STATIC_PREFIXES = ['/_next', '/__next', '/images', '/sounds', '/icons'];
 const STATIC_FILE_PATTERN = /\.[A-Za-z0-9]+$/; // favicon.ico, *.png, *.svg, *.webp, *.apk ...
 
 // 앱에 실제로 있는 페이지(최상위 경로). 로그인·역할 차단은 이 페이지들에만 적용하고,

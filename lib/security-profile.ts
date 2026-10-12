@@ -31,6 +31,6 @@ const PROFILES: Record<SecurityProfileName, SecurityProfile> = {
 };
 
 // 🔒 적용 프로필 — main(운영) = 'standard', 심사본 브랜치(cert/mfds) = 'strict'
-const ACTIVE_PROFILE: SecurityProfileName = 'standard';
+const ACTIVE_PROFILE: SecurityProfileName = 'strict';
 
 export const SECURITY_PROFILE: SecurityProfile = PROFILES[ACTIVE_PROFILE];

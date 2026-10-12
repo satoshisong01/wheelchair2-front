@@ -18,7 +18,7 @@ export default function ProtectedLayout({ children }: { children: React.ReactNod
           화면엔 안 보이고 기능만 작동합니다. */}
       <WebViewBridge />
 
-      {/* 🔒 [UC-03] 유휴 30분 시 자동 로그아웃(세션 잠금) */}
+      {/* 🔒 [UC-03] 유휴 시 자동 로그아웃(세션 잠금) — 사용 여부·시간은 보안 프로필(lib/security-profile.ts) */}
       <IdleLogout />
 
       {/* 1. PC용 사이드바 (기존 유지) */}

@@ -1,26 +1,34 @@
 'use client';
 
 // components/common/IdleLogout.tsx — 유휴 세션 자동 잠금/로그아웃 (의료기기 사이버보안 요구사항 UC-03, RT uc_auth_12)
-// - 사용자 입력이 NEXT_PUBLIC_IDLE_LOGOUT_MINUTES(기본 30분, 0이면 끔) 동안 없으면 로그아웃 → '/'(기기 로그인 화면)
+// - 사용자 입력이 보안 프로필의 유휴 시간(운영 standard 0 = 끔, 심사본 strict 30분) 동안 없으면 로그아웃 → '/'(기기 로그인 화면).
+//   시험 빌드는 NEXT_PUBLIC_IDLE_LOGOUT_MINUTES(분, 양수)로 잠금을 켜거나 줄일 수만 있다(끄거나 늘리지 못함)
 // - 앱(WebView)에 LOGOUT/SESSION_EXPIRED 메시지를 보내지 않는다 → 앱의 FCM 응급 푸시 구독이 유지된다
 //   (앱은 이 두 메시지를 받을 때만 구독을 해지함)
 // - 마지막 활동 시각을 localStorage에 남겨, 앱을 닫았다 다시 열거나 다른 탭에서 봐도 한도가 지났으면 바로 잠근다
 //   (한도 안이면 화면 열기(마운트·화면 이동)도 활동으로 기록)
-// - 활동이 있으면 5분 간격으로 getSession()을 불러 서버 세션(JWT 12시간) 만료를 연장한다(활동 없는 일반 화면은 연장 안 됨)
+// - 활동이 있으면 5분 간격으로 getSession()을 불러 서버 세션(JWT, 보안 프로필의 로그인 유지 시간) 만료를 연장한다
+//   (활동 없는 일반 화면은 연장 안 됨)
 // - 안전 예외(IDLE_LOCK_EXEMPT) 화면은 잠그지 않고, 입력과 무관하게 5분 간격으로 세션을 연장한다
 
 import { useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { getSession, signOut, useSession } from 'next-auth/react';
+import { SECURITY_PROFILE } from '@/lib/security-profile';
 
-const DEFAULT_IDLE_MINUTES = 30;
-// 빌드 시점 값(NEXT_PUBLIC_)이라 바꾸면 다시 빌드해야 함. 비어 있으면 기본값(빈 값이 0=끔으로 읽히지 않게)
+const DEFAULT_IDLE_MINUTES = SECURITY_PROFILE.idleLogoutMinutes; // 보안 프로필 값(standard 0 = 끔, strict 30분)
+// 시험용 빌드 값(NEXT_PUBLIC_ — 바꾸면 다시 빌드해야 함). 통제를 약하게 하는 쪽으로는 못 쓰게 양수만 받는다
+//   (비었거나 0·음수·숫자 아님은 무시 → 프로필 값 그대로)
 const rawIdleMinutes = process.env.NEXT_PUBLIC_IDLE_LOGOUT_MINUTES?.trim();
-const configuredMinutes = rawIdleMinutes ? Number(rawIdleMinutes) : DEFAULT_IDLE_MINUTES;
-const IDLE_LIMIT_MS =
-  (Number.isFinite(configuredMinutes) && configuredMinutes >= 0 ? configuredMinutes : DEFAULT_IDLE_MINUTES) *
-  60 *
-  1000; // 0 = 자동 잠금 끔
+const configuredMinutes = rawIdleMinutes ? Number(rawIdleMinutes) : NaN;
+const overrideMinutes =
+  Number.isFinite(configuredMinutes) && configuredMinutes > 0 ? configuredMinutes : 0;
+// 둘 다 있으면 짧은 쪽(strict는 줄이기만), 하나만 있으면 그 값(standard는 시험 빌드에서만 잠금을 켬)
+const IDLE_MINUTES =
+  DEFAULT_IDLE_MINUTES > 0 && overrideMinutes > 0
+    ? Math.min(DEFAULT_IDLE_MINUTES, overrideMinutes)
+    : Math.max(DEFAULT_IDLE_MINUTES, overrideMinutes);
+const IDLE_LIMIT_MS = IDLE_MINUTES * 60 * 1000; // 0 = 자동 잠금 끔
 
 const STORAGE_KEY = 'idle-logout:last-activity';
 const STORAGE_WRITE_INTERVAL_MS = 15 * 1000; // 활동 기록 쓰기 간격(빈번한 저장 방지)
@@ -73,7 +81,7 @@ export default function IdleLogout() {
   // 마지막 서버 세션 연장 시각 — 화면 이동으로 effect가 다시 돌아도 연장 주기가 처음부터 다시 시작되지 않게 유지
   const lastRefreshRef = useRef(0);
 
-  // 보호 화면에서 세션이 사라지면(예: 앱이 12시간 넘게 백그라운드에서 멈춰 있다가 돌아옴) 첫 화면으로 보냄
+  // 보호 화면에서 세션이 사라지면(예: 앱이 로그인 유지 시간 넘게 백그라운드에서 멈춰 있다가 돌아옴) 첫 화면으로 보냄
   //   — 그대로 두면 실시간 연결이 끊긴 화면이 방치되어 사용자가 끊김을 모름.
   //   '/'는 앱에 구독 해지 신호를 보내지 않으므로 FCM 안전 알림은 유지되고, 로그인이 살아 있으면 미들웨어가 다시 홈으로 보냄
   useEffect(() => {
@@ -93,7 +101,7 @@ export default function IdleLogout() {
 
     if (exempt) {
       // 안전 예외: 잠그지 않는다. 입력과 무관하게 활동 기록을 갱신해 같은 브라우저의 다른 탭이 유휴 잠금(로그아웃)으로
-      //   이 화면의 세션까지 끊지 않게 하고, 5분 간격 연장으로 화면을 켜 둔 동안 12시간 만료가 오지 않게 한다
+      //   이 화면의 세션까지 끊지 않게 하고, 5분 간격 연장으로 화면을 켜 둔 동안 세션 만료가 오지 않게 한다
       const keepAlive = () => {
         const now = Date.now();
         writeActivity({ session: sessionKey, at: now });

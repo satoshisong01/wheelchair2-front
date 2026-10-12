@@ -9,6 +9,7 @@ import { createAuditLog } from '@/lib/log'; // createAuditLog 사용
 import { logServerError } from '@/lib/server-log';
 import bcrypt from 'bcrypt';
 import { isLoginLocked, recordLoginFailure, resetLoginFailures } from '@/lib/login-lockout';
+import { SECURITY_PROFILE } from '@/lib/security-profile';
 import type { AppRole } from '@/types/next-auth';
 
 // 🔒 실제로 쓰는 역할 값만 허용 — 목록 밖 값(오염·미정의 역할)은 로그인·세션을 거부한다(fail-closed).
@@ -31,9 +32,9 @@ const AUDIT_ROLES: readonly string[] = ['ADMIN', 'MASTER', 'DEVICE_USER'];
 const auditRoleOf = (role: unknown): string =>
   typeof role === 'string' && AUDIT_ROLES.includes(role) ? role : 'SYSTEM';
 
-// 🔒 [UC-03] 세션 최대 수명 12시간 — 사용자 활동이 있거나 안전 예외 화면(기기 사용자·관제)이면
-//   IdleLogout이 5분 간격 getSession()으로 연장(슬라이딩)
-const SESSION_MAX_AGE_SEC = 12 * 60 * 60;
+// 🔒 [UC-03] 세션 최대 수명 = 보안 프로필의 로그인 유지 시간(운영 standard 30일, 심사본 strict 12시간) — 사용자 활동이
+//   있거나 안전 예외 화면(기기 사용자·관제)이면 IdleLogout이 5분 간격 getSession()으로 연장(슬라이딩)
+const SESSION_MAX_AGE_SEC = SECURITY_PROFILE.sessionMaxAgeSec;
 
 // 계정 존재·역할·초기 비밀번호 플래그 재확인 간격 — 삭제·역할 변경이 최대 5분 안에 세션에 반영된다
 const ACCOUNT_RECHECK_MS = 5 * 60 * 1000;
@@ -46,6 +47,10 @@ const ACCOUNT_CACHE_MAX_ENTRIES = 1000;
 
 // must_change_password 컬럼이 없는 DB(2026-10-08 마이그레이션 전)에서도 쿼리가 실패하지 않게 to_jsonb로 읽는다(없으면 false)
 const DEVICE_MUST_CHANGE_COLUMN = `COALESCE((to_jsonb(d) ->> 'must_change_password')::boolean, false) AS must_change_password`;
+// 🔒 [uc_auth_04] 초기 비밀번호 강제 변경은 보안 프로필이 켠 경우(심사본 strict)에만 세션에 싣는다 —
+//   운영(standard)은 DB 표시가 있어도 무시해 로그인 후 바로 원래 화면으로 간다(API 차단 없음)
+const mustChangePasswordOf = (flag: unknown): boolean =>
+  SECURITY_PROFILE.forceInitialPasswordChange && flag === true;
 
 // 등록 API와 같은 입력 길이 상한 — 비정상적으로 긴 값은 DB·Redis 조회 없이 거부
 const MAX_DEVICE_ID_LENGTH = 100;
@@ -106,7 +111,7 @@ async function readAccountState(token: JWT): Promise<Partial<JWT> | null> {
     const row = res.rows[0];
     const role = row ? row.role || 'DEVICE_USER' : null;
     if (!row || !isAppRole(role)) return null;
-    return { role, mustChangePassword: row.must_change_password === true };
+    return { role, mustChangePassword: mustChangePasswordOf(row.must_change_password) };
   }
   const res = await query(
     `SELECT role, name, organization, phone_number, rejection_reason FROM users WHERE id = $1`,
@@ -242,8 +247,8 @@ export const authOptions: NextAuthOptions = {
             wheelchairId: device.wheelchair_id,
             deviceId: device.device_id,
             name: `Device-${device.device_id}`,
-            // 🔒 [uc_auth_04] 초기 비밀번호 변경 전이면 middleware가 /mypage 외 접근을 막는다
-            mustChangePassword: device.must_change_password === true,
+            // 🔒 [uc_auth_04] 초기 비밀번호 변경 전이면 middleware가 /mypage 외 접근을 막는다(강제 변경이 켜진 프로필만)
+            mustChangePassword: mustChangePasswordOf(device.must_change_password),
           };
 
           // ⭐️ 기기 로그인 성공 시 감사 로그 기록
@@ -276,7 +281,12 @@ export const authOptions: NextAuthOptions = {
   ],
   session: {
     strategy: 'jwt',
-    maxAge: SESSION_MAX_AGE_SEC, // 12시간 (활동 시 연장)
+    maxAge: SESSION_MAX_AGE_SEC, // 보안 프로필의 로그인 유지 시간 (활동 시 연장)
+  },
+  // 로그인 직후 발급 토큰의 내부 만료(exp)도 같은 값으로 — next-auth는 로그인 때 jwt.maxAge(기본 30일)를, 연장 때만
+  //   session.maxAge를 쓴다(빠뜨리면 strict에서 쿠키만 12시간이고 토큰 자체는 30일간 유효)
+  jwt: {
+    maxAge: SESSION_MAX_AGE_SEC,
   },
   events: {
     // ⭐️ 로그아웃 이벤트 감사 로그 (DEVICE_USER 포함)
@@ -463,7 +473,8 @@ export const authOptions: NextAuthOptions = {
         session.user.name = token.name;
         session.user.wheelchairId = token.wheelchairId;
         session.user.deviceId = token.deviceId;
-        session.user.mustChangePassword = token.mustChangePassword === true;
+        // 프로필이 강제 변경을 끈 경우, 그 전에 발급돼 표시가 남은 토큰도 화면에는 강제 변경으로 보이지 않게 한 번 더 거른다
+        session.user.mustChangePassword = mustChangePasswordOf(token.mustChangePassword);
         session.user.loginAt = token.loginAt;
       }
       return session;

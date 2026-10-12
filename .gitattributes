@@ -1,2 +1,9 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+# 제출용 소스 아카이브(git archive)에서 빼는 개발 도구 파일 — git clone·pull(배포)에는 영향 없음
+.bkit export-ignore
+.playwright-mcp export-ignore
+.claude export-ignore
+.vscode export-ignore
+data/state_store.db export-ignore
+data/stream_store export-ignore

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import type { NextRequest } from 'next/server';
 import { rateLimiter } from '@/lib/rate-limiter';
+import { SECURITY_PROFILE } from '@/lib/security-profile';
 
 // 🔒 [보안] Rate Limit이 적용될 경로 (브루트포스 방어)
 const RATE_LIMIT_PATHS = [
@@ -68,7 +69,9 @@ const ROLE_HOME: Record<string, string> = {
   USER: '/dashboard',
 };
 
-// 🔒 [uc_auth_04] 초기 비밀번호 변경 전에 허용하는 화면·API
+// 🔒 [uc_auth_04] 초기 비밀번호 강제 변경 — 보안 프로필이 켠 경우(심사본 strict)에만 막는다. 운영(standard)은 표시가 있어도 통과
+const FORCE_PASSWORD_CHANGE = SECURITY_PROFILE.forceInitialPasswordChange;
+// 초기 비밀번호 변경 전에 허용하는 화면·API
 const FORCE_PASSWORD_PAGE = '/mypage';
 const FORCE_PASSWORD_REDIRECT = '/mypage?force=1';
 const FORCE_PASSWORD_API_PREFIX = '/api/auth/'; // 세션·로그아웃·change-password
@@ -155,9 +158,10 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // API 인증은 각 API가 처리. 단, 초기 비밀번호 변경 전 계정은 /api/auth/* 외 API를 403으로 막는다
+  // API 인증은 각 API가 처리. 단, 강제 변경이 켜진 프로필에선 초기 비밀번호 변경 전 계정의 /api/auth/* 외 API를 403으로 막는다
+  //   (꺼진 프로필은 API마다 토큰을 읽지 않고 바로 통과)
   if (pathname.startsWith('/api/')) {
-    if (!pathname.startsWith(FORCE_PASSWORD_API_PREFIX)) {
+    if (FORCE_PASSWORD_CHANGE && !pathname.startsWith(FORCE_PASSWORD_API_PREFIX)) {
       const apiToken = await readToken(req);
       if (apiToken?.mustChangePassword === true) {
         return new NextResponse(
@@ -177,7 +181,8 @@ export async function middleware(req: NextRequest) {
   // 1. 토큰(세션) 확인 — 목록 밖 역할의 토큰은 비로그인과 같게 취급
   const token = await readToken(req);
   const role = typeof token?.role === 'string' && KNOWN_ROLES.includes(token.role) ? token.role : null;
-  const mustChangePassword = role !== null && token?.mustChangePassword === true;
+  const mustChangePassword =
+    FORCE_PASSWORD_CHANGE && role !== null && token?.mustChangePassword === true;
 
   // 1-1. 로그인 화면('/', '/login'): 로그인 상태면 역할별 첫 화면으로 (비밀번호 변경 대상은 변경 화면으로)
   if (pathname === '/' || pathname === '/login') {

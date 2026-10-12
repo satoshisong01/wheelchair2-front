@@ -170,6 +170,7 @@ export async function POST(req: NextRequest) {
     // 2. DeviceAuth 테이블에 로그인 정보 삽입
     //    알림 설정 3종은 DB 기본값을 사용하며, 초기 상태를 감사 로그로 남기기 위해 RETURNING으로 회수
     //    🔒 [uc_auth_04] 신규 기기는 첫 로그인 때 초기 비밀번호를 바꿔야 서비스를 쓸 수 있게 플래그를 켠다
+    //       (적용은 보안 프로필이 강제 변경을 켠 경우만 — lib/security-profile.ts. 운영 standard는 표시만 남고 무시됨)
     const mustChangeSupported = await hasMustChangePasswordColumn(client);
     if (!mustChangeSupported) {
       console.warn('[device-register] must_change_password 컬럼 없음 — 2026-10-08 마이그레이션 적용 필요');

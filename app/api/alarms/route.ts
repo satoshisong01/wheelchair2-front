@@ -14,6 +14,7 @@ type AlarmFilters = {
   wheelchairId: string | null;
   category: AlarmCategory | null;
   limit: number | null;
+  before: string | null; // 더보기용 커서: 이 알람(id)보다 오래된 것만
 };
 
 function parseFilters(searchParams: URLSearchParams): AlarmFilters | { error: string } {
@@ -37,7 +38,12 @@ function parseFilters(searchParams: URLSearchParams): AlarmFilters | { error: st
     }
   }
 
-  return { wheelchairId, category, limit };
+  const before = searchParams.get('before');
+  if (before !== null && !UUID_REGEX.test(before)) {
+    return { error: 'before 형식이 올바르지 않습니다.' };
+  }
+
+  return { wheelchairId, category, limit, before };
 }
 
 // paramOffset: 앞에서 이미 쓰는 플레이스홀더 개수 (일반 사용자는 $1이 userId)
@@ -57,6 +63,12 @@ function buildFilterSql(filters: AlarmFilters, paramOffset: number) {
     const patterns = placeholder(CRITICAL_LIKE_PATTERNS);
     const isCritical = `COALESCE(a.alarm_type, '') LIKE ANY(${patterns}::text[])`;
     conditions.push(filters.category === 'critical' ? isCritical : `NOT (${isCritical})`);
+  }
+  if (filters.before) {
+    // 커서 알람의 (시각, id)보다 뒤 순서인 것만 — 시각이 같아도 id로 순서가 정해져 더보기에서 빠지거나 겹치지 않음
+    conditions.push(
+      `(a.alarm_time, a.id) < (SELECT b.alarm_time, b.id FROM alarms b WHERE b.id = ${placeholder(filters.before)})`,
+    );
   }
   const limitSql = filters.limit === null ? '' : ` LIMIT ${placeholder(filters.limit)}`;
 
@@ -105,7 +117,7 @@ export async function GET(request: NextRequest) {
                     w.device_serial as "deviceSerial"
                 FROM alarms a
                 JOIN wheelchairs w ON a.wheelchair_id = w.id${whereSql}
-                ORDER BY a.alarm_time DESC${filter.limitSql}
+                ORDER BY a.alarm_time DESC, a.id DESC${filter.limitSql}
             `;
       params = filter.params;
     } else {
@@ -125,7 +137,7 @@ export async function GET(request: NextRequest) {
                 JOIN user_wheelchairs uw ON a.wheelchair_id = uw.wheelchair_id
                 JOIN wheelchairs w ON a.wheelchair_id = w.id
                 WHERE uw.user_id = $1 ${andSql}
-                ORDER BY a.alarm_time DESC${filter.limitSql}
+                ORDER BY a.alarm_time DESC, a.id DESC${filter.limitSql}
             `;
       params = [userId, ...filter.params];
     }

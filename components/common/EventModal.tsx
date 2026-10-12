@@ -43,6 +43,10 @@ interface EventModalProps {
   onClose: () => void;
   title: string;
   alarms: AlarmItem[];
+  // 더보기(선택) — 넘기지 않으면 지금처럼 받은 목록만 표시
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
 }
 
 export default function EventModal({
@@ -50,6 +54,9 @@ export default function EventModal({
   onClose,
   title,
   alarms,
+  hasMore = false,
+  loadingMore = false,
+  onLoadMore,
 }: EventModalProps) {
   if (!isOpen) return null;
 
@@ -121,6 +128,16 @@ export default function EventModal({
               )}
             </tbody>
           </table>
+          {onLoadMore && (hasMore || loadingMore) && (
+            <button
+              type="button"
+              className={styles.loadMoreButton}
+              onClick={onLoadMore}
+              disabled={loadingMore}
+            >
+              {loadingMore ? '불러오는 중...' : '더보기'}
+            </button>
+          )}
         </div>
       </div>
     </div>

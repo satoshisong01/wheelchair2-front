@@ -19,8 +19,17 @@ import { AlarmCategory, isCriticalAlarmType } from '@/lib/alarm-categories';
 
 const SOCKET_SERVER_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://broker.firstcorea.com';
 
-// 첫 화면 부담을 줄이려 경고·알림은 최신 50건씩만 먼저 받음 (전체 목록은 전체보기 모달을 열 때 조회)
+// 첫 화면 부담을 줄이려 경고·알림은 최신 50건씩만 받음 (실시간 수신분도 분류별 50건까지만 유지)
 const INLINE_ALARM_LIMIT = 50;
+// 전체보기 모달은 최근 20건만 먼저 받고 '더보기'로 20건씩 이어서 받음 (수천 건을 한 번에 그리면 화면이 버벅임)
+const MODAL_PAGE_SIZE = 20;
+
+// 분류별로 최신 limit건만 남김 (목록은 최신순)
+const keepLatestPerCategory = (list: Alarm[], limit: number): Alarm[] => {
+  let critical = 0;
+  let info = 0;
+  return list.filter((a) => (isCriticalAlarmType(a.alarmType) ? critical++ < limit : info++ < limit));
+};
 
 // 첫 조회가 끝나기 전 빈 목록 자리에 보일 문구 ('알람이 없습니다' 등 빈 상태와 구분)
 const LOADING_TEXT = '불러오는 중...';
@@ -60,6 +69,9 @@ export default function DashboardPage() {
     critical: false,
     info: false,
   });
+  // 전체보기 '더보기' 상태 — 더 받을 게 있는지, 지금 받는 중인지
+  const [fullHasMore, setFullHasMore] = useState<Record<AlarmCategory, boolean>>({ critical: false, info: false });
+  const [loadingMore, setLoadingMore] = useState<Record<AlarmCategory, boolean>>({ critical: false, info: false });
   // 분류별 소켓 알람 수신 횟수 — 전체 목록 조회 중 도착한 알람이 응답에서 빠졌는지 판단용
   const socketAlarmCountRef = useRef<Record<AlarmCategory, number>>({ critical: 0, info: 0 });
 
@@ -198,7 +210,8 @@ export default function DashboardPage() {
         const enriched: Alarm = serial
           ? { ...newAlarmData, deviceSerial: serial, wheelchair: { device_serial: serial } }
           : newAlarmData;
-        setAlarms((prevAlarms) => [enriched, ...prevAlarms]);
+        // 대시보드를 오래 켜 두면 수신분이 끝없이 쌓여 화면이 버벅이므로 분류별 최신 50건까지만 유지
+        setAlarms((prevAlarms) => keepLatestPerCategory([enriched, ...prevAlarms], INLINE_ALARM_LIMIT));
 
         // 이미 불러온 전체보기 목록에도 추가 (조회 중이면 수신 횟수 비교로 다시 조회됨)
         const category = isCriticalAlarmType(enriched.alarmType) ? 'critical' : 'info';
@@ -236,14 +249,14 @@ export default function DashboardPage() {
     }
   }, [status, session]);
 
-  // 3. 전체보기 모달을 처음 열 때 해당 분류의 전체 목록 조회 (세션 확인 중에 열었으면 인증된 뒤 조회)
+  // 3. 전체보기 모달을 처음 열 때 해당 분류의 최근 20건 조회 (세션 확인 중에 열었으면 인증된 뒤 조회)
   useEffect(() => {
     if (status !== 'authenticated') return;
     const loadFullAlarms = async (category: AlarmCategory, attempt = 0): Promise<void> => {
       fullAlarmsRequestedRef.current = { ...fullAlarmsRequestedRef.current, [category]: true };
       const countAtStart = socketAlarmCountRef.current[category];
       try {
-        const res = await fetch(`/api/alarms?category=${category}`);
+        const res = await fetch(`/api/alarms?category=${category}&limit=${MODAL_PAGE_SIZE}`);
         if (!res.ok) throw new Error(`전체 알람 조회 실패 (${res.status})`);
         const rows: Alarm[] = await res.json();
         // 조회 중 같은 분류 소켓 알람이 왔으면 응답에 빠졌을 수 있어 다시 조회 (기기 오작동으로 알람이 쏟아져도 무한 반복하지 않게 2회까지)
@@ -251,6 +264,7 @@ export default function DashboardPage() {
           return loadFullAlarms(category, attempt + 1);
         }
         setFullAlarms((prev) => ({ ...prev, [category]: rows }));
+        setFullHasMore((prev) => ({ ...prev, [category]: rows.length === MODAL_PAGE_SIZE }));
       } catch (e) {
         fullAlarmsRequestedRef.current = { ...fullAlarmsRequestedRef.current, [category]: false };
         console.error(e);
@@ -286,6 +300,33 @@ export default function DashboardPage() {
     } else {
       setIsAlertModalOpen(true);
     }
+  };
+
+  // 전체보기 '더보기' — 지금 목록의 가장 오래된 알람 이전 것을 20건 더 받아 뒤에 붙임
+  const loadMoreAlarms = async (category: AlarmCategory) => {
+    const list = fullAlarms[category];
+    const oldest = list?.[list.length - 1];
+    if (!oldest || loadingMore[category]) return;
+    setLoadingMore((prev) => ({ ...prev, [category]: true }));
+    let hasMore = true;
+    try {
+      const res = await fetch(
+        `/api/alarms?category=${category}&limit=${MODAL_PAGE_SIZE}&before=${encodeURIComponent(String(oldest.id))}`,
+      );
+      if (!res.ok) throw new Error(`알람 더보기 실패 (${res.status})`);
+      const rows: Alarm[] = await res.json();
+      hasMore = rows.length === MODAL_PAGE_SIZE;
+      setFullAlarms((prev) => {
+        const current = prev[category] ?? [];
+        const seen = new Set(current.map((a) => String(a.id)));
+        return { ...prev, [category]: [...current, ...rows.filter((a) => !seen.has(String(a.id)))] };
+      });
+    } catch (e) {
+      console.error(e);
+      hasMore = false;
+    }
+    setFullHasMore((prev) => ({ ...prev, [category]: hasMore }));
+    setLoadingMore((prev) => ({ ...prev, [category]: false }));
   };
 
   const handleViewDetails = () => {
@@ -360,13 +401,19 @@ export default function DashboardPage() {
         isOpen={isWarningModalOpen}
         onClose={() => setIsWarningModalOpen(false)}
         title="경고 EVENT"
-        alarms={fullAlarms.critical ?? criticalAlarms}
+        alarms={fullAlarms.critical ?? criticalAlarms.slice(0, MODAL_PAGE_SIZE)}
+        hasMore={fullHasMore.critical}
+        loadingMore={loadingMore.critical}
+        onLoadMore={() => loadMoreAlarms('critical')}
       />
       <EventModal
         isOpen={isAlertModalOpen}
         onClose={() => setIsAlertModalOpen(false)}
         title="알림 EVENT"
-        alarms={fullAlarms.info ?? infoAlarms}
+        alarms={fullAlarms.info ?? infoAlarms.slice(0, MODAL_PAGE_SIZE)}
+        hasMore={fullHasMore.info}
+        loadingMore={loadingMore.info}
+        onLoadMore={() => loadMoreAlarms('info')}
       />
       <WheelchairInfoModal
         isOpen={isInfoModalOpen}

@@ -9,7 +9,6 @@ import {
   MouseEvent,
 } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import styles from './page.module.css';
 import { validatePassword } from '@/lib/password'; // 🔒 [IA-05] 비밀번호 강도 검증
 
@@ -43,7 +42,6 @@ const LoadingSpinner = () => (
 
 export default function DeviceManagementPage() {
   const { data: session, status } = useSession();
-  const router = useRouter();
 
   const [devices, setDevices] = useState<DeviceView[]>([]);
   const [isLoading, setIsLoading] = useState(true);

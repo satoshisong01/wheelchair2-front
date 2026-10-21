@@ -25,7 +25,6 @@ const DateRangePicker: React.FC<DateRangePickerProps> = ({
   endDate,
   onChangeStart,
   onChangeEnd,
-  loggedDates,
 }) => {
   const handleStartChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // 날짜 객체를 생성할 때 Timezone 문제가 발생하지 않도록 +1일 보정 필요 (UTC 문제 해결)

@@ -22,12 +22,6 @@ interface MonitorProps {
   } | null;
 }
 
-// ⏰ 실제 서비스용: 2시간
-const WARNING_DELAY_MS = 2 * 60 * 60 * 1000;
-// const WARNING_DELAY_MS = 10 * 1000; // ⚡️ 테스트용
-
-// 🟢 통신 두절 판단 기준 (60초 동안 새 데이터 없으면 멈춘 것으로 간주)
-const DISCONNECT_THRESHOLD_MS = 60 * 1000;
 
 export default function PostureSafetyMonitor({
   status,
@@ -44,7 +38,6 @@ export default function PostureSafetyMonitor({
   const lastChangeTime = useRef<number>(0);
   const prevStatus = useRef<MonitorProps['status']>(null);
 
-  const isArmed = postureAdviceAt != null;
   const COOLDOWN_MS = 30_000; // 짧은 시간에 POSTURE_ADVICE가 반복될 때 중복 팝업 방지
   const lastShownAtRef = useRef<number>(0);
 

@@ -65,7 +65,7 @@ interface LoginClientProps {
 }
 
 export default function LoginClient({ bannerText }: LoginClientProps) {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const router = useRouter();
 
   // 🩺 화면을 열 때 앱(WebView)에 SESSION_EXPIRED를 보내지 않는다 — 앱은 이 메시지로 FCM 구독을 해지하므로,

@@ -10,7 +10,7 @@ const safeDate = (dateStr: string | Date | undefined) => {
     const safeStr =
       typeof dateStr === 'string' ? dateStr.replace(' ', 'T') : dateStr;
     return new Date(safeStr).toLocaleString('ko-KR');
-  } catch (e) {
+  } catch {
     return String(dateStr); // 에러나면 원본 출력
   }
 };

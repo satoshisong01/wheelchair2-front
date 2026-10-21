@@ -14,7 +14,6 @@ import {
   Accessibility,
   CloudSun,
   Bell,
-  BrainCircuit,
   AlertTriangle,
   Gauge,
 } from 'lucide-react';

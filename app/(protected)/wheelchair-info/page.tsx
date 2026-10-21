@@ -224,7 +224,7 @@ function WheelchairInfoContent() {
             (a: any) => String(a.wheelchairId || a.wheelchair_id) === String(id),
           );
         }
-      } catch (e) {}
+      } catch {}
 
       // 🔒 그 뒤에 시작된 선택 요청(드롭다운·URL)이 있으면 이 결과는 버림 — 마지막 요청 우선
       if (requestSeq !== selectRequestSeqRef.current) return;
@@ -433,7 +433,6 @@ function WheelchairInfoContent() {
         // 알림 종류에 따라 다른 소리 재생 (사용자 페이지와 동일)
         const isComplete = type.includes('COMPLETE') || type.includes('SUCCESS');
         const soundFile = isComplete ? '/sounds/ding.mp3' : type.includes('POSTURE_ADVICE') ? '/sounds/chair.mp3' : '/sounds/alarm.mp3';
-        const isLoop = !isComplete && !type.includes('POSTURE_ADVICE');
         try {
           const audio = new Audio(soundFile);
           audio.volume = 1.0;

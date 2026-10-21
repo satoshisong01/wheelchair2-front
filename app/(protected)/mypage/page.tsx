@@ -81,7 +81,7 @@ export default function MyPage() {
         body: JSON.stringify({ wheelchairId, type, enabled: nextEnabled }),
       });
       if (!res.ok) throw new Error();
-    } catch (err) {
+    } catch {
       alert('설정 저장 실패');
       setNotifications((prev) => ({ ...prev, [type]: !nextEnabled }));
     }

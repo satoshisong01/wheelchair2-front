@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatInTimeZone } from 'date-fns-tz';
 import { ko } from 'date-fns/locale/ko';
-import { ChevronLeft, Bell, AlertTriangle, Zap, Info, CheckCircle2, Check } from 'lucide-react';
+import { ChevronLeft, AlertTriangle, Zap, CheckCircle2, Check } from 'lucide-react';
 import { useMyWheelchair, type Alarm } from '../../../hooks/useMyWheelchair';
 
 export default function EventsPage() {

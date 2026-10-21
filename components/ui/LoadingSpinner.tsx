@@ -1,6 +1,4 @@
 import styles from './LoadingSpinner.module.css';
-import React from 'react';
-import { ReactNode } from 'react'; // ReactNode 타입을 임포트
 
 interface LoadingSpinnerProps {
   text?: string;

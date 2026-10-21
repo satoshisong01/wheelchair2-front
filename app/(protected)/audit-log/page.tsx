@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 // 🟢 [수정] addHours 다시 추가 (UTC -> KST 수동 변환용)
-import { format, toDate, addHours } from 'date-fns';
+import { format, toDate } from 'date-fns';
 import { ko } from 'date-fns/locale/ko';
 import styles from './page.module.css';
 import LoadingSpinner from '@/components/ui/LoadingSpinner';
@@ -128,7 +127,7 @@ const formatLogContent = (log: AuditLog) => {
   let details: any;
   try {
     details = typeof log.details === 'string' ? JSON.parse(log.details) : log.details;
-  } catch (e) {
+  } catch {
     details = { text: log.details || '상세 정보 없음' };
   }
   details = details || {};
@@ -306,7 +305,6 @@ const formatLogContent = (log: AuditLog) => {
 // ------------------------------------------------
 export default function AuditLogPage() {
   const { data: session, status } = useSession();
-  const router = useRouter();
   // 🔒 [uc_log_06] 감사로그 열람은 MASTER 전용 (API·메뉴와 동일)
   const isMaster = session?.user?.role === 'MASTER';
 

@@ -5,7 +5,6 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 
 const LoadingSpinner = () => (
   <div className="flex items-center justify-center min-h-screen">
@@ -17,7 +16,6 @@ const LoadingSpinner = () => (
 );
 
 export default function WelcomePage() {
-  const router = useRouter();
   const { data: session, status, update } = useSession();
 
   const [name, setName] = useState('');

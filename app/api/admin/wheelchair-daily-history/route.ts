@@ -303,30 +303,33 @@ async function fetchPgData(
   // 급경사 경고 횟수 (alarms 테이블 SLOPE_WARNING / SLOPE → KST 일자별 COUNT)
   //   욕창(posture_daily)과 달리 전용 롤업이 없어 원본 알람에서 직접 집계한다.
   //   KST 하루 경계: [from 00:00 KST, (to+1) 00:00 KST)
+  //   ⚠️ alarm_time은 timezone 없는 timestamp이고 워커가 UTC로 저장한다.
+  //   `alarm_time AT TIME ZONE 'Asia/Seoul'`만 쓰면 UTC 값을 KST로 착각해 날짜가 하루 가까이 앞당겨지므로
+  //   먼저 UTC로 못 박은 뒤 KST로 바꾼다. 범위 경계도 KST 자정을 UTC timestamp로 바꿔 비교한다.
   let slopeSql: string;
   let slopeParams: string[];
   if (wheelchairId === 'ALL') {
     slopeSql = `
       SELECT wheelchair_id::text AS wid,
-             to_char((alarm_time AT TIME ZONE 'Asia/Seoul'), 'YYYY-MM-DD') AS day,
+             to_char(((alarm_time AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Seoul'), 'YYYY-MM-DD') AS day,
              COUNT(*)::int AS count
       FROM alarms
       WHERE UPPER(alarm_type) IN ('SLOPE_WARNING', 'SLOPE')
-        AND alarm_time >= ($1::date)::timestamp AT TIME ZONE 'Asia/Seoul'
-        AND alarm_time <  (($2::date) + 1)::timestamp AT TIME ZONE 'Asia/Seoul'
+        AND alarm_time >= (($1::date)::timestamp AT TIME ZONE 'Asia/Seoul') AT TIME ZONE 'UTC'
+        AND alarm_time <  ((($2::date) + 1)::timestamp AT TIME ZONE 'Asia/Seoul') AT TIME ZONE 'UTC'
       GROUP BY wheelchair_id, day
     `;
     slopeParams = [from, to];
   } else {
     slopeSql = `
       SELECT wheelchair_id::text AS wid,
-             to_char((alarm_time AT TIME ZONE 'Asia/Seoul'), 'YYYY-MM-DD') AS day,
+             to_char(((alarm_time AT TIME ZONE 'UTC') AT TIME ZONE 'Asia/Seoul'), 'YYYY-MM-DD') AS day,
              COUNT(*)::int AS count
       FROM alarms
       WHERE wheelchair_id = $1
         AND UPPER(alarm_type) IN ('SLOPE_WARNING', 'SLOPE')
-        AND alarm_time >= ($2::date)::timestamp AT TIME ZONE 'Asia/Seoul'
-        AND alarm_time <  (($3::date) + 1)::timestamp AT TIME ZONE 'Asia/Seoul'
+        AND alarm_time >= (($2::date)::timestamp AT TIME ZONE 'Asia/Seoul') AT TIME ZONE 'UTC'
+        AND alarm_time <  ((($3::date) + 1)::timestamp AT TIME ZONE 'Asia/Seoul') AT TIME ZONE 'UTC'
       GROUP BY wheelchair_id, day
     `;
     slopeParams = [wheelchairId, from, to];

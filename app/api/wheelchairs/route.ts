@@ -1,7 +1,7 @@
 // app/api/wheelchairs/route.ts
 // 📝 설명: 최신 DB 구조(JOIN) 조회 + 기기 등록(POST) 기능 포함 (최종본)
 
-import { NextResponse, NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 import * as dotenv from 'dotenv';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';

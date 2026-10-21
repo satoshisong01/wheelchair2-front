@@ -3,7 +3,7 @@
 import React from 'react';
 import DateRangePicker from '@/components/ui/DateRangePicker';
 import styles from '@/app/(protected)/stats/page.module.css'; // styles 경로 수정 필요
-import { MetricType, TimeUnitType, ChartModeType, HOUR_OPTIONS, DeviceInfo } from './StatsTypes'; // StatsTypes import
+import { TimeUnitType, ChartModeType, HOUR_OPTIONS, DeviceInfo } from './StatsTypes'; // StatsTypes import
 
 interface StatsFiltersProps {
   // 상태
@@ -70,7 +70,6 @@ const StatsFilters: React.FC<StatsFiltersProps> = ({
   handleSearch,
   handleModeChange,
 }) => {
-  const isHourly = chartMode === 'COMPARE' || timeUnit === 'hourly';
 
   return (
     <div className={styles.filterBox}>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useMyWheelchair } from '../../../hooks/useMyWheelchair';
 import { useIsPowerOn } from '../../../hooks/useIsPowerOn';
@@ -11,9 +11,7 @@ import {
   Sun,
   Wind,
   Droplets,
-  Thermometer,
   MapPin,
-  Home, // 실내 아이콘 추가
 } from 'lucide-react';
 
 export default function WeatherPage() {
@@ -69,7 +67,7 @@ export default function WeatherPage() {
   const wPressure = isPowerOn ? String(weather.pressure) : '-';
   const wDesc = isPowerOn ? weather.desc : '-';
 
-  const getWeatherIcon = (main: string) => {
+  const getWeatherIcon = () => {
     if (weather.desc.includes('비')) return <CloudRain className="w-8 h-8 text-blue-500" />;
     if (weather.desc.includes('구름')) return <Cloud className="w-8 h-8 text-gray-500" />;
     if (weather.desc.includes('눈')) return <Wind className="w-8 h-8 text-sky-300" />;
@@ -107,7 +105,7 @@ export default function WeatherPage() {
               {/* 1. 상태 아이콘 */}
               <div className="p-4 flex flex-col items-center justify-center">
                 <span className="text-xs text-gray-400 mb-2">기상</span>
-                {getWeatherIcon(weather.main)}
+                {getWeatherIcon()}
               </div>
 
               {/* 2. 외부 기온 (API) */}

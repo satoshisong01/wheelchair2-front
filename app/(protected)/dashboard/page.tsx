@@ -17,6 +17,7 @@ import { DashboardSummaryCards } from './components/DashboardSummaryCards';
 import { WheelchairInfoModal } from './components/WheelchairInfoModal';
 import { AlarmCategory, isCriticalAlarmType } from '@/lib/alarm-categories';
 import { SOCKET_URL } from '@/lib/socket-url';
+import { socketAuth } from '@/lib/socket-auth';
 
 const SOCKET_SERVER_URL = SOCKET_URL;
 
@@ -155,17 +156,14 @@ export default function DashboardPage() {
       const socket = io(SOCKET_SERVER_URL, {
         transports: ['websocket'],
         secure: true,
+        auth: socketAuth, // 🔐 접속마다 서명 토큰 발급(/api/socket-token)
       });
 
       socket.on('connect', () => {
         if (process.env.NODE_ENV !== 'production') console.log('✅ [Dashboard] 소켓 연결 성공');
 
-        // 🔐 [보안] 권한 검증 + admin 룸 join 요청
-        const userId = (session?.user as any)?.id;
-        const role = (session?.user as any)?.role;
-        if (userId && role) {
-          socket.emit('subscribe', { userId, role });
-        }
+        // 🔐 [보안] 알람 방 입장 요청 — 사용자 ID·역할은 보내지 않음(소켓 서버가 접속 때 받은 서명 토큰으로만 판단)
+        socket.emit('subscribe');
       });
 
       // 데이터 병합 로직

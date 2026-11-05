@@ -19,6 +19,7 @@ import { PostureControlPanel } from './components/PostureControlPanel';
 import { TopRightPanel } from './components/TopRightPanel';
 import PostureSafetyMonitor from './components/PostureSafetyMonitor';
 import { SOCKET_URL } from '@/lib/socket-url';
+import { socketAuth } from '@/lib/socket-auth';
 
 const SOCKET_SERVER_URL = SOCKET_URL;
 
@@ -317,6 +318,7 @@ function WheelchairInfoContent() {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       timeout: 20000,
+      auth: socketAuth, // 🔐 접속(재접속 포함)마다 서명 토큰 발급(/api/socket-token)
     });
 
     socketRef.current = socket;
@@ -325,12 +327,8 @@ function WheelchairInfoContent() {
       if (process.env.NODE_ENV !== 'production') console.log('✅ [Admin] 소켓 연결됨');
       setIsSocketConnected(true);
 
-      // 🔐 [보안] 권한 검증 + admin 룸 join 요청
-      const userId = (session?.user as any)?.id;
-      const role = (session?.user as any)?.role;
-      if (userId && role) {
-        socket.emit('subscribe', { userId, role });
-      }
+      // 🔐 [보안] 알람 방 입장 요청 — 사용자 ID·역할은 보내지 않음(소켓 서버가 접속 때 받은 서명 토큰으로만 판단)
+      socket.emit('subscribe');
       // 재연결 시 현재 선택된 차량 데이터 재조회
       const id = currentIdRef.current;
       if (id) {

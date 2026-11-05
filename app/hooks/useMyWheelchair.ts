@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import { io, Socket } from 'socket.io-client';
 import { DashboardWheelchair } from '@/types/wheelchair';
 import { SOCKET_URL } from '@/lib/socket-url';
+import { socketAuth } from '@/lib/socket-auth';
 
 // 🟢 도메인 주소 사용 (SSL 적용) - nginx가 443에서 SSL 종료 후 localhost:8080으로 프록시
 
@@ -230,18 +231,15 @@ export function useMyWheelchair() {
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
       timeout: 20000,
+      auth: socketAuth, // 🔐 접속(재접속 포함)마다 서명 토큰 발급(/api/socket-token)
     });
 
     socketInstance.on('connect', () => {
       console.log('✅ [Mobile Hook] 소켓 연결 성공!');
       setIsSocketConnected(true);
 
-      // 🔐 [보안] 권한 검증 + 룸 join 요청 (서버에서 DB로 진짜 권한 확인 후 분리)
-      const userId = session?.user?.id;
-      const role = session?.user?.role;
-      if (userId && role) {
-        socketInstance.emit('subscribe', { userId, role });
-      }
+      // 🔐 [보안] 알람 방 입장 요청 — 사용자 ID·역할은 보내지 않음(소켓 서버가 접속 때 받은 서명 토큰으로만 판단)
+      socketInstance.emit('subscribe');
       // 재연결 시 최신 데이터 재조회 (오래된 데이터 방지)
       fetchData();
     });

@@ -9,6 +9,8 @@ const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL!,
   token: process.env.UPSTASH_REDIS_REST_TOKEN!,
   retry: { retries: 1, backoff: () => 100 },
+  // 🔒 요청마다 2초 시간 제한 — Upstash 장애로 응답이 없으면 끊고, middleware 가 잡아 서비스는 계속 동작(로그인 시도 제한만 잠시 해제)
+  signal: () => AbortSignal.timeout(2000),
 });
 
 // "IP당 10초에 10회" 규칙을 설정합니다.

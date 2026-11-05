@@ -1,20 +1,14 @@
 // app/api/wheelchairs/route.ts
-// 📝 설명: 최신 DB 구조(JOIN) 조회 + 기기 등록(POST) 기능 포함 (최종본)
+// 📝 설명: 최신 DB 구조(JOIN) 조회 (기기 등록은 /api/admin/devices POST — 쓰지 않던 POST는 삭제)
 
 import { NextResponse } from 'next/server';
 import * as dotenv from 'dotenv';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
-import { createAuditLog } from '@/lib/log';
 import pool from '@/lib/db';
-import { z } from 'zod';
-import { parseJsonBody } from '@/lib/validate';
-import { logServerError, summarizeError } from '@/lib/server-log';
+import { logServerError } from '@/lib/server-log';
 
 dotenv.config();
-
-// 🔒 [입력검증] 시리얼은 통계·각도 API와 같은 문자셋(영숫자·_-, 1~64자) — 제어문자·따옴표 차단
-const DEVICE_SERIAL_REGEX = /^[A-Za-z0-9_-]{1,64}$/;
 
 // 1. 휠체어 목록 조회 (GET) — 인증 필수 (ADMIN/MASTER만 허용)
 export async function GET() {
@@ -133,76 +127,3 @@ export async function GET() {
   }
 }
 
-// 2. 휠체어 기기 등록 (POST)
-export async function POST(req: Request) {
-  // ⭐️ [추가] 세션 인증 및 권한 확인
-  const session = await getServerSession(authOptions);
-  // @ts-ignore
-  const userId = session?.user?.id;
-  // @ts-ignore
-  const userRole = session?.user?.role;
-
-  if (!session || (userRole !== 'MASTER' && userRole !== 'ADMIN')) {
-    return NextResponse.json({ message: '권한이 없습니다.' }, { status: 403 });
-  }
-
-  try {
-    const parsed = await parseJsonBody(
-      req,
-      z.object({
-        device_serial: z.string().regex(DEVICE_SERIAL_REGEX),
-        model_name: z.string().min(1).max(200),
-      }),
-      '시리얼 번호와 모델명이 필요합니다.',
-    );
-    if ('error' in parsed) {
-      return NextResponse.json(
-        { error: '시리얼 번호와 모델명이 필요합니다.' },
-        { status: 400 }
-      );
-    }
-    const { device_serial, model_name } = parsed.data;
-
-    // UUID 자동 생성 (gen_random_uuid)
-    const query = `
-      INSERT INTO wheelchairs (id, device_serial, model_name, created_at)
-      VALUES (gen_random_uuid(), $1, $2, NOW())
-      RETURNING *
-    `;
-
-    const result = await pool.query(query, [device_serial, model_name]);
-    const newDevice = result.rows[0];
-
-    // ⭐️ [핵심 추가] 활동 로그 기록
-    await createAuditLog({
-      userId: userId,
-      userRole: userRole,
-      action: 'DEVICE_REGISTER',
-      details: {
-        serial: device_serial,
-        model: model_name,
-        wheelchairId: newDevice.id,
-      },
-    });
-
-    return NextResponse.json(newDevice);
-  } catch (error) {
-    logServerError('Insert Error', error);
-    // ⭐️ [추가] DB 오류 발생 시에도 로그 기록 (선택 사항이지만, 문제 추적에 유용)
-    //   🔒 감사로그(관리자 화면 열람)에는 오류 원문 대신 오류 코드(없으면 오류 이름)만 저장
-    if (userId && userRole) {
-      const { code, name } = summarizeError(error);
-      await createAuditLog({
-        userId: userId,
-        userRole: userRole,
-        action: 'DEVICE_REGISTER',
-        details: { status: 'Failed', errorCode: code ?? name },
-      });
-    }
-
-    return NextResponse.json(
-      { error: 'Failed to create wheelchair' },
-      { status: 500 }
-    );
-  }
-}

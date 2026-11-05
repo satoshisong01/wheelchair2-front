@@ -56,6 +56,10 @@ export async function POST(req: NextRequest) {
     const processSnapshot = process_info
       ? (Array.isArray(process_info) ? process_info.join('\n') : process_info)
           .replace(CONTROL_CHARS_EXCEPT_LINE_BREAKS, '')
+          // 🔒 줄마다 앞 4칸(pid·CPU·메모리·실행 파일 이름)만 저장 — 이전 버전 모니터가 보낸 명령 인자는 버림
+          .split('\n')
+          .map((line) => line.trim().split(/\s+/).slice(0, 4).join(' '))
+          .join('\n')
           .slice(0, MAX_PROCESS_INFO_LENGTH)
       : '';
 

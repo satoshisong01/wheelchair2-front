@@ -77,9 +77,7 @@ function buildFilterSql(filters: AlarmFilters, paramOffset: number) {
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
-  // @ts-ignore
   const userId = session?.user?.id;
-  // @ts-ignore
   const userRole = session?.user?.role;
 
   if (!userId) {

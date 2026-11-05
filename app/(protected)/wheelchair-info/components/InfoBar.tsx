@@ -20,8 +20,7 @@ export const InfoBar = ({
   disableDropdown = false,
 }: InfoBarProps) => {
   const { data: session } = useSession();
-  // @ts-ignore
-  const userRole = (session?.user?.role as string) || '';
+  const userRole: string = session?.user?.role || '';
 
   // 관리자 여부 (드롭다운 표시용)
   const isManager = userRole === 'ADMIN' || userRole === 'MASTER';

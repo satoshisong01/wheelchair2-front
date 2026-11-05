@@ -45,18 +45,29 @@ const NAME_KEYS = /(name|이름|성명)/i;
 const PHONE_KEYS = /(phone|tel|연락처|전화)/i;
 const EMAIL_KEYS = /(email|메일)/i;
 const CONTACT_KEYS = /(emergency|응급|contact)/i;
+// 비밀값(비밀번호·토큰·키·쿠키)은 값 종류와 상관없이 통째로 가림
+const SECRET_KEYS = /(password|passwd|pwd|secret|token|authorization|cookie|api[_-]?key|비밀번호)/i;
+const MAX_DEPTH = 5;
 
-/** 객체에서 개인식별 가능 필드를 키 이름 기준으로 비식별화 (로그/내보내기 방어용) */
-export function deidentifyDetails(details: Record<string, unknown>): Record<string, unknown> {
+function deidentifyValue(v: unknown, depth: number): unknown {
+  if (depth >= MAX_DEPTH || v === null || typeof v !== 'object') return v;
+  if (Array.isArray(v)) return v.map((item) => deidentifyValue(item, depth + 1));
+  return deidentifyDetails(v as Record<string, unknown>, depth + 1);
+}
+
+/** 객체에서 개인식별 가능 필드를 키 이름 기준으로 비식별화 (로그/내보내기 방어용, 중첩 객체·배열 포함) */
+export function deidentifyDetails(details: Record<string, unknown>, depth = 0): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(details || {})) {
-    if (typeof v === 'string' && v) {
+    if (SECRET_KEYS.test(k)) {
+      out[k] = '[REDACTED]';
+    } else if (typeof v === 'string' && v) {
       if (PHONE_KEYS.test(k) || CONTACT_KEYS.test(k)) out[k] = maskPhone(v);
       else if (EMAIL_KEYS.test(k)) out[k] = maskEmail(v);
       else if (NAME_KEYS.test(k)) out[k] = maskName(v);
       else out[k] = v;
     } else {
-      out[k] = v;
+      out[k] = deidentifyValue(v, depth);
     }
   }
   return out;

@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     );
     if ('error' in parsed) return parsed.error;
     const { alarmId, all, resolvePostureAdvice } = parsed.data;
-    const wheelchairId = (session.user as any).wheelchairId;
+    const wheelchairId = session.user.wheelchairId;
 
     let resolvedCount = 0;
     const client = await pool.connect();

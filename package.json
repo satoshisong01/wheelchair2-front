@@ -2,6 +2,9 @@
   "name": "wheelchair2-front",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",
@@ -15,7 +18,7 @@
     "@google/generative-ai": "^0.24.1",
     "@upstash/ratelimit": "^2.0.7",
     "@upstash/redis": "^1.35.6",
-    "axios": "^1.20.0",
+    "axios": "^1.21.0",
     "bcrypt": "^6.0.0",
     "chart.js": "^4.5.1",
     "date-fn": "^0.0.2",
@@ -28,7 +31,7 @@
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.563.0",
     "mqtt": "^5.14.1",
-    "next": "^16.3.8",
+    "next": "^16.4.5",
     "next-auth": "^4.24.15",
     "node-cron": "^4.2.1",
     "pg": "^8.16.3",
@@ -39,7 +42,7 @@
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "wheelchair2-front": "file:",
-    "zod": "^4.1.13"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@aws-sdk/types": "^3.914.0",
@@ -53,8 +56,8 @@
     "@types/pg": "^8.15.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "^16.3.8",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.4.5",
     "tailwindcss": "^4",
     "ts-node": "^10.9.2",
     "typescript": "^5"

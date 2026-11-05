@@ -18,8 +18,9 @@ import { WheelchairStatePanel } from './components/WheelchairStatePanel';
 import { PostureControlPanel } from './components/PostureControlPanel';
 import { TopRightPanel } from './components/TopRightPanel';
 import PostureSafetyMonitor from './components/PostureSafetyMonitor';
+import { SOCKET_URL } from '@/lib/socket-url';
 
-const SOCKET_SERVER_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://broker.firstcorea.com';
+const SOCKET_SERVER_URL = SOCKET_URL;
 
 const CRITICAL_KEYWORDS = ['FALL', 'CRITICAL', 'EMERGENCY', 'WARNING', 'FATAL', 'COLLISION'];
 
@@ -321,7 +322,7 @@ function WheelchairInfoContent() {
     socketRef.current = socket;
 
     socket.on('connect', () => {
-      console.log('✅ [Admin] 소켓 연결됨');
+      if (process.env.NODE_ENV !== 'production') console.log('✅ [Admin] 소켓 연결됨');
       setIsSocketConnected(true);
 
       // 🔐 [보안] 권한 검증 + admin 룸 join 요청

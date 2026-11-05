@@ -307,7 +307,6 @@ export async function POST(request: NextRequest) {
     const userRole = session.user.role;
     let deviceId = requestDeviceId;
     if (userRole === 'DEVICE_USER') {
-      // @ts-ignore
       deviceId = String(session.user.wheelchairId);
     } else if (!deviceId) {
       deviceId = 'ALL';

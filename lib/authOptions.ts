@@ -8,6 +8,7 @@ import { query } from '@/lib/db';
 import { createAuditLog } from '@/lib/log'; // createAuditLog 사용
 import { logServerError } from '@/lib/server-log';
 import bcrypt from 'bcrypt';
+import { BCRYPT_COST } from '@/lib/password';
 import { isLoginLocked, recordLoginFailure, resetLoginFailures } from '@/lib/login-lockout';
 import { SECURITY_PROFILE } from '@/lib/security-profile';
 import type { AppRole } from '@/types/next-auth';
@@ -57,12 +58,22 @@ const MAX_DEVICE_ID_LENGTH = 100;
 const MAX_PASSWORD_LENGTH = 200;
 
 // 미등록 기기 ID도 bcrypt 비교를 거쳐 응답시간으로 ID 존재 여부를 추정하지 못하게 한다.
-// 기존 기기 계정 해시가 cost 10이라 같은 비용으로 맞춤(최초 1회 생성 후 재사용)
+// 비밀번호 저장과 같은 비용(BCRYPT_COST)으로 맞춤(최초 1회 생성 후 재사용) — 이전 비용의 해시는 로그인 성공 때 다시 해시
 let dummyHashPromise: Promise<string> | null = null;
 const getDummyHash = (): Promise<string> => {
-  if (!dummyHashPromise) dummyHashPromise = bcrypt.hash('device-login-timing-equalizer', 10);
+  if (!dummyHashPromise) dummyHashPromise = bcrypt.hash('device-login-timing-equalizer', BCRYPT_COST);
   return dummyHashPromise;
 };
+
+// 이전 비용(cost 10)으로 저장된 기기 비밀번호 해시를 로그인 성공 때 현재 비용으로 다시 저장 — 실패해도 로그인은 계속
+async function upgradeDeviceHashIfWeak(id: string, password: string, storedHash: string): Promise<void> {
+  try {
+    if (bcrypt.getRounds(storedHash) >= BCRYPT_COST) return;
+    await query('UPDATE device_auths SET password = $1 WHERE id = $2', [await bcrypt.hash(password, BCRYPT_COST), id]);
+  } catch (error) {
+    logServerError('Device password rehash failed', error);
+  }
+}
 
 // 카카오 프로필 값 정규화: 제어문자 제거·앞뒤 공백 제거·길이 제한
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -240,6 +251,7 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
           await resetLoginFailures(lockKey); // 🔒 [IA-07] 성공 시 실패 카운트 초기화
+          await upgradeDeviceHashIfWeak(device.id, password, device.password);
 
           const userPayload = {
             id: String(device.id),
@@ -289,10 +301,10 @@ export const authOptions: NextAuthOptions = {
     maxAge: SESSION_MAX_AGE_SEC,
   },
   events: {
-    // ⭐️ 로그아웃 이벤트 감사 로그 (DEVICE_USER 포함)
+    // ⭐️ 로그아웃 이벤트 감사 로그 (모든 역할 — 승인 대기·거절 계정 포함)
     async signOut({ token }) {
       const role = token?.role;
-      if (role === 'ADMIN' || role === 'MASTER' || role === 'DEVICE_USER') {
+      if (role) {
         try {
           await createAuditLog({
             userId: token.id,
@@ -387,8 +399,8 @@ export const authOptions: NextAuthOptions = {
         token.loginAt = now; // 유휴 잠금 기록을 로그인(세션)별로 구분
         token.accountCheckedAt = now; // 방금 DB에서 읽었으므로 [B] 재확인은 5분 뒤부터
 
-        // ⭐️ 관리자(카카오) 로그인 감사 로그 — 기기 계정(테스트용 ADMIN 포함)은 authorize에서 이미 기록
-        if (authSource === 'users' && (token.role === 'ADMIN' || token.role === 'MASTER')) {
+        // ⭐️ 카카오 로그인 감사 로그(모든 역할 — 가입 대기 계정 포함) — 기기 계정(테스트용 ADMIN 포함)은 authorize에서 이미 기록
+        if (authSource === 'users' && token.role) {
           await createAuditLog({
             userId: token.id,
             userRole: token.role,

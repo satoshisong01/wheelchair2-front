@@ -11,7 +11,6 @@ const RATE_LIMIT_PATHS = [
   '/api/auth/callback/device-login',
   '/api/auth/change-password',
   '/api/auth/profile-submit',
-  '/api/auth/re-apply',
   '/api/ai-search', // 반복 호출로 외부 AI 비용이 소진되지 않게
   '/api/admin/users', // 회원 승인·역할 변경
 ];

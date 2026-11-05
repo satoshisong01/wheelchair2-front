@@ -5,9 +5,9 @@ import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { io, Socket } from 'socket.io-client';
 import { DashboardWheelchair } from '@/types/wheelchair';
+import { SOCKET_URL } from '@/lib/socket-url';
 
 // 🟢 도메인 주소 사용 (SSL 적용) - nginx가 443에서 SSL 종료 후 localhost:8080으로 프록시
-const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://broker.firstcorea.com';
 
 // 알람 인터페이스 정의 (DB의 snake_case와 소켓의 camelCase 모두 대응)
 export interface Alarm {
@@ -206,7 +206,7 @@ export function useMyWheelchair() {
           setData((prev) => prev ?? ({ status: {} } as DashboardWheelchair));
         }
       } catch (error) {
-        console.error('Failed to fetch wheelchair data', error);
+        console.error('Failed to fetch wheelchair data', error instanceof Error ? error.message : error);
         if (retryCount < 3) {
           console.warn(`⚠️ 네트워크 오류 (${retryCount + 1}/3), 3초 후 재시도...`);
           setTimeout(() => fetchData(retryCount + 1), 3000);
@@ -237,8 +237,8 @@ export function useMyWheelchair() {
       setIsSocketConnected(true);
 
       // 🔐 [보안] 권한 검증 + 룸 join 요청 (서버에서 DB로 진짜 권한 확인 후 분리)
-      const userId = (session?.user as any)?.id;
-      const role = (session?.user as any)?.role;
+      const userId = session?.user?.id;
+      const role = session?.user?.role;
       if (userId && role) {
         socketInstance.emit('subscribe', { userId, role });
       }
@@ -260,7 +260,7 @@ export function useMyWheelchair() {
       console.log(`🔄 [Mobile Hook] 재연결 시도 #${attempt}`);
     });
 
-    const myWheelchairId = (session.user as any)?.wheelchairId;
+    const myWheelchairId = session.user?.wheelchairId;
 
     // 3. 실시간 주행 상태 데이터 업데이트
     socketInstance.on('wheelchair_status_update', (update: any) => {
@@ -335,7 +335,7 @@ export function useMyWheelchair() {
 
     // 4. 🚨 실시간 알람 수신 및 목록 누적
     socketInstance.on('new_alarm', (newAlarm: Alarm) => {
-      console.log('🚨 [Mobile Hook] 새 알람 수신:', newAlarm);
+      if (process.env.NODE_ENV !== 'production') console.log('🚨 [Mobile Hook] 새 알람 수신:', newAlarm.alarmType || newAlarm.alarm_type);
 
       const type = (newAlarm.alarmType || newAlarm.alarm_type || '').toUpperCase();
 

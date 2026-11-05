@@ -1,3 +1,8 @@
+// 🔒 실시간 알람 소켓 주소는 환경변수로만 받고, 운영 빌드에서는 https/wss 가 아니면 빌드를 멈춘다(평문 연결·주소 누락 방지)
+if (process.env.NODE_ENV === 'production' && !/^(https|wss):\/\//.test(process.env.NEXT_PUBLIC_SOCKET_URL || '')) {
+  throw new Error('NEXT_PUBLIC_SOCKET_URL 은 https:// 또는 wss:// 로 시작해야 합니다 (실시간 알람 소켓 주소)');
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // 🔒 응답 헤더 X-Powered-By(Next.js) 제거 — 서버 기술 노출 최소화 (EC2는 Nginx에서도 숨김)

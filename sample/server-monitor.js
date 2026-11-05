@@ -99,7 +99,7 @@ async function checkServerHealth() {
 
     const culpritProcess =
       lines.length > 1
-        ? lines[1].trim().split(/\s+/).slice(4).join(' ').substring(0, 20)
+        ? lines[1].trim().split(/\s+/)[3].substring(0, 20) // 실행 파일 이름(comm)만 — 인자(args)는 보내지 않음
         : 'unknown';
 
     // 3. 상황별 메시지 분류 (사용자 요청 반영)
@@ -123,7 +123,12 @@ async function checkServerHealth() {
         memory_free_gb: memFreeGB,
         alert_reason: alertReason,
         server_id: SERVER_IDENTIFIER,
-        process_info: psOutput,
+        // 🔒 pid·CPU·메모리·실행 파일 이름 4칸만 보냄(명령 인자에 경로·설정값이 섞여 나가지 않게)
+        process_info: psOutput
+          .trim()
+          .split('\n')
+          .map((line) => line.trim().split(/\s+/).slice(0, 4).join(' '))
+          .join('\n'),
       };
 
       const controller = new AbortController();

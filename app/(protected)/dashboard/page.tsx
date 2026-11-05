@@ -16,8 +16,9 @@ import EventModal from '../../../components/common/EventModal';
 import { DashboardSummaryCards } from './components/DashboardSummaryCards';
 import { WheelchairInfoModal } from './components/WheelchairInfoModal';
 import { AlarmCategory, isCriticalAlarmType } from '@/lib/alarm-categories';
+import { SOCKET_URL } from '@/lib/socket-url';
 
-const SOCKET_SERVER_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'https://broker.firstcorea.com';
+const SOCKET_SERVER_URL = SOCKET_URL;
 
 // 첫 화면 부담을 줄이려 경고·알림은 최신 50건씩만 받음 (실시간 수신분도 분류별 50건까지만 유지)
 const INLINE_ALARM_LIMIT = 50;
@@ -93,7 +94,7 @@ export default function DashboardPage() {
 
       if (playPromise !== undefined) {
         playPromise.catch((err) => {
-          console.warn('🔊 자동 재생 차단됨 (페이지 클릭 필요):', err);
+          console.warn('🔊 자동 재생 차단됨 (페이지 클릭 필요):', err instanceof Error ? err.message : err);
         });
       }
 
@@ -149,7 +150,7 @@ export default function DashboardPage() {
   // 2. Socket.IO 연결
   useEffect(() => {
     if (status === 'authenticated' && isAuthorized()) {
-      console.log('🔌 [Dashboard] 소켓 연결 시도:', SOCKET_SERVER_URL);
+      if (process.env.NODE_ENV !== 'production') console.log('🔌 [Dashboard] 소켓 연결 시도');
 
       const socket = io(SOCKET_SERVER_URL, {
         transports: ['websocket'],
@@ -157,7 +158,7 @@ export default function DashboardPage() {
       });
 
       socket.on('connect', () => {
-        console.log('✅ [Dashboard] 소켓 연결 성공!');
+        if (process.env.NODE_ENV !== 'production') console.log('✅ [Dashboard] 소켓 연결 성공');
 
         // 🔐 [보안] 권한 검증 + admin 룸 join 요청
         const userId = (session?.user as any)?.id;
@@ -199,7 +200,7 @@ export default function DashboardPage() {
 
       // 🔴 알람 수신 시 -> 소리 울리고 + 팝업 띄우기
       socket.on('new_alarm', (newAlarmData: Alarm) => {
-        console.log('🚨 [Dashboard] 알람 수신:', newAlarmData);
+        if (process.env.NODE_ENV !== 'production') console.log('🚨 [Dashboard] 알람 수신:', newAlarmData.alarmType);
         // 🔧 소켓 페이로드에는 차량 시리얼이 없고 wheelchairId만 있으므로, 현재 wheelchairs 목록에서
         //    device_serial을 찾아 보강한다. (보강 전엔 차량명이 "-"로 표시되던 문제 해결)
         const matched = wheelchairsRef.current.find(

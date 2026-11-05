@@ -27,11 +27,8 @@ export default function WelcomePage() {
   // 1. 초기값 세팅
   useEffect(() => {
     if (session?.user) {
-      // @ts-ignore
       setName(session.user.name || '');
-      // @ts-ignore
       setOrganization(session.user.organization || '');
-      // @ts-ignore
       setPhoneNumber(session.user.phoneNumber || '');
     }
   }, [session]);
@@ -39,9 +36,7 @@ export default function WelcomePage() {
   // 2. [핵심 수정] Role 기반 리다이렉트 방어 로직
   useEffect(() => {
     if (status === 'authenticated' && session?.user) {
-      // @ts-ignore
       const role = session.user.role; // ⭐️ status 대신 role 사용
-      // @ts-ignore
       const org = session.user.organization;
 
       // 🛡️ [예외 처리] Role이 'REJECTED'라면?
@@ -62,10 +57,8 @@ export default function WelcomePage() {
 
   if (status === 'loading' || !session) return <LoadingSpinner />;
 
-  // @ts-ignore
   const userRole = session.user.role;
-  // @ts-ignore
-  const rejectReason = session.user.rejectReason; // (DB user테이블에 reject_reason 컬럼이 있어야 함)
+  const rejectReason = (session.user as { rejectReason?: string }).rejectReason; // (DB user테이블에 reject_reason 컬럼이 있어야 함)
 
   // 4. 화면 렌더링 조건 (GUEST거나 REJECTED인 경우만 폼 노출)
   if (userRole !== 'GUEST' && userRole !== 'REJECTED')

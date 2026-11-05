@@ -28,9 +28,7 @@ interface RouteParams {
 
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
   const session = await getServerSession(authOptions);
-  // @ts-ignore
   const role = session?.user?.role;
-  // @ts-ignore
   const adminUserId = session?.user?.id;
 
   if (!session || (role !== 'ADMIN' && role !== 'MASTER')) {

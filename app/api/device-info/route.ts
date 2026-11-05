@@ -10,11 +10,11 @@ export async function GET(req: Request) {
     // 1. 세션 및 권한 확인
     const session = await getServerSession(authOptions);
 
-    if (!session || !session.user || (session.user as any).role !== 'DEVICE_USER') {
+    if (!session || !session.user || session.user.role !== 'DEVICE_USER') {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    const user = session.user as any;
+    const user = session.user;
     const wheelchairId = user.wheelchairId; // 기기 고유 ID (UUID)
     const userId = user.id || user.email; // 사용자 계정 식별자
 

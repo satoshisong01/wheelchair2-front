@@ -40,8 +40,8 @@ export default function MobileViewPage() {
       (window as any).ReactNativeWebView.postMessage(
         JSON.stringify({
           type: 'LOGIN_SUCCESS',
-          userId: (session.user as any).id,
-          wheelchairId: (session.user as any).wheelchairId || wheelchairData.id,
+          userId: session.user.id,
+          wheelchairId: session.user.wheelchairId || wheelchairData.id,
         }),
       );
     } catch (e) {

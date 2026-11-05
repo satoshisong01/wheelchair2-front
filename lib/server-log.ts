@@ -35,8 +35,8 @@ const isVerbose = (): boolean =>
 export function logServerError(context: string, error: unknown): void {
   const summary = summarizeError(error);
   if (isVerbose() && error instanceof Error && error.stack) {
-    console.error(`[server-error] ${sanitize(context)}`, summary, error.stack);
+    console.error('[server-error]', sanitize(context), summary, error.stack);
     return;
   }
-  console.error(`[server-error] ${sanitize(context)}`, summary);
+  console.error('[server-error]', sanitize(context), summary);
 }

@@ -27,7 +27,16 @@ export interface TableRowData {
 }
 
 // ⭐️ [신규 타입] Metric 설정 정의
-export const METRIC_CONFIG: Record<MetricType, any> = {
+export interface MetricConfigEntry {
+  label: string;
+  unit: string;
+  color: string;
+  colorCompare: string;
+  bgColor: string;
+  yMax: number | undefined;
+}
+
+export const METRIC_CONFIG: Record<MetricType, MetricConfigEntry> = {
   BATTERY: {
     label: '평균 배터리 잔량',
     unit: '%',

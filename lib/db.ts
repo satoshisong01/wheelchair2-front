@@ -132,7 +132,8 @@ export const query = async (text: string, params?: unknown[]) => {
 
     // (선택 사항) 느린 쿼리 모니터링용 로그
     if (duration > 1000) {
-      console.warn(`⚠️ [Slow Query] ${duration}ms: ${text}`);
+      // 쿼리 원문은 남기지 않음(조건 값·테이블 구조 노출 방지) — 소요 시간과 문장 종류(SELECT 등)만
+      console.warn(`⚠️ [Slow Query] ${duration}ms (${text.trim().split(/\s+/)[0].toUpperCase()})`);
     }
 
     return res;

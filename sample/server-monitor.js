@@ -4,6 +4,7 @@
 require('dotenv').config({ path: '/home/ubuntu/wheelchair2-front/.env' });
 
 const { exec } = require('child_process');
+const { createHmac } = require('crypto');
 const os = require('os');
 
 // --- 환경 설정 ---
@@ -135,13 +136,18 @@ async function checkServerHealth() {
       const timeoutId = setTimeout(() => controller.abort(), 5000); // 5초 타임아웃
 
       try {
+        // 🔒 시크릿 원문 대신 `시각.본문` HMAC 서명을 보냄 — 웹은 5분 안의 처음 받은 서명만 인정(재전송 차단)
+        const body = JSON.stringify(payload);
+        const timestamp = String(Math.floor(Date.now() / 1000));
+        const signature = createHmac('sha256', HEALTH_SECRET || '').update(`${timestamp}.${body}`).digest('hex');
         const response = await fetch(API_ENDPOINT, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-health-secret': HEALTH_SECRET || '',
+            'x-health-timestamp': timestamp,
+            'x-health-signature': signature,
           },
-          body: JSON.stringify(payload),
+          body,
           signal: controller.signal,
         });
         clearTimeout(timeoutId);

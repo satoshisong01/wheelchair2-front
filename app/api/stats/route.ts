@@ -262,8 +262,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    // 🔒 [인가] 승인된 역할만 통계 조회 가능 (GUEST/PENDING 등 미승인 세션 차단)
-    if (!['ADMIN', 'MASTER', 'USER', 'DEVICE_USER'].includes(session.user.role)) {
+    // 🔒 [인가] 관리자(전체·지정 기기)와 기기 사용자(본인 기기)만 통계 조회 — 휠체어 목록·알람 API와 같은 역할 기준
+    if (!['ADMIN', 'MASTER', 'DEVICE_USER'].includes(session.user.role)) {
       return NextResponse.json({ message: 'Forbidden' }, { status: 403 });
     }
 

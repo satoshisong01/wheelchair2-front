@@ -377,11 +377,15 @@ async function handleGet(req: NextRequest) {
       return NextResponse.json({ message: 'from, to 가 필요합니다.' }, { status: 400 });
     }
 
-    // ⚠️ 형식 오류는 기존대로 500 경로 유지 (KTC 6-2 JMeter 시험이 잘못된 날짜 → 500을 기대)
-    assertSafe(from, DATE_REGEX, 'from');
-    assertSafe(to, DATE_REGEX, 'to');
-    if (wheelchairId !== 'ALL') {
-      assertSafe(wheelchairId, UUID_REGEX, 'wheelchairId');
+    // 🔒 형식 오류(날짜·휠체어 ID)는 400
+    try {
+      assertSafe(from, DATE_REGEX, 'from');
+      assertSafe(to, DATE_REGEX, 'to');
+      if (wheelchairId !== 'ALL') {
+        assertSafe(wheelchairId, UUID_REGEX, 'wheelchairId');
+      }
+    } catch {
+      return NextResponse.json({ message: '조회 조건 형식이 올바르지 않습니다.' }, { status: 400 });
     }
     // 🔒 형식은 맞지만 없는 날짜(예: 13월)·from > to·기간 초과는 400
     if (!isAllowedRange(from, to)) {

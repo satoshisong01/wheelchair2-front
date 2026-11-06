@@ -243,7 +243,7 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
-          // 🧪 [KTC 자체테스트] device_auths.role이 채워진 특수 계정(예: 관리자 테스트 계정)만
+          // device_auths.role이 채워진 계정(아이디·비밀번호로 로그인하는 관리자 계정)만
           //    해당 role을 쓰고, 일반 기기 계정(role=NULL)은 기존과 동일하게 DEVICE_USER 고정.
           const role = device.role || 'DEVICE_USER';
           if (!isAppRole(role)) {
@@ -383,8 +383,8 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        // 🧪 [KTC 자체테스트] 아래 [B] 재확인이 조회할 테이블을 구분하기 위한 출처 기록.
-        //    device_auths 계정은 role=ADMIN이어도(테스트계정) users 테이블엔 없으므로 role만으로 판단하면 안 됨.
+        // 아래 [B] 재확인이 조회할 테이블을 구분하기 위한 출처 기록.
+        //    device_auths 계정은 role=ADMIN이어도 users 테이블엔 없으므로 role만으로 판단하면 안 됨.
         const authSource = account?.provider === 'kakao' ? 'users' : 'device_auths';
         const now = Date.now();
 
@@ -414,7 +414,7 @@ export const authOptions: NextAuthOptions = {
       }
 
       // [B] 계정 존재·역할 재확인 — 5분 간격, update() 요청 시엔 즉시
-      //     (계정 삭제·역할 변경·초기 비밀번호 변경 완료가 세션에 반영되도록. KTC 관리자 테스트 계정은 authSource로 device_auths 조회)
+      //     (계정 삭제·역할 변경·초기 비밀번호 변경 완료가 세션에 반영되도록. device_auths 소속 관리자 계정은 authSource로 device_auths 조회)
       //     결과는 계정별로 5분 캐시(route handler가 요청마다 DB를 읽지 않게), DB 조회는 2.5초 제한
       if (token.id) {
         const isDue =

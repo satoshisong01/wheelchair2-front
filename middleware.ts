@@ -23,7 +23,7 @@ const STATIC_PREFIXES = ['/_next', '/__next', '/images', '/sounds', '/icons'];
 const STATIC_FILE_PATTERN = /\.[A-Za-z0-9]+$/; // favicon.ico, *.png, *.svg, *.webp, *.apk ...
 
 // 앱에 실제로 있는 페이지(최상위 경로). 로그인·역할 차단은 이 페이지들에만 적용하고,
-// 없는 경로는 그대로 통과시켜 Next가 404를 돌려주게 한다(KTC 6-1 '없는 경로 → 404' 응답 유지).
+// 없는 경로는 그대로 통과시켜 Next가 404를 돌려주게 한다.
 // ⚠️ 페이지를 새로 만들면 여기에 추가해야 로그인 보호가 적용된다.
 const APP_PAGES = [
   '/admin-portal',

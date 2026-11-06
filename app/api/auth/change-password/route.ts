@@ -44,7 +44,7 @@ async function handlePost(req: Request) {
     }
 
     // ⛔️ 비밀번호는 기기 계정(device_auths)에만 있음 — 카카오 로그인 관리자는 변경 대상 아님
-    //    (KTC 관리자 테스트 계정처럼 role=ADMIN인 기기 계정도 deviceId가 있어 변경 가능)
+    //    (role=ADMIN인 device_auths 계정도 deviceId가 있어 변경 가능)
     if (!user.deviceId) {
       return NextResponse.json(
         { message: '비밀번호 변경 권한이 없는 계정입니다.' },

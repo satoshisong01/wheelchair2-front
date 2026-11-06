@@ -14,7 +14,7 @@ export default function MyPage() {
   const userRole = session?.user?.role;
   const isDeviceUser = userRole === 'DEVICE_USER';
   const wheelchairId = session?.user?.wheelchairId;
-  // 비밀번호가 있는 계정 = 기기 계정(device_auths). KTC 관리자 테스트 계정처럼 role=ADMIN인 기기 계정 포함
+  // 비밀번호가 있는 계정 = 기기 계정(device_auths). role=ADMIN인 device_auths 계정(아이디·비밀번호 관리자) 포함
   const hasDevicePassword = Boolean(session?.user?.deviceId);
   // 🔒 [uc_auth_04] 초기 비밀번호 변경 전 — middleware가 이 화면(/mypage?force=1) 외 접근을 막는다
   const mustChangePassword = session?.user?.mustChangePassword === true;

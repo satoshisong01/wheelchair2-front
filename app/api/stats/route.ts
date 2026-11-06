@@ -8,6 +8,7 @@ import { TimestreamQueryClient, QueryCommand } from '@aws-sdk/client-timestream-
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/validate';
 import { logServerError } from '@/lib/server-log';
+import { withRequestAudit } from '@/lib/api-audit';
 
 // AWS Timestream 클라이언트 설정
 const queryClient = new TimestreamQueryClient({
@@ -254,7 +255,7 @@ async function generateAnalysisComment(
 }
 
 // --- POST 핸들러 ---
-export async function POST(request: NextRequest) {
+async function handlePost(request: NextRequest) {
   // ⭐️ [수정 없음] (POST 핸들러 로직)
   try {
     const session = await getServerSession(authOptions);
@@ -382,3 +383,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// 🔒 [UC-04] 오류 응답(4xx·5xx)은 감사기록 '요청 오류'로 남긴다 (lib/api-audit.ts)
+export const POST = withRequestAudit(handlePost);

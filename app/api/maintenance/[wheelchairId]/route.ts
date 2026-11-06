@@ -10,6 +10,7 @@ import { authOptions } from '@/lib/authOptions';
 import pool from '@/lib/db';
 import { createAuditLog } from '@/lib/log';
 import { logServerError } from '@/lib/server-log';
+import { withRequestAudit } from '@/lib/api-audit';
 
 interface RouteParams {
   params: Promise<{ wheelchairId: string }>;
@@ -26,7 +27,7 @@ function isValidDateString(value: string): boolean {
 }
 
 // 1. 조회 (GET)
-export async function GET(request: Request, { params }: RouteParams) {
+async function handleGet(request: Request, { params }: RouteParams) {
   try {
     // Next.js 15+ 대응: params await
     const { wheelchairId } = await params;
@@ -88,7 +89,7 @@ export async function GET(request: Request, { params }: RouteParams) {
 }
 
 // 2. 추가 (POST) - 관리자 전용
-export async function POST(request: Request, { params }: RouteParams) {
+async function handlePost(request: Request, { params }: RouteParams) {
   try {
     const { wheelchairId } = await params;
 
@@ -182,3 +183,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     );
   }
 }
+
+// 🔒 [UC-04] 오류 응답(4xx·5xx)은 감사기록 '요청 오류'로 남긴다 (lib/api-audit.ts)
+export const GET = withRequestAudit(handleGet);
+export const POST = withRequestAudit(handlePost);

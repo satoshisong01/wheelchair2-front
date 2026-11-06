@@ -32,6 +32,7 @@ const ACTION_CATEGORIES = new Map<string, AuditCategory>([
   ['USER_SIGNUP', 'ACCESS_CONTROL'],
   ['USER_REAPPLY', 'ACCESS_CONTROL'],
   ['USER_UPDATE', 'ACCESS_CONTROL'], // 비밀번호 변경
+  ['REQUEST_ERROR', 'REQUEST_ERROR'], // API 오류 응답(4xx·5xx) — lib/api-audit.ts
   ['DEVICE_REGISTER', 'DEVICE'],
   ['DEVICE_REGISTER_FAILED', 'DEVICE'],
   ['DEVICE_UPDATE', 'DEVICE'],

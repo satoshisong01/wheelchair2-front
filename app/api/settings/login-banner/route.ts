@@ -17,6 +17,7 @@ import {
 } from '@/lib/login-banner';
 import { logServerError, summarizeError } from '@/lib/server-log';
 import { parseJsonBody } from '@/lib/validate';
+import { withRequestAudit } from '@/lib/api-audit';
 
 // 빌드 시 정적 응답으로 굳지 않도록 매 요청 처리 (DB 조회는 아래 메모리 캐시로 제한)
 export const dynamic = 'force-dynamic';
@@ -25,7 +26,7 @@ export const dynamic = 'force-dynamic';
 const PUBLIC_CACHE_TTL_MS = 60 * 1000;
 let publicCache: { text: string; expiresAt: number } | null = null;
 
-export async function GET() {
+async function handleGet() {
   const now = Date.now();
   if (!publicCache || publicCache.expiresAt <= now) {
     publicCache = { text: await getLoginBanner(), expiresAt: now + PUBLIC_CACHE_TTL_MS };
@@ -44,7 +45,7 @@ const bannerSchema = z.object({
     .pipe(z.string().min(1).max(LOGIN_BANNER_MAX_LENGTH)),
 });
 
-export async function PUT(req: NextRequest) {
+async function handlePut(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user) {
     return NextResponse.json({ message: '로그인이 필요합니다.' }, { status: 401 });
@@ -120,3 +121,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ message: '알림 문구 저장에 실패했습니다.' }, { status: 500 });
   }
 }
+
+// 🔒 [UC-04] 오류 응답(4xx·5xx)은 감사기록 '요청 오류'로 남긴다 (lib/api-audit.ts)
+export const GET = withRequestAudit(handleGet);
+export const PUT = withRequestAudit(handlePut);

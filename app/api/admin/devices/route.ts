@@ -11,6 +11,7 @@ import { validatePassword, PASSWORD_POLICY_MESSAGE, BCRYPT_COST } from '@/lib/pa
 import { logServerError, summarizeError } from '@/lib/server-log';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/validate';
+import { withRequestAudit } from '@/lib/api-audit';
 
 // 🔒 [입력 검증] 시리얼은 통계·각도 API와 같은 문자셋(영숫자·_·-, 64자 이내)만 등록 허용
 const SERIAL_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
@@ -39,7 +40,7 @@ async function hasMustChangePasswordColumn(client: PoolClient): Promise<boolean>
 // ------------------------------
 // GET: 휠체어/기기 목록 조회 (ADMIN/MASTER 전용)
 // ------------------------------
-export async function GET(req: NextRequest) {
+async function handleGet(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (
     !session ||
@@ -85,7 +86,7 @@ export async function GET(req: NextRequest) {
 // ------------------------------
 // POST: 새 휠체어/기기 등록 (ADMIN/MASTER 전용)
 // ------------------------------
-export async function POST(req: NextRequest) {
+async function handlePost(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const userId = session?.user?.id; // 현재 로그인된 관리자 ID
   const userRole = session?.user?.role;
@@ -261,7 +262,7 @@ export async function POST(req: NextRequest) {
 // ------------------------------
 // DELETE: 휠체어/기기 삭제 (ADMIN/MASTER — MASTER 전용 제한 여부는 운영 정책 결정 대기)
 // ------------------------------
-export async function DELETE(req: NextRequest) {
+async function handleDelete(req: NextRequest) {
   const session = await getServerSession(authOptions);
   const userRole = session?.user?.role;
   const userId = session?.user?.id;
@@ -386,3 +387,8 @@ export async function DELETE(req: NextRequest) {
     message: `장치 (${deleted.serial})가 성공적으로 삭제되었습니다.`,
   });
 }
+
+// 🔒 [UC-04] 오류 응답(4xx·5xx)은 감사기록 '요청 오류'로 남긴다 (lib/api-audit.ts)
+export const GET = withRequestAudit(handleGet);
+export const POST = withRequestAudit(handlePost);
+export const DELETE = withRequestAudit(handleDelete);

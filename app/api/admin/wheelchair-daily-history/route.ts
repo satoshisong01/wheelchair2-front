@@ -22,6 +22,7 @@ import { authOptions } from '@/lib/authOptions';
 import { TimestreamQueryClient, QueryCommand } from '@aws-sdk/client-timestream-query';
 import pool from '@/lib/db';
 import { logServerError } from '@/lib/server-log';
+import { withRequestAudit } from '@/lib/api-audit';
 
 const queryClient = new TimestreamQueryClient({
   region: process.env.AWS_REGION || 'ap-northeast-1',
@@ -359,7 +360,7 @@ async function fetchPgData(
   return { ulcerMap, slopeMap, serialMap };
 }
 
-export async function GET(req: NextRequest) {
+async function handleGet(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     const role = (session?.user as any)?.role;
@@ -451,3 +452,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ message: 'Server Error' }, { status: 500 });
   }
 }
+
+// 🔒 [UC-04] 오류 응답(4xx·5xx)은 감사기록 '요청 오류'로 남긴다 (lib/api-audit.ts)
+export const GET = withRequestAudit(handleGet);

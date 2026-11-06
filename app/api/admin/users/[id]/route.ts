@@ -8,6 +8,7 @@ import { createAuditLog } from '@/lib/log'; // ✅ 공용 로그 도구 사용
 import { logServerError, summarizeError } from '@/lib/server-log';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/validate';
+import { withRequestAudit } from '@/lib/api-audit';
 
 // Next.js 15+ 라우트 파라미터 타입
 interface RouteParams {
@@ -17,7 +18,7 @@ interface RouteParams {
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // 1. 역할 변경 (PATCH) - 승인/거절
-export async function PATCH(request: Request, { params }: RouteParams) {
+async function handlePatch(request: Request, { params }: RouteParams) {
   const { id } = await params; // 타겟 유저 ID
 
   // 1. 세션 확인
@@ -121,7 +122,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 }
 
 // 2. 삭제 (DELETE)
-export async function DELETE(request: Request, { params }: RouteParams) {
+async function handleDelete(request: Request, { params }: RouteParams) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -157,3 +158,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
     return NextResponse.json({ error: 'Delete Failed' }, { status: 500 });
   }
 }
+
+// 🔒 [UC-04] 오류 응답(4xx·5xx)은 감사기록 '요청 오류'로 남긴다 (lib/api-audit.ts)
+export const PATCH = withRequestAudit(handlePatch);
+export const DELETE = withRequestAudit(handleDelete);

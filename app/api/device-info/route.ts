@@ -3,8 +3,9 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/authOptions';
 import pool from '@/lib/db';
 import { logServerError } from '@/lib/server-log';
+import { withRequestAudit } from '@/lib/api-audit';
 
-export async function GET(req: Request) {
+async function handleGet(req: Request) {
   let client;
   try {
     // 1. 세션 및 권한 확인
@@ -132,3 +133,6 @@ export async function GET(req: Request) {
     if (client) client.release();
   }
 }
+
+// 🔒 [UC-04] 오류 응답(4xx·5xx)은 감사기록 '요청 오류'로 남긴다 (lib/api-audit.ts)
+export const GET = withRequestAudit(handleGet);

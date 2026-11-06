@@ -12,6 +12,7 @@ import { logServerError, summarizeError } from '@/lib/server-log';
 import pool from '@/lib/db';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/validate';
+import { withRequestAudit } from '@/lib/api-audit';
 
 const LOCKED_MESSAGE = '비밀번호 확인 시도 횟수를 초과했습니다. 잠시 후 다시 시도해주세요.';
 
@@ -31,7 +32,7 @@ async function saveNewPassword(accountId: string, hashedPassword: string): Promi
   }
 }
 
-export async function POST(req: Request) {
+async function handlePost(req: Request) {
   let session: Session | null = null;
   try {
     // 1. 세션 확인
@@ -138,3 +139,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ message: '서버 에러가 발생했습니다.' }, { status: 500 });
   }
 }
+
+// 🔒 [UC-04] 오류 응답(4xx·5xx)은 감사기록 '요청 오류'로 남긴다 (lib/api-audit.ts)
+export const POST = withRequestAudit(handlePost);

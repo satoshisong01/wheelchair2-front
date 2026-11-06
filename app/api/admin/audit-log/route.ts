@@ -7,6 +7,7 @@ import { authOptions } from '@/lib/authOptions';
 import { query } from '@/lib/db';
 import { createAuditLog, getAuditCategory, inferAuditOutcome } from '@/lib/log';
 import { logServerError } from '@/lib/server-log';
+import { withRequestAudit } from '@/lib/api-audit';
 
 const DEFAULT_PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 100; // 기존 LIMIT 100 상한 유지
@@ -57,7 +58,7 @@ function toDetailsObject(raw: unknown, logId: unknown): Record<string, unknown> 
   return raw === null || raw === undefined ? {} : { text: JSON.stringify(raw) };
 }
 
-export async function GET(req: NextRequest) {
+async function handleGet(req: NextRequest) {
   const session = await getServerSession(authOptions);
   // 🔒 [uc_log_06] 미인증은 401, 권한 없음은 403으로 구분
   if (!session?.user) {
@@ -176,3 +177,6 @@ LIMIT $5 OFFSET $6
     return NextResponse.json({ message: '활동 로그를 불러오는 데 실패했습니다.' }, { status: 500 });
   }
 }
+
+// 🔒 [UC-04] 오류 응답(4xx·5xx)은 감사기록 '요청 오류'로 남긴다 (lib/api-audit.ts)
+export const GET = withRequestAudit(handleGet);

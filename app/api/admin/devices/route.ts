@@ -171,7 +171,7 @@ async function handlePost(req: NextRequest) {
     // 2. DeviceAuth 테이블에 로그인 정보 삽입
     //    알림 설정 3종은 DB 기본값을 사용하며, 초기 상태를 감사 로그로 남기기 위해 RETURNING으로 회수
     //    🔒 [uc_auth_04] 신규 기기는 첫 로그인 때 초기 비밀번호를 바꿔야 서비스를 쓸 수 있게 플래그를 켠다
-    //       (적용은 보안 프로필이 강제 변경을 켠 경우만 — lib/security-profile.ts. 운영 standard는 표시만 남고 무시됨)
+    //       (설정: lib/security-profile.ts)
     const mustChangeSupported = await hasMustChangePasswordColumn(client);
     if (!mustChangeSupported) {
       console.warn('[device-register] must_change_password 컬럼 없음 — 2026-10-08 마이그레이션 적용 필요');
@@ -260,7 +260,7 @@ async function handlePost(req: NextRequest) {
 }
 
 // ------------------------------
-// DELETE: 휠체어/기기 삭제 (ADMIN/MASTER — MASTER 전용 제한 여부는 운영 정책 결정 대기)
+// DELETE: 휠체어/기기 삭제 (ADMIN/MASTER)
 // ------------------------------
 async function handleDelete(req: NextRequest) {
   const session = await getServerSession(authOptions);

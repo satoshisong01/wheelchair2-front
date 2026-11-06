@@ -7,3 +7,4 @@
 .vscode export-ignore
 data/state_store.db export-ignore
 data/stream_store export-ignore
+vercel.json export-ignore

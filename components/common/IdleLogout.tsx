@@ -1,13 +1,13 @@
 'use client';
 
 // components/common/IdleLogout.tsx — 유휴 세션 자동 잠금/로그아웃 (의료기기 사이버보안 요구사항 UC-03, RT uc_auth_12)
-// - 사용자 입력이 보안 프로필의 유휴 시간(운영 standard 0 = 끔, 심사본 strict 30분) 동안 없으면 로그아웃 → '/'(기기 로그인 화면).
-//   시험 빌드는 NEXT_PUBLIC_IDLE_LOGOUT_MINUTES(분, 양수)로 잠금을 켜거나 줄일 수만 있다(끄거나 늘리지 못함)
+// - 사용자 입력이 유휴 시간(30분, lib/security-profile.ts) 동안 없으면 로그아웃 → '/'(기기 로그인 화면).
+//   시험 빌드는 NEXT_PUBLIC_IDLE_LOGOUT_MINUTES(분, 양수)로 잠금 시간을 줄일 수만 있다(끄거나 늘리지 못함)
 // - 앱(WebView)에 LOGOUT/SESSION_EXPIRED 메시지를 보내지 않는다 → 앱의 FCM 응급 푸시 구독이 유지된다
 //   (앱은 이 두 메시지를 받을 때만 구독을 해지함)
 // - 마지막 활동 시각을 localStorage에 남겨, 앱을 닫았다 다시 열거나 다른 탭에서 봐도 한도가 지났으면 바로 잠근다
 //   (한도 안이면 화면 열기(마운트·화면 이동)도 활동으로 기록)
-// - 활동이 있으면 5분 간격으로 getSession()을 불러 서버 세션(JWT, 보안 프로필의 로그인 유지 시간) 만료를 연장한다
+// - 활동이 있으면 5분 간격으로 getSession()을 불러 서버 세션(JWT, 로그인 유지 시간) 만료를 연장한다
 //   (활동 없는 일반 화면은 연장 안 됨)
 // - 안전 예외(IDLE_LOCK_EXEMPT) 화면은 잠그지 않고, 입력과 무관하게 5분 간격으로 세션을 연장한다
 
@@ -16,14 +16,14 @@ import { usePathname } from 'next/navigation';
 import { getSession, signOut, useSession } from 'next-auth/react';
 import { SECURITY_PROFILE } from '@/lib/security-profile';
 
-const DEFAULT_IDLE_MINUTES = SECURITY_PROFILE.idleLogoutMinutes; // 보안 프로필 값(standard 0 = 끔, strict 30분)
+const DEFAULT_IDLE_MINUTES = SECURITY_PROFILE.idleLogoutMinutes; // 설정값(30분)
 // 시험용 빌드 값(NEXT_PUBLIC_ — 바꾸면 다시 빌드해야 함). 통제를 약하게 하는 쪽으로는 못 쓰게 양수만 받는다
-//   (비었거나 0·음수·숫자 아님은 무시 → 프로필 값 그대로)
+//   (비었거나 0·음수·숫자 아님은 무시 → 설정값 그대로)
 const rawIdleMinutes = process.env.NEXT_PUBLIC_IDLE_LOGOUT_MINUTES?.trim();
 const configuredMinutes = rawIdleMinutes ? Number(rawIdleMinutes) : NaN;
 const overrideMinutes =
   Number.isFinite(configuredMinutes) && configuredMinutes > 0 ? configuredMinutes : 0;
-// 둘 다 있으면 짧은 쪽(strict는 줄이기만), 하나만 있으면 그 값(standard는 시험 빌드에서만 잠금을 켬)
+// 둘 다 있으면 짧은 쪽(줄이기만 가능), 하나만 있으면 그 값
 const IDLE_MINUTES =
   DEFAULT_IDLE_MINUTES > 0 && overrideMinutes > 0
     ? Math.min(DEFAULT_IDLE_MINUTES, overrideMinutes)

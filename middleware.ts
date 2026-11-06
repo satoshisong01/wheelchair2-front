@@ -68,7 +68,7 @@ const ROLE_HOME: Record<string, string> = {
   USER: '/dashboard',
 };
 
-// 🔒 [uc_auth_04] 초기 비밀번호 강제 변경 — 보안 프로필이 켠 경우(심사본 strict)에만 막는다. 운영(standard)은 표시가 있어도 통과
+// 🔒 [uc_auth_04] 초기 비밀번호 강제 변경 — 바꾸기 전에는 아래 화면·API만 허용 (설정: lib/security-profile.ts)
 const FORCE_PASSWORD_CHANGE = SECURITY_PROFILE.forceInitialPasswordChange;
 // 초기 비밀번호 변경 전에 허용하는 화면·API
 const FORCE_PASSWORD_PAGE = '/mypage';

@@ -157,8 +157,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // API 인증은 각 API가 처리. 단, 강제 변경이 켜진 프로필에선 초기 비밀번호 변경 전 계정의 /api/auth/* 외 API를 403으로 막는다
-  //   (꺼진 프로필은 API마다 토큰을 읽지 않고 바로 통과)
+  // API 인증은 각 API가 처리. 단, 초기 비밀번호 변경 전 계정은 /api/auth/* 외 API를 403으로 막는다
   if (pathname.startsWith('/api/')) {
     if (FORCE_PASSWORD_CHANGE && !pathname.startsWith(FORCE_PASSWORD_API_PREFIX)) {
       const apiToken = await readToken(req);

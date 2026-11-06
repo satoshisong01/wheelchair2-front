@@ -259,7 +259,7 @@ export const authOptions: NextAuthOptions = {
             wheelchairId: device.wheelchair_id,
             deviceId: device.device_id,
             name: `Device-${device.device_id}`,
-            // 🔒 [uc_auth_04] 초기 비밀번호 변경 전이면 middleware가 /mypage 외 접근을 막는다(강제 변경이 켜진 프로필만)
+            // 🔒 [uc_auth_04] 초기 비밀번호 변경 전이면 middleware가 /mypage 외 접근을 막는다
             mustChangePassword: mustChangePasswordOf(device.must_change_password),
           };
 
@@ -485,7 +485,7 @@ export const authOptions: NextAuthOptions = {
         session.user.name = token.name;
         session.user.wheelchairId = token.wheelchairId;
         session.user.deviceId = token.deviceId;
-        // 프로필이 강제 변경을 끈 경우, 그 전에 발급돼 표시가 남은 토큰도 화면에는 강제 변경으로 보이지 않게 한 번 더 거른다
+        // 강제 변경 설정(lib/security-profile.ts)을 한 번 더 반영해 화면에 보낸다
         session.user.mustChangePassword = mustChangePasswordOf(token.mustChangePassword);
         session.user.loginAt = token.loginAt;
       }

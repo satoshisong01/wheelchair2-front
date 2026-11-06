@@ -6,11 +6,12 @@ import { createAuditLog } from '@/lib/log';
 import { logServerError } from '@/lib/server-log';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/validate';
+import { withRequestAudit } from '@/lib/api-audit';
 
 // 전화번호: 숫자와 + - ( ) . 공백만, 7~20자
 const PHONE_PATTERN = /^[0-9+\-(). ]{7,20}$/;
 
-export async function POST(req: Request) {
+async function handlePost(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     const userId = session?.user?.id;
@@ -86,3 +87,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ message: '서버 내부 오류가 발생했습니다.' }, { status: 500 });
   }
 }
+
+// 🔒 [UC-04] 오류 응답(4xx·5xx)은 감사기록 '요청 오류'로 남긴다 (lib/api-audit.ts)
+export const POST = withRequestAudit(handlePost);

@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/authOptions';
 import { query } from '@/lib/db';
 import { AlarmCategory, CRITICAL_ALARM_KEYWORDS } from '@/lib/alarm-categories';
 import { logServerError } from '@/lib/server-log';
+import { withRequestAudit } from '@/lib/api-audit';
 
 // 선택 쿼리 파라미터는 화이트리스트 검증 후 플레이스홀더로만 SQL에 전달
 const UUID_REGEX = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
@@ -75,7 +76,7 @@ function buildFilterSql(filters: AlarmFilters, paramOffset: number) {
   return { params, condition: conditions.join(' AND '), limitSql };
 }
 
-export async function GET(request: NextRequest) {
+async function handleGet(request: NextRequest) {
   const session = await getServerSession(authOptions);
   const userId = session?.user?.id;
   const userRole = session?.user?.role;
@@ -151,3 +152,6 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+// 🔒 [UC-04] 오류 응답(4xx·5xx)은 감사기록 '요청 오류'로 남긴다 (lib/api-audit.ts)
+export const GET = withRequestAudit(handleGet);

@@ -30,7 +30,7 @@ const isAppRole = (value: unknown): value is AppRole =>
 
 // 감사로그(lib/log.ts)가 저장하는 역할 — 그 외(GUEST 등)는 SYSTEM으로 남기고 실제 역할은 details에 적는다
 const AUDIT_ROLES: readonly string[] = ['ADMIN', 'MASTER', 'DEVICE_USER'];
-const auditRoleOf = (role: unknown): string =>
+export const auditRoleOf = (role: unknown): string =>
   typeof role === 'string' && AUDIT_ROLES.includes(role) ? role : 'SYSTEM';
 
 // 🔒 [UC-03] 세션 최대 수명 = 보안 프로필의 로그인 유지 시간(운영 standard 30일, 심사본 strict 12시간) — 사용자 활동이

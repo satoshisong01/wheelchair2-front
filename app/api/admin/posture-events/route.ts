@@ -13,6 +13,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { query } from '@/lib/db';
 import { logServerError } from '@/lib/server-log';
+import { withRequestAudit } from '@/lib/api-audit';
 
 // 🔒 SQL Injection 방어: 입력값 화이트리스트 검증
 const UUID_REGEX = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
@@ -30,7 +31,7 @@ function assertSafe(value: string, regex: RegExp, label: string): void {
   }
 }
 
-export async function GET(req: NextRequest) {
+async function handleGet(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
     const role = (session?.user as any)?.role;
@@ -77,3 +78,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ message: 'Server Error' }, { status: 500 });
   }
 }
+
+// 🔒 [UC-04] 오류 응답(4xx·5xx)은 감사기록 '요청 오류'로 남긴다 (lib/api-audit.ts)
+export const GET = withRequestAudit(handleGet);

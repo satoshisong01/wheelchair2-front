@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/authOptions';
 import { getDbTlsStatus } from '@/lib/db';
+import { withRequestAudit } from '@/lib/api-audit';
 
 // 🔎 DB TLS 검증이 실제로 켜졌는지 확인용 (로그인 필요). 민감정보 없음(불리언만).
-export async function GET() {
+async function handleGet() {
   const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
@@ -16,3 +17,6 @@ export async function GET() {
     caSource: status.caSource.startsWith('file:') ? 'file' : status.caSource,
   });
 }
+
+// 🔒 [UC-04] 오류 응답(4xx·5xx)은 감사기록 '요청 오류'로 남긴다 (lib/api-audit.ts)
+export const GET = withRequestAudit(handleGet);

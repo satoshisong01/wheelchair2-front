@@ -7,11 +7,12 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import pool from '@/lib/db';
 import { logServerError } from '@/lib/server-log';
+import { withRequestAudit } from '@/lib/api-audit';
 
 dotenv.config();
 
 // 1. 휠체어 목록 조회 (GET) — 인증 필수 (ADMIN/MASTER만 허용)
-export async function GET() {
+async function handleGet() {
   // 🔒 [보안] 인증/인가 체크
   const session = await getServerSession(authOptions);
   if (!session || !session.user) {
@@ -127,3 +128,5 @@ export async function GET() {
   }
 }
 
+// 🔒 [UC-04] 오류 응답(4xx·5xx)은 감사기록 '요청 오류'로 남긴다 (lib/api-audit.ts)
+export const GET = withRequestAudit(handleGet);

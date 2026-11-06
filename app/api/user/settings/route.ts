@@ -6,8 +6,9 @@ import { z } from 'zod';
 import { parseJsonBody } from '@/lib/validate';
 import { createAuditLog } from '@/lib/log';
 import { logServerError } from '@/lib/server-log';
+import { withRequestAudit } from '@/lib/api-audit';
 
-export async function POST(req: Request) {
+async function handlePost(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
@@ -74,3 +75,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ message: '설정 저장에 실패했습니다.' }, { status: 500 });
   }
 }
+
+// 🔒 [UC-04] 오류 응답(4xx·5xx)은 감사기록 '요청 오류'로 남긴다 (lib/api-audit.ts)
+export const POST = withRequestAudit(handlePost);

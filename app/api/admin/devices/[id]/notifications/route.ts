@@ -10,6 +10,7 @@ import pool from '@/lib/db';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/validate';
 import { logServerError } from '@/lib/server-log';
+import { withRequestAudit } from '@/lib/api-audit';
 
 // 🔒 [입력검증] 경로의 휠체어 ID는 UUID만 허용 (그 외 값은 DB 형변환 오류(500) 대신 400)
 const UUID_REGEX = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
@@ -26,7 +27,7 @@ interface RouteParams {
   params: Promise<{ id: string }>;
 }
 
-export async function PATCH(req: NextRequest, { params }: RouteParams) {
+async function handlePatch(req: NextRequest, { params }: RouteParams) {
   const session = await getServerSession(authOptions);
   const role = session?.user?.role;
   const adminUserId = session?.user?.id;
@@ -108,3 +109,6 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
     );
   }
 }
+
+// 🔒 [UC-04] 오류 응답(4xx·5xx)은 감사기록 '요청 오류'로 남긴다 (lib/api-audit.ts)
+export const PATCH = withRequestAudit(handlePatch);

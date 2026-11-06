@@ -80,6 +80,7 @@ const LOG_CONFIG = {
   LOGIN_FAILED: { color: '#dc3545', label: '로그인 실패', bg: '#f8d7da' },
   ACCOUNT_LOCKED: { color: '#dc3545', label: '계정 잠금', bg: '#f8d7da' },
   ACCESS_DENIED: { color: '#dc3545', label: '접근 거부', bg: '#f8d7da' },
+  REQUEST_ERROR: { color: '#dc3545', label: '요청 오류', bg: '#f8d7da' },
   ALARM_RESOLVE: { color: '#28a745', label: '알람 확인', bg: '#e6ffed' },
   MAINTENANCE_CREATE: { color: '#17a2b8', label: '정비 이력 등록', bg: '#e8f7fa' },
   AI_QUERY: { color: '#495057', label: 'AI 질의', bg: '#f1f3f5' },
@@ -283,6 +284,14 @@ const formatLogContent = (log: AuditLog) => {
           <span style={{ color: '#aaa', fontSize: '0.9em', display: 'block' }}>
             변경 후: {toText(details.after, 100)}
           </span>
+        </>
+      );
+    case 'REQUEST_ERROR':
+      return (
+        <>
+          {details.role === 'ANONYMOUS' ? '비로그인' : <>{log.user_role} <Name name={displayActorName} /></>} 요청
+          오류: {toText(details.method, 8)}{' '}
+          {toText(details.path, 60)} → {toText(details.httpStatus, 3)} (접속 IP {toText(details.ip, 45)})
         </>
       );
     default: {

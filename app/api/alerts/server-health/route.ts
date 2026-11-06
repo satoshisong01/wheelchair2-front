@@ -6,6 +6,7 @@ import { createAuditLog } from '@/lib/log'; // 기존 로그 함수 사용
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/validate';
 import { logServerError } from '@/lib/server-log';
+import { withRequestAudit } from '@/lib/api-audit';
 
 // 감사로그 details에 남길 프로세스 스냅샷 최대 길이 (ps 상위 몇 줄이면 충분)
 const MAX_PROCESS_INFO_LENGTH = 4096;
@@ -24,7 +25,7 @@ const CONTROL_CHARS_EXCEPT_LINE_BREAKS = /[\u0000-\u0008\u000b-\u001f\u007f]/g;
 
 // 서버 모니터링 스크립트가 POST 요청을 보낼 엔드포인트
 // 🔒 [보안] SERVER_HEALTH_SECRET 헤더로 인증 (외부 무인증 호출 차단)
-export async function POST(req: NextRequest) {
+async function handlePost(req: NextRequest) {
   try {
     // 1. [보안] 공유 시크릿 검증
     const HEALTH_SECRET = process.env.SERVER_HEALTH_SECRET;
@@ -99,3 +100,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// 🔒 [UC-04] 오류 응답(4xx·5xx)은 감사기록 '요청 오류'로 남긴다 (lib/api-audit.ts)
+export const POST = withRequestAudit(handlePost);

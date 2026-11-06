@@ -9,6 +9,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { createAuditLog } from '@/lib/log';
 import { logServerError, summarizeError } from '@/lib/server-log';
+import { withRequestAudit } from '@/lib/api-audit';
 
 // 🔒 [보안] AI가 생성한 SQL에서 차단해야 할 위험 키워드 (Prompt Injection 방어 강화)
 const FORBIDDEN_SQL_PATTERNS = [
@@ -93,7 +94,7 @@ console.log(
   `[LOG 2] Global Config Loaded. API Key Variable Loaded: ${API_KEY ? '✅ YES' : '❌ NO'}`,
 );
 
-export async function POST(request: NextRequest) {
+async function handlePost(request: NextRequest) {
   // 🔒 [보안] 인증 체크 — ADMIN/MASTER만 AI 검색 허용
   const session = await getServerSession(authOptions);
   if (!session || !session.user) {
@@ -311,3 +312,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// 🔒 [UC-04] 오류 응답(4xx·5xx)은 감사기록 '요청 오류'로 남긴다 (lib/api-audit.ts)
+export const POST = withRequestAudit(handlePost);

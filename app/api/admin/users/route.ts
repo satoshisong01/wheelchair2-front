@@ -8,13 +8,14 @@ import { createAuditLog } from '@/lib/log'; // 🔒 [F6] 역할 변경 감사 �
 import { logServerError } from '@/lib/server-log';
 import { z } from 'zod';
 import { parseJsonBody } from '@/lib/validate';
+import { withRequestAudit } from '@/lib/api-audit';
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // ------------------------------
 // GET: PENDING, USER, ADMIN 사용자 목록 조회
 // ------------------------------
-export async function GET() {
+async function handleGet() {
     const session = await getServerSession(authOptions);
 
     // MASTER 권한 확인
@@ -45,7 +46,7 @@ export async function GET() {
 // ------------------------------
 // PUT: 유저 상태 업데이트 (승인/거절)
 // ------------------------------
-export async function PUT(req: NextRequest) {
+async function handlePut(req: NextRequest) {
     const session = await getServerSession(authOptions);
 
     if (!session || session.user.role !== 'MASTER') {
@@ -116,3 +117,7 @@ export async function PUT(req: NextRequest) {
         return NextResponse.json({ message: '사용자 상태 업데이트에 실패했습니다.' }, { status: 500 });
     }
 }
+
+// 🔒 [UC-04] 오류 응답(4xx·5xx)은 감사기록 '요청 오류'로 남긴다 (lib/api-audit.ts)
+export const GET = withRequestAudit(handleGet);
+export const PUT = withRequestAudit(handlePut);

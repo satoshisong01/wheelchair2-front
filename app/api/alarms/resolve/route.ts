@@ -6,12 +6,13 @@ import { z } from 'zod';
 import { parseJsonBody } from '@/lib/validate';
 import { createAuditLog } from '@/lib/log';
 import { logServerError } from '@/lib/server-log';
+import { withRequestAudit } from '@/lib/api-audit';
 
 // 🔒 [입력검증] 알람 ID는 UUID(현행) 또는 정수만 허용
 const ALARM_ID_REGEX =
   /^(?:[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}|\d{1,18})$/i;
 
-export async function POST(req: Request) {
+async function handlePost(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session || !session.user)
@@ -86,3 +87,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ message: 'Server Error' }, { status: 500 });
   }
 }
+
+// 🔒 [UC-04] 오류 응답(4xx·5xx)은 감사기록 '요청 오류'로 남긴다 (lib/api-audit.ts)
+export const POST = withRequestAudit(handlePost);
